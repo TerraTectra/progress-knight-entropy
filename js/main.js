@@ -3475,15 +3475,32 @@ function checkSkillSkipped(skill) {
     return !!gameData.skipSkills[skill.name]
 }
 
+function isSkillUnlockedForAutoLearn(skill) {
+    if (!(skill instanceof Skill)) return false
+
+    var requirement = null
+    if (gameData && gameData.requirements) {
+        requirement = gameData.requirements[skill.name]
+    }
+
+    if (requirement) {
+        if (typeof requirement.isCompleted === "function") {
+            if (!requirement.isCompleted()) return false
+        } else if (requirement.completed === false) {
+            return false
+        }
+    }
+
+    if (checkSkillSkipped(skill)) return false
+    return true
+}
+
 function setSkillWithLowestMaxXp() {
     var xpDict = {}
 
     for (skillName in gameData.taskData) {
         var skill = gameData.taskData[skillName]
-        var requirement = gameData.requirements[skillName]
-        if (!(skill instanceof Skill)) continue
-        if (requirement && typeof requirement.isCompleted === "function" && !requirement.isCompleted()) continue
-        if (checkSkillSkipped(skill)) continue
+        if (!isSkillUnlockedForAutoLearn(skill)) continue
         xpDict[skill.name] = skill.level // original metric
     }
 
