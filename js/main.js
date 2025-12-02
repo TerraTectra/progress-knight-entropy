@@ -725,7 +725,6 @@ const skillCategories = {
     "Combat": ["Strength", "Battle tactics", "Muscle memory"],
     "Magic": ["Mana control", "Immortality", "Time warping", "Super immortality"],
     "Dark magic": ["Dark influence", "Evil control", "Intimidation", "Demon training", "Blood meditation", "Demon's wealth"],
-    "Entropy Studies": ["Read Almanach", "Study Entropy"],
     "Deep Studies": ["Pattern Weaving"],
     "Longevity": ["Body Maintenance"],
     "Orchestration": ["Life Orchestration"],
@@ -4521,6 +4520,7 @@ function initBaseGame() {
         "Rebirth note 2": new AgeRequirement([document.getElementById("rebirthNote2")], [{requirement: 65}]),
         "Rebirth note 3": new AgeRequirement([document.getElementById("rebirthNote3")], [{requirement: 200}]),
         "Evil info": new EvilRequirement([document.getElementById("evilInfo")], [{requirement: 1}]),
+        "Read Almanach": new EntropyRequirement([], [{seeds: 1}]),
         "Time warping info": new TaskRequirement([document.getElementById("timeWarping")], [{task: "Mage", requirement: 10}]),
         "Automation": new AgeRequirement([document.getElementById("automation")], [{requirement: 20}]),
         "Quick task display": new AgeRequirement([document.getElementById("quickTaskDisplay")], [{requirement: 20}]),
@@ -4641,6 +4641,7 @@ function initEntropyGame() {
 
     var entropyRequirements = {
         "Entropy tab": new EntropyRequirement([document.getElementById("entropyTabButton"), document.getElementById("entropy")], [{seeds: 1}]),
+        "Read Almanach": new EntropyRequirement([getTaskElement("Read Almanach")], [{seeds: 1}]),
         "Work with Entropy": new TaskRequirement([getTaskElement("Work with Entropy")], [{task: "Read Almanach", requirement: 5}]),
         "Study Entropy": new TaskRequirement([getTaskElement("Study Entropy")], [{task: "Read Almanach", requirement: 25}]),
         "Pattern Comprehension": new TaskRequirement([getTaskElement("Pattern Comprehension")], [{task: "Study Entropy", requirement: 1}]),
