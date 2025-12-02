@@ -3467,40 +3467,42 @@ function checkSkillSkipped(skill) {
     return !!gameData.skipSkills[skill.name]
 }
 
-function chooseAutoLearnTarget() {
-    var candidate = null
+function setSkillWithLowestMaxXp() {
+    var xpDict = {}
+
     for (skillName in gameData.taskData) {
         var skill = gameData.taskData[skillName]
         var requirement = gameData.requirements[skillName]
         if (!(skill instanceof Skill)) continue
-        var unlocked = !requirement || (typeof requirement.isCompleted === "function" ? requirement.isCompleted() : requirement.completed === true)
-        if (!unlocked) continue
+        if (requirement && typeof requirement.isCompleted === "function" && !requirement.isCompleted()) continue
         if (checkSkillSkipped(skill)) continue
-        if (!candidate) {
-            candidate = skill
-            continue
-        }
-        if (skill.level < candidate.level) {
-            candidate = skill
-            continue
-        }
-        if (skill.level === candidate.level) {
-            var skillXp = skill.xp || 0
-            var candidateXp = candidate.xp || 0
-            if (skillXp < candidateXp) {
-                candidate = skill
-            }
-        }
+        xpDict[skill.name] = skill.level // original metric
     }
-    return candidate
+
+    var keys = Object.keys(xpDict)
+    if (keys.length === 0) {
+        skillWithLowestMaxXp = gameData.taskData["Concentration"]
+        return
+    }
+
+    var skillName = getKeyOfLowestValueFromDict(xpDict)
+    skillWithLowestMaxXp = gameData.taskData[skillName]
 }
 
-function setSkillWithLowestMaxXp() {
-    var candidate = chooseAutoLearnTarget()
-    if (candidate) {
-        skillWithLowestMaxXp = candidate
-    } else {
-        skillWithLowestMaxXp = gameData.taskData["Concentration"]
+function getKeyOfLowestValueFromDict(dict) {
+    var values = []
+    for (key in dict) {
+        var value = dict[key]
+        values.push(value)
+    }
+
+    values.sort(function(a, b){return a - b})
+
+    for (key in dict) {
+        var value = dict[key]
+        if (value == values[0]) {
+            return key
+        }
     }
 }
 
@@ -3747,6 +3749,12 @@ function ensureAutoSwitchState() {
     }
     if (gameData.autoSwitchSkills === undefined) {
         gameData.autoSwitchSkills = false
+    }
+}
+
+function ensureSkipSkillsState() {
+    if (!gameData.skipSkills) {
+        gameData.skipSkills = {}
     }
 }
 
@@ -4752,13 +4760,18 @@ if (typeof window !== "undefined") {
             var s = gameData.taskData[key]
             if (s instanceof Skill) allSkills.push(s)
         }
-        var target = chooseAutoLearnTarget()
-        console.log("Auto-learn candidates:")
+        var xpDict = {}
         allSkills.forEach(function(s) {
             var req = gameData.requirements[s.name]
             var unlocked = !req || (typeof req.isCompleted === "function" ? req.isCompleted() : req && req.completed === true)
-            console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", unlocked, "skipped", checkSkillSkipped(s))
+            var skipped = checkSkillSkipped(s)
+            if (unlocked && !skipped) {
+                xpDict[s.name] = s.level
+            }
+            console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", unlocked, "skipped", skipped)
         })
+        var targetName = Object.keys(xpDict).length ? getKeyOfLowestValueFromDict(xpDict) : null
+        var target = targetName ? gameData.taskData[targetName] : null
         console.log("Chosen target:", target ? target.name : "(none) -> fallback Concentration")
     }
 }
