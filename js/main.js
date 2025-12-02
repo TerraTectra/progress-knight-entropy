@@ -3478,6 +3478,12 @@ function checkSkillSkipped(skill) {
 function isSkillUnlockedForAutoLearn(skill) {
     if (!(skill instanceof Skill)) return false
 
+    // Use the same row visibility as UI (hiddenTask / display:none)
+    var row = document.getElementById("row " + skill.name)
+    if (row && typeof isRowVisible === "function" && !isRowVisible(row)) {
+        return false
+    }
+
     var requirement = null
     if (gameData && gameData.requirements) {
         requirement = gameData.requirements[skill.name]
