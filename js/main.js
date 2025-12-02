@@ -3483,12 +3483,11 @@ function isSkillUnlockedForAutoLearn(skill) {
         requirement = gameData.requirements[skill.name]
     }
 
-    if (requirement) {
-        if (typeof requirement.isCompleted === "function") {
-            if (!requirement.isCompleted()) return false
-        } else if (requirement.completed === false) {
-            return false
-        }
+    if (!requirement) return false
+    if (typeof requirement.isCompleted === "function") {
+        if (!requirement.isCompleted()) return false
+    } else if (requirement.completed === false) {
+        return false
     }
 
     if (checkSkillSkipped(skill)) return false
@@ -3787,6 +3786,21 @@ function ensureAutoSwitchState() {
 function ensureSkipSkillsState() {
     if (!gameData.skipSkills) {
         gameData.skipSkills = {}
+    }
+}
+
+function ensureRequirementsBackfill() {
+    if (!tempData["requirements"]) return
+    if (!gameData.requirements) {
+        gameData.requirements = {}
+    }
+
+    // Add any missing requirement entries from the current templates
+    for (var key in tempData["requirements"]) {
+        if (!tempData["requirements"].hasOwnProperty(key)) continue
+        if (!gameData.requirements[key]) {
+            gameData.requirements[key] = tempData["requirements"][key]
+        }
     }
 }
 
@@ -4175,6 +4189,7 @@ function loadGameData() {
     ensureEntropyUpgradesState()
     ensureEntropyPatternsState()
     ensureEntropyArtifactsState()
+    ensureRequirementsBackfill()
     ensureAutoSwitchState()
     ensureSkipSkillsState()
     ensureUniverseState()
