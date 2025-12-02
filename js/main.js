@@ -1606,8 +1606,8 @@ function setCustomEffects() {
     var timeWarping = gameData.taskData["Time warping"]
     timeWarping.getEffect = function() {
         var multiplier = 1 + getBaseLog(13, timeWarping.level + 1) 
-        // Temporary testing override: force a very high baseline warp speed
-        if (multiplier < 100) multiplier = 100
+        // Temporary testing override: force a baseline warp speed
+        if (multiplier < 10) multiplier = 10
         return multiplier
     }
 
