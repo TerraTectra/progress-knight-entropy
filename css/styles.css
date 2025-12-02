@@ -3,11 +3,13 @@ body {
 }
 
 :root {
-    --pk-base-font-size: 15px;
+    --pk-font-size-base: 14px;
+    --pk-font-size-small: 12px;
+    --pk-font-size-tiny: 11px;
 }
 
 body {
-    font-size: var(--pk-base-font-size);
+    font-size: var(--pk-font-size-base);
 }
 
 .w3-bar-item {
@@ -29,9 +31,8 @@ td {
 }
 
 .progress-text {
-    position: absolute;
-    top: 0px;
-    bottom: 0px;
+    position: relative;
+    z-index: 1;
     padding: 5px;
     color: white;
     white-space: normal;
@@ -44,12 +45,16 @@ td {
     background-color: rgb(12, 101, 173);
     cursor: pointer;
     width: 200px;
-    min-height: 40px;
+    height: 24px;
+    line-height: 24px;
+    overflow: hidden;
 }
 
 .progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100%;
-    min-height: 40px;
     background-color: rgb(46, 148, 231)
 }
 
@@ -216,8 +221,8 @@ button:focus {
 jobTable .name,
 skillTable .name,
 itemTable .name {
-    font-size: clamp(11px, 0.95vw, 14px);
-    line-height: 1.15;
+    font-size: clamp(11px, 0.9vw, 13px);
+    line-height: 1.1;
     word-break: break-word;
     white-space: normal;
 }
@@ -226,9 +231,9 @@ itemTable .name {
 jobTable th,
 skillTable th,
 itemTable th {
-    font-size: clamp(11px, 0.9vw, 14px);
+    font-size: clamp(11px, 0.9vw, 13px);
     line-height: 1.2;
-    white-space: normal;
+    white-space: nowrap;
     word-break: break-word;
 }
 
@@ -236,8 +241,10 @@ itemTable th {
 tabs .w3-bar .w3-bar-item,
 tabs .tabButton,
 settingsTabs .tabButton {
-    font-size: clamp(12px, 0.9vw, 15px);
+    font-size: clamp(12px, 1vw, 14px);
     line-height: 1.2;
+    font-weight: 500;
+    letter-spacing: 0.01em;
     white-space: normal;
     word-break: break-word;
 }
@@ -250,4 +257,24 @@ jobTable button {
     line-height: 1.2;
     white-space: normal;
     word-break: break-word;
+}
+
+/* Compact labels for quick task bars */
+quickTaskDisplay .progress-text.name {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow: none;
+}
+
+@media (max-width: 480px) {
+    quickTaskDisplay .progress-bar {
+        max-width: 100%;
+        height: 24px;
+        margin-bottom: 6px;
+    }
+    quickTaskDisplay .progress-text.name {
+        font-size: 12px;
+    }
 }
