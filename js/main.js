@@ -2325,9 +2325,9 @@ function updateRequiredRows(data, categoryType) {
             var nextIndex = i + 1
             if (nextIndex >= category.length) {break}
             var nextEntityName = category[nextIndex]
-            nextEntityRequirements = gameData.requirements[nextEntityName]
+            var nextEntityRequirements = gameData.requirements[nextEntityName]
 
-            if (!nextEntityRequirements.isCompleted()) {
+            if (nextEntityRequirements && !nextEntityRequirements.isCompleted()) {
                 nextEntity = data[nextEntityName]
                 break
             }       
