@@ -3520,7 +3520,6 @@ function autoLearn() {
         setSkillWithLowestMaxXp()
         if (!skillWithLowestMaxXp) return
     }
-    if (!shouldAutoSwitch(gameData.currentSkill, skillWithLowestMaxXp)) return
     if (!attemptSelectTask(skillWithLowestMaxXp)) return
     if (isCycleOverseerActive()) {
         gameData.entropy.focusTask = gameData.currentSkill.name
