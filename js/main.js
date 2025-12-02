@@ -2208,6 +2208,9 @@ function createEntity(data, entity) {
     else if ("maxXp" in entity) {data[entity.name] = new Skill(entity)}
     else {data[entity.name] = new Item(entity)}
     data[entity.name].id = "row " + entity.name
+    if (data[entity.name].skip === undefined) {
+        data[entity.name].skip = false
+    }
 }
 
 function createRequiredRow(categoryName) {
@@ -2427,12 +2430,17 @@ function updateTaskRows() {
                 task instanceof Skill && autoLearnElement.checked ? "block" : "none"
             var checkbox = skipSkillElement.getElementsByClassName("checkbox")[0]
             if (checkbox) {
-                checkbox.checked = !!(gameData.skipSkills && gameData.skipSkills[task.name])
+                checkbox.checked = !!task.skip
                 if (!checkbox.dataset.bound) {
                     (function(name) {
                         checkbox.addEventListener("change", function() {
                             ensureSkipSkillsState()
-                            gameData.skipSkills[name] = this.checked
+                            var t = gameData.taskData[name]
+                            if (t) {
+                                t.skip = !!this.checked
+                                gameData.skipSkills[name] = t.skip
+                                saveGameData()
+                            }
                         })
                     })(task.name)
                     checkbox.dataset.bound = "true"
@@ -3107,8 +3115,15 @@ function setSignDisplay() {
     }
 }
 
-function applyAutoSwitchDefaults(entropyUnlocked) {
-    if (!entropyUnlocked || autoSwitchDefaultsApplied) return
+function isAutomationUnlocked() {
+    var req = gameData && gameData.requirements ? gameData.requirements["Automation"] : null
+    if (!req) return true
+    if (typeof req.isCompleted === "function") return req.isCompleted()
+    return req.completed !== false
+}
+
+function applyAutoSwitchDefaults(entropyUnlocked, automationUnlocked) {
+    if (!entropyUnlocked || !automationUnlocked || autoSwitchDefaultsApplied) return
     var unlockedThisSession = entropyUnlocked && !lastEntropyUnlockedState
     var needsBackfill = entropyUnlocked && !autoSwitchFlagsPresentInSave
     if (unlockedThisSession || needsBackfill) {
@@ -3119,7 +3134,16 @@ function applyAutoSwitchDefaults(entropyUnlocked) {
     }
 }
 
-function syncAutomationCheckboxes(entropyUnlocked) {
+function syncAutomationCheckboxes(entropyUnlocked, automationUnlocked) {
+    if (!automationUnlocked) {
+        gameData.autoSwitchJobs = false
+        gameData.autoSwitchSkills = false
+        autoPromoteElement.disabled = true
+        autoLearnElement.disabled = true
+        autoPromoteElement.checked = false
+        autoLearnElement.checked = false
+        return
+    }
     autoPromoteElement.disabled = false
     autoLearnElement.disabled = false
     autoPromoteElement.checked = !!gameData.autoSwitchJobs
@@ -3128,8 +3152,9 @@ function syncAutomationCheckboxes(entropyUnlocked) {
 
 function updateAutoSwitchState() {
     var entropyUnlocked = isEntropyUnlocked()
-    applyAutoSwitchDefaults(entropyUnlocked)
-    syncAutomationCheckboxes(entropyUnlocked)
+    var automationUnlocked = isAutomationUnlocked()
+    applyAutoSwitchDefaults(entropyUnlocked, automationUnlocked)
+    syncAutomationCheckboxes(entropyUnlocked, automationUnlocked)
     lastEntropyUnlockedState = entropyUnlocked
 }
 
@@ -3461,18 +3486,18 @@ function autoPromote() {
     }
     if (nextEntity == null) return
     var requirement = gameData.requirements[nextEntity.name]
-    if (requirement.isCompleted()) {
-        if (!shouldAutoSwitch(gameData.currentJob, nextEntity)) return
-        if (!attemptSelectTask(nextEntity)) return
-        if (isCycleOverseerActive()) {
-            gameData.entropy.focusTask = nextEntity.name
-        }
+    var unlocked = !requirement || (typeof requirement.isCompleted === "function" ? requirement.isCompleted() : requirement.completed !== false)
+    if (!unlocked) return
+    if (!shouldAutoSwitch(gameData.currentJob, nextEntity)) return
+    if (!attemptSelectTask(nextEntity)) return
+    if (isCycleOverseerActive()) {
+        gameData.entropy.focusTask = nextEntity.name
     }
 }
 
 function checkSkillSkipped(skill) {
-    if (!gameData.skipSkills) return false
-    return !!gameData.skipSkills[skill.name]
+    if (!skill) return false
+    return !!skill.skip
 }
 
 function isSkillUnlockedForAutoLearn(skill) {
@@ -3489,11 +3514,12 @@ function isSkillUnlockedForAutoLearn(skill) {
         requirement = gameData.requirements[skill.name]
     }
 
-    if (!requirement) return false
-    if (typeof requirement.isCompleted === "function") {
-        if (!requirement.isCompleted()) return false
-    } else if (requirement.completed === false) {
-        return false
+    if (requirement) {
+        if (typeof requirement.isCompleted === "function") {
+            if (!requirement.isCompleted()) return false
+        } else if (requirement.completed === false) {
+            return false
+        }
     }
 
     if (checkSkillSkipped(skill)) return false
@@ -3789,12 +3815,6 @@ function ensureAutoSwitchState() {
     }
 }
 
-function ensureSkipSkillsState() {
-    if (!gameData.skipSkills) {
-        gameData.skipSkills = {}
-    }
-}
-
 function ensureRequirementsBackfill() {
     if (!tempData["requirements"]) return
     if (!gameData.requirements) {
@@ -3813,6 +3833,19 @@ function ensureRequirementsBackfill() {
 function ensureSkipSkillsState() {
     if (!gameData.skipSkills) {
         gameData.skipSkills = {}
+    }
+    if (!gameData.taskData) return
+    for (var key in gameData.taskData) {
+        if (!gameData.taskData.hasOwnProperty(key)) continue
+        var task = gameData.taskData[key]
+        if (task.skip === undefined) {
+            if (gameData.skipSkills.hasOwnProperty(task.name)) {
+                task.skip = !!gameData.skipSkills[task.name]
+            } else {
+                task.skip = false
+            }
+        }
+        gameData.skipSkills[task.name] = !!task.skip
     }
 }
 
