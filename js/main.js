@@ -3513,7 +3513,11 @@ function getKeyOfLowestValueFromDict(dict) {
 }
 
 function autoLearn() {
-    if (!gameData.autoSwitchSkills || !skillWithLowestMaxXp) return
+    if (!gameData.autoSwitchSkills) return
+    if (!skillWithLowestMaxXp) {
+        setSkillWithLowestMaxXp()
+        if (!skillWithLowestMaxXp) return
+    }
     if (!shouldAutoSwitch(gameData.currentSkill, skillWithLowestMaxXp)) return
     if (!attemptSelectTask(skillWithLowestMaxXp)) return
     if (isCycleOverseerActive()) {
