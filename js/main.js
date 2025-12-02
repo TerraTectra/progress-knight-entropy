@@ -3123,6 +3123,25 @@ function getNet() {
     return net
 }
 
+function showIntroModal() {
+    var modal = document.getElementById("introModal");
+    if (!modal) return;
+    modal.style.display = "block";
+}
+
+function hideIntroModal() {
+    var modal = document.getElementById("introModal");
+    if (!modal) return;
+    modal.style.display = "none";
+    if (window.gameData) {
+        if (!gameData.meta) gameData.meta = {};
+        gameData.meta.introSeen = true;
+        if (typeof saveGameData === "function") {
+            saveGameData();
+        }
+    }
+}
+
 function enforceEntropyTabVisibility() {
     var entropyTabButton = document.getElementById("entropyTabButton");
     var entropyTabSection = document.getElementById("entropy");
@@ -3776,6 +3795,15 @@ function ensureFirstTimePromptState() {
 function ensureLanguageState() {
     if (!gameData.language) {
         gameData.language = LANG.RU
+    }
+}
+
+function ensureMetaState() {
+    if (!gameData.meta) {
+        gameData.meta = {}
+    }
+    if (typeof gameData.meta.introSeen !== "boolean") {
+        gameData.meta.introSeen = false
     }
 }
 
@@ -4628,6 +4656,7 @@ function startGame() {
     ensureEntropyArtifactsState()
     ensureFirstTimePromptState()
     ensureLanguageState()
+    ensureMetaState()
 
     if (savedGameData && savedGameData.hasAnsweredFirstTimePrompt === true) {
         gameData.hasAnsweredFirstTimePrompt = true
@@ -4676,6 +4705,9 @@ function startGame() {
     addMultipliers()
 
     refreshUI()
+    if (gameData.meta && gameData.meta.introSeen === false) {
+        showIntroModal()
+    }
     enforceEntropyTabVisibility()
     setTab(jobTabButton, "jobs")
     initDebugUI()
@@ -4687,6 +4719,13 @@ function startGame() {
 }
 
 startGame()
+
+document.addEventListener("DOMContentLoaded", function () {
+    var btn = document.getElementById("introContinueButton");
+    if (btn) {
+        btn.addEventListener("click", hideIntroModal);
+    }
+});
 function attemptSelectTask(task) {
     if (!task) return false
     if (!isTaskExclusiveAvailable(task.name)) return false
