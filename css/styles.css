@@ -249,6 +249,14 @@ settingsTabs .tabButton {
     word-break: break-word;
 }
 
+.settings-message {
+    margin-top: 8px;
+    font-weight: 600;
+}
+.settings-message.success { color: #4caf50; }
+.settings-message.error { color: #f44336; }
+.settings-message.info { color: #cccccc; }
+
 /* Better alignment for multi-line buttons inside tables */
 table .button,
 itemTable button,

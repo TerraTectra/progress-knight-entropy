@@ -4279,6 +4279,14 @@ function updateUI() {
     updateDebugPanel()
 }
 
+function showSettingsMessage(text, type) {
+    var el = document.getElementById("settingsMessage")
+    if (!el) return
+    el.textContent = text || ""
+    el.classList.remove("success", "error", "info")
+    if (type) el.classList.add(type)
+}
+
 function update() {
     if (isObserverMode()) {
         initObserverDataIfNeeded()
@@ -4550,17 +4558,51 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
     location.reload(true)
 }
 
+function openResetConfirm() {
+    var modal = document.getElementById("resetModal")
+    if (modal) modal.style.display = "block"
+}
+
+function closeResetConfirm() {
+    var modal = document.getElementById("resetModal")
+    if (modal) modal.style.display = "none"
+}
+
+function confirmResetGameData() {
+    closeResetConfirm()
+    resetGameData()
+}
+
 function importGameData() {
     var importExportBox = document.getElementById("importExportBox")
-    var data = JSON.parse(window.atob(importExportBox.value))
-    gameData = data
-    saveGameData()
-    location.reload()
+    var raw = (importExportBox.value || "").trim()
+    if (!raw) {
+        showSettingsMessage("No data to import", "error")
+        return
+    }
+    try {
+        var decoded = window.atob(raw)
+        var parsed = JSON.parse(decoded)
+        if (!parsed || typeof parsed !== "object" || !parsed.taskData || !parsed.itemData) {
+            throw new Error("Invalid structure")
+        }
+        gameData = parsed
+        saveGameData()
+        showSettingsMessage("Save loaded successfully", "success")
+        setTimeout(function() { location.reload() }, 200)
+    } catch (e) {
+        console.error("Import failed:", e)
+        showSettingsMessage("Invalid save data. Please check and try again.", "error")
+    }
 }
 
 function exportGameData() {
     var importExportBox = document.getElementById("importExportBox")
     importExportBox.value = window.btoa(JSON.stringify(gameData))
+    if (typeof importExportBox.select === "function") {
+        importExportBox.select()
+    }
+    showSettingsMessage("Save exported. Copy the text above.", "info")
 }
 
 function initBaseGame() {

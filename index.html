@@ -678,6 +678,7 @@
                             <form style="margin-top: 16px"> 
                                 <input id="importExportBox" type="text" style="width:300px; height:30px"></input>
                             </form>
+                            <div id="settingsMessage" class="settings-message"></div>
                         </li>
                         <li>
                             <h2>Переключить светлую/тёмную тему</h2>
@@ -691,9 +692,21 @@
                         </li>
                         <li>
                             <h2>Полный сброс игры</h2>
-                            <button class="w3-button button w3-red" onClick="resetGameData()">Сбросить</button>
+                            <button class="w3-button button w3-red" onClick="openResetConfirm()">Сбросить</button>
                         </li>
                     </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="resetModal" class="w3-modal" style="display:none;">
+        <div class="w3-modal-content w3-dark-grey" style="max-width:500px; margin-top:10%;">
+            <div class="w3-container">
+                <h3>Reset progress?</h3>
+                <p>Это удалит <b>весь</b> прогресс (работы, навыки, энтропию, настройки). Действие необратимо.</p>
+                <div style="margin-top: 16px; text-align: right;">
+                    <button class="w3-button button" onClick="closeResetConfirm()">Cancel</button>
+                    <button class="w3-button button w3-red" style="margin-left: 8px;" onClick="confirmResetGameData()">Reset anyway</button>
                 </div>
             </div>
         </div>
