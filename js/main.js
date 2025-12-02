@@ -741,7 +741,7 @@ const entropySkillCategories = {
 }
 
 // Чисто энтропийные ветки, скрываются до полной разблокировки энтропии
-const entropyOnlySkillCategories = ["Deep Studies", "Longevity", "Orchestration", "Commitments", "Cycle"]
+const entropyOnlySkillCategories = ["Entropy Studies", "Deep Studies", "Longevity", "Orchestration", "Commitments", "Cycle"]
 
 const itemCategories = {
     "Properties": ["Homeless", "Tent", "Wooden hut", "Cottage", "House", "Large house", "Small palace", "Grand palace"],
