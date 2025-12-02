@@ -3456,41 +3456,32 @@ function checkSkillSkipped(skill) {
 }
 
 function setSkillWithLowestMaxXp() {
-    var xpDict = {}
-
+    var candidate = null
     for (skillName in gameData.taskData) {
         var skill = gameData.taskData[skillName]
         var requirement = gameData.requirements[skillName]
         if (!(skill instanceof Skill)) continue
         if (!requirement || !requirement.isCompleted()) continue
         if (checkSkillSkipped(skill)) continue
-        xpDict[skill.name] = skill.level //skill.getMaxXp() / skill.getXpGain()
-    }
-
-    var keys = Object.keys(xpDict)
-    if (keys.length === 0) {
-        skillWithLowestMaxXp = gameData.taskData["Concentration"]
-        return
-    }
-
-    var skillName = getKeyOfLowestValueFromDict(xpDict)
-    skillWithLowestMaxXp = gameData.taskData[skillName]
-}
-
-function getKeyOfLowestValueFromDict(dict) {
-    var values = []
-    for (key in dict) {
-        var value = dict[key]
-        values.push(value)
-    }
-
-    values.sort(function(a, b){return a - b})
-
-    for (key in dict) {
-        var value = dict[key]
-        if (value == values[0]) {
-            return key
+        if (!candidate) {
+            candidate = skill
+            continue
         }
+        if (skill.level < candidate.level) {
+            candidate = skill
+        } else if (skill.level === candidate.level) {
+            var skillXp = skill.xp || 0
+            var candidateXp = candidate.xp || 0
+            if (skillXp < candidateXp) {
+                candidate = skill
+            }
+        }
+    }
+
+    if (candidate) {
+        skillWithLowestMaxXp = candidate
+    } else {
+        skillWithLowestMaxXp = gameData.taskData["Concentration"]
     }
 }
 
