@@ -3462,7 +3462,8 @@ function chooseAutoLearnTarget() {
         var skill = gameData.taskData[skillName]
         var requirement = gameData.requirements[skillName]
         if (!(skill instanceof Skill)) continue
-        if (!requirement || !requirement.isCompleted()) continue
+        var unlocked = !requirement || (typeof requirement.isCompleted === "function" ? requirement.isCompleted() : requirement.completed === true)
+        if (!unlocked) continue
         if (checkSkillSkipped(skill)) continue
         if (!candidate) {
             candidate = skill
