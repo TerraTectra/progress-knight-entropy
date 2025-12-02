@@ -89,7 +89,6 @@ var gameData = {
 var tempData = {}
 
 var skillWithLowestMaxXp = null
-var almanachOfferedThisLife = false
 var realityArchitectureEffect = null
 var baseInitialized = false
 var entropyInitialized = false
@@ -645,11 +644,12 @@ const jobBaseData = {
 }
 
 const entropyJobBaseData = {
+    "Work with Entropy": {name: "Work with Entropy", maxXp: 3000, income: 150},
     "Chronicle Keeper": {name: "Chronicle Keeper", maxXp: 5000, income: 250},
     "Fate Analyst": {name: "Fate Analyst", maxXp: 25000, income: 1500},
     "Flow Regulator": {name: "Flow Regulator", maxXp: 150000, income: 8000},
     "Reality Architect": {name: "Reality Architect", maxXp: 750000, income: 25000},
-}
+} 
 
 const skillBaseData = {
     "Concentration": {name: "Concentration", maxXp: 100, effect: 0.01, description: "Skill xp"},
@@ -687,11 +687,12 @@ const skillBaseData = {
 
 const entropySkillBaseData = {
     "Read Almanach": {name: "Read Almanach", maxXp: 200, effect: 0.005, description: "Insight gain", meaningTag: "meaningful"},
+    "Study Entropy": {name: "Study Entropy", maxXp: 400, effect: 0.004, description: "Entropy understanding"},
     "Pattern Comprehension": {name: "Pattern Comprehension", maxXp: 400, effect: 0.004, description: "Max level bonus"},
     "Time Manipulation": {name: "Time Manipulation", maxXp: 800, effect: 0.004, description: "Longevity efficiency"},
     "Reality Architecture": {name: "Reality Architecture", maxXp: 1600, effect: 0.006, description: "High-tier job xp"},
     "Self-Awareness of the Cycle": {name: "Self-Awareness of the Cycle", maxXp: 2000, effect: 0.002, description: "All xp"},
-}
+} 
 
 const itemBaseData = {
     "Homeless": {name: "Homeless", expense: 0, effect: 1},
@@ -724,7 +725,7 @@ const skillCategories = {
     "Combat": ["Strength", "Battle tactics", "Muscle memory"],
     "Magic": ["Mana control", "Immortality", "Time warping", "Super immortality"],
     "Dark magic": ["Dark influence", "Evil control", "Intimidation", "Demon training", "Blood meditation", "Demon's wealth"],
-    "Entropy Studies": ["Read Almanach"],
+    "Entropy Studies": ["Read Almanach", "Study Entropy"],
     "Deep Studies": ["Pattern Weaving"],
     "Longevity": ["Body Maintenance"],
     "Orchestration": ["Life Orchestration"],
@@ -733,12 +734,12 @@ const skillCategories = {
 }
 
 const entropyJobCategories = {
-    "Entropy Work": ["Chronicle Keeper", "Fate Analyst", "Flow Regulator", "Reality Architect"],
-}
+    "Entropy Work": ["Work with Entropy", "Chronicle Keeper", "Fate Analyst", "Flow Regulator", "Reality Architect"],
+} 
 
 const entropySkillCategories = {
-    "Entropy Studies": ["Pattern Comprehension", "Time Manipulation", "Reality Architecture", "Self-Awareness of the Cycle"],
-}
+    "Entropy Studies": ["Read Almanach", "Study Entropy", "Pattern Comprehension", "Time Manipulation", "Reality Architecture", "Self-Awareness of the Cycle"],
+} 
 
 // Чисто энтропийные ветки, скрываются до полной разблокировки энтропии
 const entropyOnlySkillCategories = ["Entropy Studies", "Deep Studies", "Longevity", "Orchestration", "Commitments", "Cycle"]
@@ -3297,14 +3298,21 @@ function allStandardContentUnlocked() {
     return true
 }
 
-function checkAlmanachEvent() {
-    if (!gameData.entropy || almanachOfferedThisLife) return
-    if (gameData.entropy.hasAlmanac) return
-    if (daysToYears(gameData.days) < 55) return
-
-    almanachOfferedThisLife = true
+function showAlmanacDiscoveryDialog() {
     alert("At age 55, you uncover a heavy Almanach of Entropy. Its pages whisper of patterns, but its power remains dormant-for now.")
+}
+
+function showEntropyUnlockedDialogOnce() {
+    alert("You jolt awake at 14 once more. The Almanach is bound to you now-its entropy lessons will follow every life from here on.")
+}
+
+function maybeUnlockAlmanac() {
+    if (!gameData.entropy) return
+    if (gameData.entropy.hasAlmanac) return
+    var ageYears = Math.floor(gameData.days / 365)
+    if (ageYears < 55) return
     gameData.entropy.hasAlmanac = true
+    showAlmanacDiscoveryDialog()
 }
 
 function getInsightGain(task) {
@@ -3933,13 +3941,20 @@ function bindEntropyOnFirstRebirth() {
     alert("You jolt awake at 14 once more. The Almanach is bound to you now-its entropy lessons will follow every life from here on.")
 }
 
+function maybeUnlockEntropyOnRebirth() {
+    if (!gameData.entropy) return
+    if (!gameData.entropy.hasAlmanac) return
+    if (gameData.entropy.entropyUnlocked) return
+    bindEntropyOnFirstRebirth()
+}
+
 function rebirthOne() {
     updateEntropyPatternsOnRebirth()
     gameData.rebirthOneCount += 1
     applyEntropyRebirthGain()
 
+    maybeUnlockEntropyOnRebirth()
     rebirthReset()
-    bindEntropyOnFirstRebirth()
 }
 
 function rebirthTwo() {
@@ -3965,7 +3980,6 @@ function entropyHardReset() {
 
 function rebirthReset() {
     setTab(jobTabButton, "jobs")
-    almanachOfferedThisLife = false
     gameData.entropy.focusTask = null
     universeSwitchPenalty = 0
     lastJobName = null
@@ -4202,12 +4216,13 @@ function update() {
         decaySwitchPenalty()
         decayBurnout()
         updateMeaning()
-        updateCycleStrain()
-        tryMetaTune()
-        recordLifeTickParticipation()
-        increaseDays()
-        autoPromote()
-        autoLearn()
+    updateCycleStrain()
+    tryMetaTune()
+    recordLifeTickParticipation()
+    increaseDays()
+    maybeUnlockAlmanac()
+    autoPromote()
+    autoLearn()
         if (isCycleOverseerActive()) {
             var focusTask = getFocusedTask()
             if (focusTask) {
@@ -4224,7 +4239,6 @@ function update() {
             doCurrentTask(gameData.currentSkill)
         }
         applyExpenses()
-        checkAlmanachEvent()
     }
     updateUI()
     checkForcedRebirth()
@@ -4510,7 +4524,6 @@ function initBaseGame() {
         "Time warping info": new TaskRequirement([document.getElementById("timeWarping")], [{task: "Mage", requirement: 10}]),
         "Automation": new AgeRequirement([document.getElementById("automation")], [{requirement: 20}]),
         "Quick task display": new AgeRequirement([document.getElementById("quickTaskDisplay")], [{requirement: 20}]),
-        "Read Almanach": new AgeRequirement([getTaskElement("Read Almanach")], [{requirement: 55}]),
         "Body Maintenance": new AgeRequirement([getTaskElement("Body Maintenance")], [{requirement: 50}]),
         "Life Decision": new AgeRequirement([getTaskElement("Life Decision")], [{requirement: 35}]),
         "Cycle Steward": new AgeRequirement([getTaskElement("Cycle Steward")], [{requirement: 40}]),
@@ -4628,11 +4641,12 @@ function initEntropyGame() {
 
     var entropyRequirements = {
         "Entropy tab": new EntropyRequirement([document.getElementById("entropyTabButton"), document.getElementById("entropy")], [{seeds: 1}]),
-        "Deep Studies": new EntropyRequirement([getTaskElement("Deep Studies")], [{seeds: 1}]),
-        "Pattern Comprehension": new TaskRequirement([getTaskElement("Pattern Comprehension")], [{task: "Read Almanach", requirement: 25}]),
+        "Work with Entropy": new TaskRequirement([getTaskElement("Work with Entropy")], [{task: "Read Almanach", requirement: 5}]),
+        "Study Entropy": new TaskRequirement([getTaskElement("Study Entropy")], [{task: "Read Almanach", requirement: 25}]),
+        "Pattern Comprehension": new TaskRequirement([getTaskElement("Pattern Comprehension")], [{task: "Study Entropy", requirement: 1}]),
         "Time Manipulation": new TaskRequirement([getTaskElement("Time Manipulation")], [{task: "Pattern Comprehension", requirement: 50}]),
         "Reality Architecture": new TaskRequirement([getTaskElement("Reality Architecture")], [{task: "Time Manipulation", requirement: 75}]),
-        "Self-Awareness of the Cycle": new TaskRequirement([getTaskElement("Self-Awareness of the Cycle")], [{task: "Read Almanach", requirement: 100}]),
+        "Self-Awareness of the Cycle": new TaskRequirement([getTaskElement("Self-Awareness of the Cycle")], [{task: "Study Entropy", requirement: 25}]),
         "Pattern Weaving": new TaskRequirement([getTaskElement("Pattern Weaving")], [{task: "Pattern Comprehension", requirement: 50}, {universe: 3}]),
         "Body Maintenance": new TaskRequirement([getTaskElement("Body Maintenance")], [{task: "Meditation", requirement: 150}, {universe: 4}]),
         "Life Orchestration": new TaskRequirement([getTaskElement("Life Orchestration")], [{task: "Pattern Weaving", requirement: 30}, {age: 35}, {universe: 5}]),
@@ -4644,7 +4658,7 @@ function initEntropyGame() {
         "Existential Insight": new TaskRequirement([getTaskElement("Existential Insight")], [{task: "Life Decision", requirement: 10}, {meaning: 5}, {age: 40}, {universe: 7}]),
         "Cycle Steward": new TaskRequirement([getTaskElement("Cycle Steward")], [{task: "Body Maintenance", requirement: 50}, {task: "Life Orchestration", requirement: 20}, {age: 45}, {universe: 8}]),
         "Meta Tuning": new TaskRequirement([getTaskElement("Meta Tuning")], [{task: "Existential Insight", requirement: 10}, {task: "Cycle Steward", requirement: 10}, {age: 50}, {universe: 9}]),
-        "Chronicle Keeper": new TaskRequirement([getTaskElement("Chronicle Keeper")], [{task: "Read Almanach", requirement: 5}]),
+        "Chronicle Keeper": new TaskRequirement([getTaskElement("Chronicle Keeper")], [{task: "Work with Entropy", requirement: 10}]),
         "Fate Analyst": new TaskRequirement([getTaskElement("Fate Analyst")], [{task: "Pattern Comprehension", requirement: 30}]),
         "Flow Regulator": new TaskRequirement([getTaskElement("Flow Regulator")], [{task: "Time Manipulation", requirement: 50}]),
         "Reality Architect": new TaskRequirement([getTaskElement("Reality Architect")], [{task: "Reality Architecture", requirement: 30}]),
@@ -4775,6 +4789,18 @@ if (typeof window !== "undefined") {
         var targetName = Object.keys(xpDict).length ? getKeyOfLowestValueFromDict(xpDict) : null
         var target = targetName ? gameData.taskData[targetName] : null
         console.log("Chosen target:", target ? target.name : "(none) -> fallback Concentration")
+    }
+}
+
+if (typeof window !== "undefined") {
+    window.__debugEntropy = function() {
+        console.log("Entropy state:", gameData.entropy)
+        var read = gameData.taskData["Read Almanach"]
+        var workReq = gameData.requirements["Work with Entropy"]
+        var studyReq = gameData.requirements["Study Entropy"]
+        console.log("Read Almanach lvl:", read ? read.level : "n/a")
+        console.log("Work with Entropy unlocked:", workReq ? workReq.isCompleted() : "no req")
+        console.log("Study Entropy unlocked:", studyReq ? studyReq.isCompleted() : "no req")
     }
 }
 function attemptSelectTask(task) {
