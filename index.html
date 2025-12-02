@@ -35,6 +35,20 @@
             color: #fff;
             cursor: pointer;
         }
+        /* Hard guard: Entropy tab stays hidden until JS sets body.entropy-visible */
+        #entropyTabButton,
+        #entropy {
+            display: none !important;
+            visibility: hidden !important;
+        }
+        body.entropy-visible #entropyTabButton {
+            display: inline-block !important;
+            visibility: visible !important;
+        }
+        body.entropy-visible #entropy {
+            display: block !important;
+            visibility: visible !important;
+        }
     </style>
     <title id="titleText">Progress Knight</title>
 </head>
