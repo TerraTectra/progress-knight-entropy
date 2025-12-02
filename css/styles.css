@@ -2,6 +2,14 @@ body {
     background-color: rgb(243, 243, 243);
 }
 
+:root {
+    --pk-base-font-size: 15px;
+}
+
+body {
+    font-size: var(--pk-base-font-size);
+}
+
 .w3-bar-item {
     width: 100px;
     min-height: 40px;
@@ -202,4 +210,44 @@ button:focus {
 
 .small-margin  {
     margin-bottom: 2px;
+}
+
+/* Responsive font sizing for long labels in tables */
+jobTable .name,
+skillTable .name,
+itemTable .name {
+    font-size: clamp(11px, 0.95vw, 14px);
+    line-height: 1.15;
+    word-break: break-word;
+    white-space: normal;
+}
+
+/* Responsive font sizing for headers and tabs */
+jobTable th,
+skillTable th,
+itemTable th {
+    font-size: clamp(11px, 0.9vw, 14px);
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Top-level tab buttons (Jobs / Skills / Shop / Settings) */
+tabs .w3-bar .w3-bar-item,
+tabs .tabButton,
+settingsTabs .tabButton {
+    font-size: clamp(12px, 0.9vw, 15px);
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Better alignment for multi-line buttons inside tables */
+table .button,
+itemTable button,
+skillTable button,
+jobTable button {
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
 }
