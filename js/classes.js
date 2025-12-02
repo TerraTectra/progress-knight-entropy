@@ -203,7 +203,7 @@ class EntropyRequirement extends Requirement {
     }
 
     getCondition(requirement) {
-        var unlocked = (typeof isEntropyUnlocked === "function") ? isEntropyUnlocked() : (gameData && gameData.entropy && gameData.entropy.unlocked)
+        var unlocked = (typeof isEntropyUnlocked === "function") ? isEntropyUnlocked() : (gameData && gameData.entropy && gameData.entropy.entropyUnlocked)
         var seedsOk = requirement.seeds ? (gameData && gameData.entropy && gameData.entropy.seeds >= requirement.seeds) : true
         if (unlocked && seedsOk) {
             this.completed = true

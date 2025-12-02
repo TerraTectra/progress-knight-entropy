@@ -941,11 +941,11 @@ function getBaseLog(x, y) {
 }
 
 function isEntropyUnlocked() {
-    return gameData.entropy && gameData.entropy.unlocked
+    return gameData.entropy && gameData.entropy.entropyUnlocked
 }
 
 function isEntropyFullyUnlocked() {
-    return !!(gameData.entropy && gameData.entropy.unlocked === true)
+    return !!(gameData.entropy && gameData.entropy.entropyUnlocked === true)
 }
 
 function isEntropyOnlySkill(taskOrName) {
@@ -3172,7 +3172,7 @@ function enforceEntropyTabVisibility() {
     // (this is exactly the moment when the Almanach is bound and Entropy becomes real).
     var unlocked = typeof isEntropyUnlocked === "function"
         ? isEntropyUnlocked()
-        : !!(gameData && gameData.entropy && gameData.entropy.unlocked);
+        : !!(gameData && gameData.entropy && gameData.entropy.entropyUnlocked);
     var hasSeeds = !!(gameData && gameData.entropy && gameData.entropy.seeds && gameData.entropy.seeds > 0);
 
     // Also respect the "Entropy tab" Requirement, if present, so we stay in sync
@@ -3246,7 +3246,7 @@ function hideEntities() {
         var requirement = gameData.requirements[key]
         if (!requirement || !requirement.elements) continue
         if (key === "Entropy tab") {
-            var unlockedEntropy = typeof isEntropyUnlocked === "function" ? isEntropyUnlocked() : (gameData && gameData.entropy && gameData.entropy.unlocked);
+            var unlockedEntropy = typeof isEntropyUnlocked === "function" ? isEntropyUnlocked() : (gameData && gameData.entropy && gameData.entropy.entropyUnlocked);
             var hasEntropySeeds = !!(gameData && gameData.entropy && gameData.entropy.seeds && gameData.entropy.seeds > 0);
             if (!unlockedEntropy || !hasEntropySeeds) {
                 requirement.completed = false;
@@ -3299,13 +3299,12 @@ function allStandardContentUnlocked() {
 
 function checkAlmanachEvent() {
     if (!gameData.entropy || almanachOfferedThisLife) return
-    if (gameData.entropy.unlocked) return
-    var totalRebirths = gameData.rebirthOneCount + gameData.rebirthTwoCount
-    if (totalRebirths !== 0) return
+    if (gameData.entropy.hasAlmanac) return
     if (daysToYears(gameData.days) < 55) return
 
     almanachOfferedThisLife = true
     alert("At age 55, you uncover a heavy Almanach of Entropy. Its pages whisper of patterns, but its power remains dormant-for now.")
+    gameData.entropy.hasAlmanac = true
 }
 
 function getInsightGain(task) {
@@ -3622,7 +3621,8 @@ function performRebirth(hardReset) {
 
 function ensureEntropyState() {
     var defaults = {
-        unlocked: false,
+        entropyUnlocked: false,
+        hasAlmanac: false,
         seeds: 0,
         insight: 0,
         EP: 0,
@@ -3634,6 +3634,9 @@ function ensureEntropyState() {
     if (!gameData.entropy) {
         gameData.entropy = Object.assign({}, defaults)
     } else {
+        if (gameData.entropy.unlocked && gameData.entropy.entropyUnlocked === undefined) {
+            gameData.entropy.entropyUnlocked = true
+        }
         for (key in defaults) {
             if (gameData.entropy[key] === undefined) {
                 gameData.entropy[key] = defaults[key]
@@ -3921,14 +3924,13 @@ function updateEntropyPatternsOnRebirth() {
 
 function bindEntropyOnFirstRebirth() {
     if (!gameData.entropy) return
-    var totalRebirths = gameData.rebirthOneCount + gameData.rebirthTwoCount
-    if (totalRebirths !== 1) return
-    if (gameData.entropy.unlocked) return
+    if (!gameData.entropy.hasAlmanac) return
+    if (gameData.entropy.entropyUnlocked) return
 
-    gameData.entropy.unlocked = true
+    gameData.entropy.entropyUnlocked = true
     gameData.entropy.seeds = Math.max(gameData.entropy.seeds || 0, 1)
     initEntropyGame()
-    alert("You jolt awake at 14 once more. The Almanach is bound to you now—its entropy lessons will follow every life from here on.")
+    alert("You jolt awake at 14 once more. The Almanach is bound to you now-its entropy lessons will follow every life from here on.")
 }
 
 function rebirthOne() {
@@ -3947,7 +3949,6 @@ function rebirthTwo() {
     applyEntropyRebirthGain()
 
     rebirthReset()
-    bindEntropyOnFirstRebirth()
 
     for (taskName in gameData.taskData) {
         var task = gameData.taskData[taskName]
@@ -4607,7 +4608,7 @@ function initBaseGame() {
         if (anyLocked) break
     }
     var requirementsActive = Object.keys(gameData.requirements).length > 0
-    if (!anyLocked || !requirementsActive || (gameData.entropy && gameData.entropy.unlocked)) {
+    if (!anyLocked || !requirementsActive || (gameData.entropy && gameData.entropy.entropyUnlocked)) {
         console.error("Base init assertion failed: requirements missing or entropy unlocked too early.")
     }
 
@@ -4687,7 +4688,7 @@ function startGame() {
         gameData.hasAnsweredFirstTimePrompt = true
     }
 
-    var shouldUnlockEntropy = savedGameData && savedGameData.entropy && savedGameData.entropy.unlocked
+    var shouldUnlockEntropy = savedGameData && savedGameData.entropy && savedGameData.entropy.entropyUnlocked
 
     if (!gameData.hasAnsweredFirstTimePrompt) {
         handleFirstTimePrompt()
@@ -4695,7 +4696,7 @@ function startGame() {
     }
 
     if (gameData.entropy) {
-        gameData.entropy.unlocked = false
+        gameData.entropy.entropyUnlocked = false
     }
 
     initBaseGame()
@@ -4706,14 +4707,15 @@ function startGame() {
     ensureEntropyArtifactsState()
     ensureCoinRequirementKeys()
 
-    if (shouldUnlockEntropy || (gameData.entropy && gameData.entropy.unlocked)) {
-        gameData.entropy.unlocked = true
+    if (shouldUnlockEntropy || (gameData.entropy && gameData.entropy.entropyUnlocked)) {
+        gameData.entropy.entropyUnlocked = true
         initEntropyGame()
     }
 
     loadGameData()
+    ensureEntropyState()
 
-    if (gameData.entropy.unlocked) {
+    if (gameData.entropy.entropyUnlocked) {
         gameData.entropy.seeds = Math.max(gameData.entropy.seeds || 0, 1)
         initEntropyGame()
     }
