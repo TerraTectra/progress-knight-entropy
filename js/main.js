@@ -2423,6 +2423,19 @@ function updateTaskRows() {
         if (skipSkillElement) {
             skipSkillElement.style.display =
                 task instanceof Skill && autoLearnElement.checked ? "block" : "none"
+            var checkbox = skipSkillElement.getElementsByClassName("checkbox")[0]
+            if (checkbox) {
+                checkbox.checked = !!(gameData.skipSkills && gameData.skipSkills[task.name])
+                if (!checkbox.dataset.bound) {
+                    (function(name) {
+                        checkbox.addEventListener("change", function() {
+                            ensureSkipSkillsState()
+                            gameData.skipSkills[name] = this.checked
+                        })
+                    })(task.name)
+                    checkbox.dataset.bound = "true"
+                }
+            }
         }
 
         var focusTag = row.getElementsByClassName("focusTag")[0]
@@ -3450,10 +3463,8 @@ function autoPromote() {
 }
 
 function checkSkillSkipped(skill) {
-    var row = document.getElementById("row " + skill.name)
-    if (!row) return false
-    var checkbox = row.getElementsByClassName("checkbox")[0]
-    return checkbox ? checkbox.checked : false
+    if (!gameData.skipSkills) return false
+    return !!gameData.skipSkills[skill.name]
 }
 
 function chooseAutoLearnTarget() {
@@ -3736,6 +3747,12 @@ function ensureAutoSwitchState() {
     }
     if (gameData.autoSwitchSkills === undefined) {
         gameData.autoSwitchSkills = false
+    }
+}
+
+function ensureSkipSkillsState() {
+    if (!gameData.skipSkills) {
+        gameData.skipSkills = {}
     }
 }
 
@@ -4115,6 +4132,7 @@ function loadGameData() {
     ensureEntropyPatternsState()
     ensureEntropyArtifactsState()
     ensureAutoSwitchState()
+    ensureSkipSkillsState()
     ensureUniverseState()
     ensureFirstTimePromptState()
     assignMethods()
@@ -4738,7 +4756,8 @@ if (typeof window !== "undefined") {
         console.log("Auto-learn candidates:")
         allSkills.forEach(function(s) {
             var req = gameData.requirements[s.name]
-            console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", !!(req && req.isCompleted()), "skipped", checkSkillSkipped(s))
+            var unlocked = !req || (typeof req.isCompleted === "function" ? req.isCompleted() : req && req.completed === true)
+            console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", unlocked, "skipped", checkSkillSkipped(s))
         })
         console.log("Chosen target:", target ? target.name : "(none) -> fallback Concentration")
     }
