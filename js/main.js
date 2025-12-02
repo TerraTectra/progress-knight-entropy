@@ -3451,11 +3451,12 @@ function autoPromote() {
 
 function checkSkillSkipped(skill) {
     var row = document.getElementById("row " + skill.name)
-    var isSkillSkipped = row.getElementsByClassName("checkbox")[0].checked
-    return isSkillSkipped
+    if (!row) return false
+    var checkbox = row.getElementsByClassName("checkbox")[0]
+    return checkbox ? checkbox.checked : false
 }
 
-function setSkillWithLowestMaxXp() {
+function chooseAutoLearnTarget() {
     var candidate = null
     for (skillName in gameData.taskData) {
         var skill = gameData.taskData[skillName]
@@ -3469,7 +3470,9 @@ function setSkillWithLowestMaxXp() {
         }
         if (skill.level < candidate.level) {
             candidate = skill
-        } else if (skill.level === candidate.level) {
+            continue
+        }
+        if (skill.level === candidate.level) {
             var skillXp = skill.xp || 0
             var candidateXp = candidate.xp || 0
             if (skillXp < candidateXp) {
@@ -3477,7 +3480,11 @@ function setSkillWithLowestMaxXp() {
             }
         }
     }
+    return candidate
+}
 
+function setSkillWithLowestMaxXp() {
+    var candidate = chooseAutoLearnTarget()
     if (candidate) {
         skillWithLowestMaxXp = candidate
     } else {
@@ -4717,6 +4724,24 @@ document.addEventListener("DOMContentLoaded", function () {
         btn.addEventListener("click", hideIntroModal);
     }
 });
+
+// Debug helper to inspect auto-learn choice in console
+if (typeof window !== "undefined") {
+    window.__debugAutoLearnOnce = function() {
+        var allSkills = []
+        for (key in gameData.taskData) {
+            var s = gameData.taskData[key]
+            if (s instanceof Skill) allSkills.push(s)
+        }
+        var target = chooseAutoLearnTarget()
+        console.log("Auto-learn candidates:")
+        allSkills.forEach(function(s) {
+            var req = gameData.requirements[s.name]
+            console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", !!(req && req.isCompleted()), "skipped", checkSkillSkipped(s))
+        })
+        console.log("Chosen target:", target ? target.name : "(none) -> fallback Concentration")
+    }
+}
 function attemptSelectTask(task) {
     if (!task) return false
     if (!isTaskExclusiveAvailable(task.name)) return false
