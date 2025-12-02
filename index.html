@@ -1,0 +1,682 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+    <link rel="stylesheet" type="text/css" href="css/dark.css">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
+    <style>
+        .debug-panel {
+            position: fixed;
+            right: 10px;
+            bottom: 10px;
+            width: 320px;
+            max-height: 50vh;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            font-size: 11px;
+            padding: 6px;
+            border-radius: 4px;
+            z-index: 9999;
+            overflow: auto;
+        }
+        .debug-panel.hidden {
+            display: none;
+        }
+        #debug-panel-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        #debug-panel-header button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+    </style>
+    <title id="titleText">Progress Knight</title>
+</head>
+<body id="body" class="dark">
+    <div class="w3-margin"> 
+        <h1 id="titleHeader">Progress Knight</h1>
+        <div style="width: 1220px; height: 600px"> 
+            <div id="life-root" class="panel w3-padding" style="width: 300px; height: auto; float: left">
+                <span id="deathText">
+                    <div style="font-size: large; color: red">Возраст настиг вас</div>
+                    <div class="sidebar-element" style="color: gray">Возраст сравнялся с продолжительностью жизни, используйте амулет для перерождения прежде чем умереть</div>
+                </span>
+
+                <div class="sidebar-element" id="universeDisplay" style="font-size: large; color: gray">Universe I</div>
+                <div class="sidebar-element" id="cycleStrainDisplay" style="font-size: small; color: gray"></div>
+                <div class="sidebar-element" id="metaPanel" style="font-size: small; color: gray"></div>
+                <button id="debug-toggle-button" class="w3-button button sidebar-element">Debug</button>
+                <div class="sidebar-element hidden" id="observerScaffoldBox" style="font-size: small; color: gray; border: 1px solid #555; padding: 4px; margin-top: 6px;"></div>
+
+                <div class="" style="font-size: large"><span id="ageLabel">Age</span> <span id="ageDisplay">14</span> <span id="dayLabel">Day</span> <span id="dayDisplay">0</span></div>
+                <div class="sidebar-element" style="color: gray"><span id="lifespanLabel">Lifespan:</span> <span id="lifespanDisplay">70</span> <span id="lifespanYearsLabel">years</span></div>
+                
+                <button id="pauseButton" class="w3-button button sidebar-element" onClick="setPause()">Pause</button>
+                <button id="universeAdvanceButton" class="w3-button button sidebar-element hidden" onClick="moveToNextUniverse()">Travel to next universe</button>
+
+                <span id="automation" class="inline" style="margin-left: 8px">
+                    <span>
+                        <div class="inline">Auto-promote</div>
+                        <input type="checkbox" class="inline" id="autoPromote">
+                    </span>
+                    </br>
+                    <span>
+                        <div class="inline">Auto-learn</div>
+                        <input type="checkbox" class="inline sidebar-element" id="autoLearn">
+                    </span>
+                </span>
+
+                <div style="font-size: large" id="coinDisplay">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div style="color: gray" id="balanceLabel">Balance (in coins)</div>
+
+                <ul class="sidebar-element" style="padding-left: 20px;">
+                    <li><span style="color: rgb(9, 160, 230)" id="netLabel">Net/day: </span ><b id="signDisplay"></b><span id="netDisplay">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span></li>
+                    <li><span style="color: green" id="incomeLabel">Income/day: </span><span id="incomeDisplay">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span></li>
+                    <li><span style="color: red" id="expenseLabel">Expense/day: </span><span id="expenseDisplay">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span></li>
+                </ul>
+
+                <span id="quickTaskDisplay">
+                    <div style="width: 230px" class="small-margin inline job progress-bar progressBar">
+                        <div class="progress-fill progressFill" style="background-color:rgb(225, 165, 0)"></div>
+                        <div class="progress-text name">Task</div>
+                    </div>
+                    <div class="sidebar-element" style="color: gray" id="currentJobLabel">Current job</div>
+
+                    <div style="width: 230px" class="small-margin skill progress-bar progressBar">
+                        <div class="progress-fill progressFill" style="background-color:rgb(225, 165, 0)"></div>
+                        <div class="progress-text name">Task</div>              
+                    </div>
+                    <div class="sidebar-element" style="color: gray" id="currentSkillLabel">Current skill</div>
+                </span>
+
+                <div style="font-size: large"><span style="color: rgb(15, 105, 207)" id="happinessLabel">Happiness: </span><span id="happinessDisplay"></span></div>
+                <div style="color: gray" class="sidebar-element" id="happinessHint">Affects all xp gain</div>
+
+                <span id="evilInfo">
+                    <div style="font-size: large"><span style="color: rgb(200, 0, 0)" id="evilLabel">Evil: </span><span id="evilDisplay"></span></div>
+                    <div style="color: gray" class="sidebar-element" id="evilHint">Affects dark magic xp gain</div>
+                </span>
+
+                <!--
+                <span id="scheduling">
+                    <div style="font-size: large">Scheduling</div>
+                    <div style="color: gray" class="sidebar-element">Schedule time to jobs/skills</div>
+                    <span style="height: 30px"> 
+                        <p style="width: 5px">Jobs</br>(32%)</p>
+                        <input id="schedulingSlider" class="slider" type="range" min="0" max="100" value="0">
+                        <p style="width: 5px">Skills</br>(68%)</p>
+                    </span>
+                </span>
+                -->
+
+                <span id="timeWarping">
+                    <div style="font-size: large"><span style="color: rgb(204, 34, 219)" id="timeWarpingLabel">Time warping: </span><span id="timeWarpingDisplay"></span></div>
+                    <div style="color: gray" id="timeWarpingHint">Affects game speed</div>
+                    <button id="timeWarpingButton" class="w3-button button sidebar-element" style="margin-top: 5px; width:150px" onClick="setTimeWarping()">Enable warp</button>
+                </span>
+            </div>
+
+            <div id="life-root-tabs" class="panel w3-margin-left" style="width: 900px; height: 40px; float: left">
+                <div class="w3-button w3-bar-item tabButton" id="jobTabButton" onClick="setTab(this, 'jobs')">Jobs</div>
+                <div class="w3-button w3-bar-item tabButton" onClick="setTab(this, 'skills')">Skills</div>
+                <div class="w3-button w3-bar-item tabButton" id="shopTabButton" onClick="setTab(this, 'shop')">Shop</div>
+                <div class="w3-button w3-bar-item tabButton hidden" id="entropyTabButton" onClick="setTab(this, 'entropy')">Entropy</div>
+                <div class="w3-button w3-bar-item tabButton" id="rebirthTabButton" onClick="setTab(this, 'rebirth')">Amulet</div>
+                <div class="w3-button w3-bar-item tabButton" onClick="setTab(this, 'settings')" style="float: right">Settings</div>
+            </div>
+
+            <div id="observer-root" class="panel w3-padding hidden" style="width: 1200px; height: auto; float: left">
+                <h3>Observer of Worlds</h3>
+                <div id="observerContent"></div>
+            </div>
+
+            <div id="life-root-content" class="panel w3-margin-left w3-margin-top w3-padding" style="width: 900px; height: auto; float: left">
+                <div id="observerPanel" class="hidden">
+                    <h3>Observer of Worlds</h3>
+                    <div id="observerHeader" class="w3-margin-bottom"></div>
+                    <div class="w3-row">
+                        <div class="w3-half">
+                            <h4>Students</h4>
+                            <div id="observerStudents"></div>
+                        </div>
+                        <div class="w3-half">
+                            <h4>Details</h4>
+                            <div id="observerDetails"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <template class="headerRowTaskTemplate">
+                    <tr>
+                        <th class="category" style="width: 250px">Job</th>
+                        <th>Level</th>
+                        <th class="valueType">Value type</th>
+                        <th>Xp/day</th>
+                        <th>Xp left</th>
+                        <th class="maxLevel">Max level</th>
+                        <th class="skipSkill">Skip</th>
+                    </tr>
+                </template>
+
+                <template class="headerRowItemTemplate">
+                    <tr>
+                        <th class="category" style="width: 250px">Item</th>
+                        <th style="width: 100px">Active</th>
+                        <th style="width: 250px">Effect</th>
+                        <th>Expense/day</th>
+                    </tr>
+                </template>
+
+                <template class="rowTaskTemplate">
+                    <tr>
+                        <td>
+                            <div class="progress-bar progressBar tooltip">
+                                <div class="progress-fill progressFill"></div>
+                                <div class="progress-text name">Task</div>
+                                <div class="progress-status focusTag"></div>
+                                <span class="tooltipText"></span>
+                            </div>
+                        </td>
+                        <td class="level">Level</td>
+                        <td class="value">
+                            <div class="effect"></div>
+                            <div class="income">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </td>
+                        <td class="xpGain">Xp/day</td>
+                        <td class="xpLeft">Xp left</td>
+                        <td class="maxLevel">Max level</td>
+                        <td class="skipSkill">
+                            <input class="checkbox" type="checkbox"></input>
+                        </td>
+                    </tr>
+                </template>
+
+                <template class="rowItemTemplate">
+                    <tr>
+                        <td>
+                            
+                            <button class="button item-button tooltip">
+                                <span class="name"></span>
+                                <span class="tooltipText">tooltip</span>
+                            </button>
+                            
+                        </td>
+                        <td>
+                            <div class="w3-border w3-circle" style="width: 40px; height: 40px; padding: 7px">
+                                <div class="active w3-circle" style="width: 24px; height: 24px;"></div>
+                            </div>
+                        </td>
+                        <td class="effect"></td>
+                        <td class="expense">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </td>
+                    </tr>
+                </template>
+
+                <template class="requiredRowTemplate">
+                    <td class="w3-text-gray" style="padding-left: 16px" colspan=5>
+                        Required: 
+                        <span class="value" colspan=5>
+                            <span class="levels"></span>
+                            <span class="coins">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                            <span style="color: rgb(200, 0, 0)" class="evil"></span>
+                        </span>
+                    </td> 
+                </template>
+
+                <div class="tab" id="jobs">
+                    <table id="jobTable" class="w3-table w3-bordered">
+                    </table>
+                </div>
+
+                <div class="tab" id="skills">
+                    <table id="skillTable" class="w3-table w3-bordered">
+                    </table>
+                </div>
+
+                <div class="tab" id="shop">
+                    <table id="itemTable" class="w3-table w3-bordered">
+                    </table>
+                </div>
+
+                <div class="tab hidden" id="entropy">
+                    <div class="w3-row">
+                        <div class="w3-half">
+                            <h3>Entropy Ledger</h3>
+                            <div style="color: gray; margin-bottom: 6px;">Passive actions gain XP only. No passive income.</div>
+                            <p>Seeds: <span id="entropySeedDisplay">0</span></p>
+                            <p>Insight (this life): <span id="entropyInsightDisplay">0</span></p>
+                            <p>Max insight ever: <span id="entropyMaxInsightDisplay">0</span></p>
+                            <p>Entropy points (EP): <span id="entropyEPDisplay">0</span></p>
+                            <p>Focus: <span id="entropyFocusDisplay">Disabled</span></p>
+                            <button class="w3-button button" id="cycleOverseerButton" onClick="unlockCycleOverseer()">Unlock Cycle Overseer</button>
+                            <div style="color: gray; margin-top: 8px;">Passive actions gain XP only and never generate money. Overseer lets one task run at full power while all others train softly.</div>
+                        </div>
+                        <div class="w3-half">
+                            <h3>Entropy Work</h3>
+                            <table id="entropyJobTable" class="w3-table w3-bordered"></table>
+                        </div>
+                    </div>
+                    <div class="w3-row" style="margin-top: 12px;">
+                        <div class="w3-half">
+                            <h3>Entropy Studies</h3>
+                            <table id="entropySkillTable" class="w3-table w3-bordered"></table>
+                        </div>
+                    </div>
+                    <div class="w3-row" id="entropyUpgradeSection" style="margin-top: 12px;">
+                        <div class="w3-third">
+                            <h3>Velocity Upgrades</h3>
+                            <table class="w3-table w3-bordered">
+                                <tr>
+                                    <th style="width: 45%;">Upgrade</th>
+                                    <th style="width: 15%;">Level</th>
+                                    <th style="width: 20%;">Cost</th>
+                                    <th style="width: 20%;"></th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Temporal Momentum</div>
+                                        <div style="color: gray; font-size: 12px;">Extend early window.</div>
+                                    </td>
+                                    <td id="upgrade-velocity-temporalMomentum-level">0/5</td>
+                                    <td id="upgrade-velocity-temporalMomentum-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-velocity-temporalMomentum-buy" onClick="buyEntropyUpgrade('velocity', 'temporalMomentum')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Early Compression</div>
+                                        <div style="color: gray; font-size: 12px;">Front-load early XP.</div>
+                                    </td>
+                                    <td id="upgrade-velocity-earlyCompression-level">0/5</td>
+                                    <td id="upgrade-velocity-earlyCompression-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-velocity-earlyCompression-buy" onClick="buyEntropyUpgrade('velocity', 'earlyCompression')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Chain Progression</div>
+                                        <div style="color: gray; font-size: 12px;">Switch faster.</div>
+                                    </td>
+                                    <td id="upgrade-velocity-chainProgression-level">0/5</td>
+                                    <td id="upgrade-velocity-chainProgression-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-velocity-chainProgression-buy" onClick="buyEntropyUpgrade('velocity', 'chainProgression')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Momentum Persistence</div>
+                                        <div style="color: gray; font-size: 12px;">Sustain early income.</div>
+                                    </td>
+                                    <td id="upgrade-velocity-momentumPersistence-level">0/5</td>
+                                    <td id="upgrade-velocity-momentumPersistence-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-velocity-momentumPersistence-buy" onClick="buyEntropyUpgrade('velocity', 'momentumPersistence')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Wealth Focus</div>
+                                        <div style="color: gray; font-size: 12px;">Prioritize income over mastery (exclusive).</div>
+                                    </td>
+                                    <td id="upgrade-velocity-wealthFocus-level">0/1</td>
+                                    <td id="upgrade-velocity-wealthFocus-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-velocity-wealthFocus-buy" onClick="buyEntropyUpgrade('velocity', 'wealthFocus')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Mastery Focus</div>
+                                        <div style="color: gray; font-size: 12px;">Favor learning over income (exclusive).</div>
+                                    </td>
+                                    <td id="upgrade-velocity-masteryFocus-level">0/1</td>
+                                    <td id="upgrade-velocity-masteryFocus-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-velocity-masteryFocus-buy" onClick="buyEntropyUpgrade('velocity', 'masteryFocus')">Buy</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="w3-third">
+                            <h3>Stability Upgrades</h3>
+                            <table class="w3-table w3-bordered">
+                                <tr>
+                                    <th style="width: 45%;">Upgrade</th>
+                                    <th style="width: 15%;">Level</th>
+                                    <th style="width: 20%;">Cost</th>
+                                    <th style="width: 20%;"></th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Entropy Stability</div>
+                                        <div style="color: gray; font-size: 12px;">Gentle steadiness.</div>
+                                    </td>
+                                    <td id="upgrade-stability-entropyStability-level">0/5</td>
+                                    <td id="upgrade-stability-entropyStability-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-entropyStability-buy" onClick="buyEntropyUpgrade('stability', 'entropyStability')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Life Continuity</div>
+                                        <div style="color: gray; font-size: 12px;">Reward long lives.</div>
+                                    </td>
+                                    <td id="upgrade-stability-lifeContinuity-level">0/5</td>
+                                    <td id="upgrade-stability-lifeContinuity-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-lifeContinuity-buy" onClick="buyEntropyUpgrade('stability', 'lifeContinuity')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Balanced Growth</div>
+                                        <div style="color: gray; font-size: 12px;">Across-the-board gain.</div>
+                                    </td>
+                                    <td id="upgrade-stability-balancedGrowth-level">0/5</td>
+                                    <td id="upgrade-stability-balancedGrowth-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-balancedGrowth-buy" onClick="buyEntropyUpgrade('stability', 'balancedGrowth')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Short Brilliant Life</div>
+                                        <div style="color: gray; font-size: 12px;">Bright early flourish; gentler late game (exclusive).</div>
+                                    </td>
+                                    <td id="upgrade-stability-shortBrilliantLife-level">0/1</td>
+                                    <td id="upgrade-stability-shortBrilliantLife-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-shortBrilliantLife-buy" onClick="buyEntropyUpgrade('stability', 'shortBrilliantLife')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Long Steady Life</div>
+                                        <div style="color: gray; font-size: 12px;">Slow rise, strong finish (exclusive).</div>
+                                    </td>
+                                    <td id="upgrade-stability-longSteadyLife-level">0/1</td>
+                                    <td id="upgrade-stability-longSteadyLife-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-longSteadyLife-buy" onClick="buyEntropyUpgrade('stability', 'longSteadyLife')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Early Peak</div>
+                                        <div style="color: gray; font-size: 12px;">Explosive start, early plateau (exclusive).</div>
+                                    </td>
+                                    <td id="upgrade-stability-earlyPeak-level">0/1</td>
+                                    <td id="upgrade-stability-earlyPeak-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-earlyPeak-buy" onClick="buyEntropyUpgrade('stability', 'earlyPeak')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Late Bloom</div>
+                                        <div style="color: gray; font-size: 12px;">Slow open, richer later (exclusive).</div>
+                                    </td>
+                                    <td id="upgrade-stability-lateBloom-level">0/1</td>
+                                    <td id="upgrade-stability-lateBloom-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-lateBloom-buy" onClick="buyEntropyUpgrade('stability', 'lateBloom')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Entropy Smoothing</div>
+                                        <div style="color: gray; font-size: 12px;">Diminishing polish to income swings.</div>
+                                    </td>
+                                    <td id="upgrade-stability-smoothing-level">0/3</td>
+                                    <td id="upgrade-stability-smoothing-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-smoothing-buy" onClick="buyEntropyUpgrade('stability', 'smoothing')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Quiet Mind</div>
+                                        <div style="color: gray; font-size: 12px;">Diminishing comfort gains.</div>
+                                    </td>
+                                    <td id="upgrade-stability-quietMind-level">0/3</td>
+                                    <td id="upgrade-stability-quietMind-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-quietMind-buy" onClick="buyEntropyUpgrade('stability', 'quietMind')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Pattern Attunement</div>
+                                        <div style="color: gray; font-size: 12px;">Tiny uplift to patterns.</div>
+                                    </td>
+                                    <td id="upgrade-stability-patternAttunement-level">0/3</td>
+                                    <td id="upgrade-stability-patternAttunement-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-stability-patternAttunement-buy" onClick="buyEntropyUpgrade('stability', 'patternAttunement')">Buy</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="w3-third">
+                            <h3>Meta</h3>
+                            <table class="w3-table w3-bordered">
+                                <tr>
+                                    <th style="width: 45%;">Upgrade</th>
+                                    <th style="width: 15%;">Level</th>
+                                    <th style="width: 20%;">Cost</th>
+                                    <th style="width: 20%;"></th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Unified Architecture</div>
+                                        <div style="color: gray; font-size: 12px;">Lift soft caps after investing in both branches.</div>
+                                    </td>
+                                    <td id="upgrade-meta-unifiedArchitecture-level">0/1</td>
+                                    <td id="upgrade-meta-unifiedArchitecture-cost">-</td>
+                                    <td><button class="w3-button button" id="upgrade-meta-unifiedArchitecture-buy" onClick="buyEntropyUpgrade('meta', 'unifiedArchitecture')">Buy</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="w3-row" id="entropyArtifactSection" style="margin-top: 12px;">
+                        <div class="w3-third">
+                            <h3>Entropy Artifacts</h3>
+                            <table class="w3-table w3-bordered">
+                                <tr>
+                                    <th style="width: 45%;">Artifact</th>
+                                    <th style="width: 20%;">Status</th>
+                                    <th style="width: 15%;">Cost</th>
+                                    <th style="width: 20%;"></th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Sigil of Momentum</div>
+                                        <div style="color: gray; font-size: 12px;">Enhances early-life XP and job income.</div>
+                                    </td>
+                                    <td id="artifact-sigilMomentum-status">-</td>
+                                    <td id="artifact-sigilMomentum-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-sigilMomentum-buy" onClick="buyEntropyArtifact('sigilMomentum')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Chain Conductor</div>
+                                        <div style="color: gray; font-size: 12px;">More eager auto-switch into new tasks.</div>
+                                    </td>
+                                    <td id="artifact-chainConductor-status">-</td>
+                                    <td id="artifact-chainConductor-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-chainConductor-buy" onClick="buyEntropyArtifact('chainConductor')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Loop Anchor</div>
+                                        <div style="color: gray; font-size: 12px;">Strengthens early income momentum persistence.</div>
+                                    </td>
+                                    <td id="artifact-loopAnchor-status">-</td>
+                                    <td id="artifact-loopAnchor-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-loopAnchor-buy" onClick="buyEntropyArtifact('loopAnchor')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Pattern Resonator</div>
+                                        <div style="color: gray; font-size: 12px;">Amplifies pattern-based bonuses. Requires UA.</div>
+                                    </td>
+                                    <td id="artifact-patternResonator-status">-</td>
+                                    <td id="artifact-patternResonator-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-patternResonator-buy" onClick="buyEntropyArtifact('patternResonator')">Buy</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="w3-row" id="entropyPatternSection" style="margin-top: 12px;">
+                        <div class="w3-third">
+                            <h3>Form / Patterns</h3>
+                            <table class="w3-table w3-bordered">
+                                <tr>
+                                    <th style="width: 60%;">Pattern</th>
+                                    <th style="width: 40%;">Level</th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Labor Cycle</div>
+                                        <div style="color: gray; font-size: 12px;">Favors time spent working.</div>
+                                    </td>
+                                    <td id="pattern-laborCycle-level">0/10</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Scholar Loop</div>
+                                        <div style="color: gray; font-size: 12px;">Favors time spent training skills.</div>
+                                    </td>
+                                    <td id="pattern-scholarLoop-level">0/10</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Compressed Life</div>
+                                        <div style="color: gray; font-size: 12px;">Short, intense lives.</div>
+                                    </td>
+                                    <td id="pattern-compressedLife-level">0/10</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Stable Cycle</div>
+                                        <div style="color: gray; font-size: 12px;">Long, balanced lives.</div>
+                                    </td>
+                                    <td id="pattern-stableCycle-level">0/10</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>Opportunist</div>
+                                        <div style="color: gray; font-size: 12px;">Adaptive, auto-switch-driven lives.</div>
+                                    </td>
+                                    <td id="pattern-opportunist-level">0/10</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab" id="rebirth">
+                    <ul>
+                        <li style="margin: 8px;">
+                            В свой 25-й день рождения ты натыкаешься на странный амулет. На вид дешёвый медный ломтик,
+                            продавать такое смысла нет. Но чувство подсказывает оставить его, и ты убираешь амулет в
+                            карман про запас.
+                        </li>
+                        <li style="margin: 8px;" id="rebirthNote1">
+                            В 45 лет амулет в кармане вдруг начинает неистово дрожать. Ты достаёшь его — дрожь резко
+                            стихает, а в центре замечаешь странную гравировку.
+                        </li>
+                        <li style="margin: 8px;" id="rebirthNote2">
+                            <div style="margin-bottom: 8px">
+                                В 65 лет амулет снова дрожит, и из центра показывается живой глаз. Хотя страшно, ты
+                                понимаешь, что жить осталось немного, и задумываешься: что будет, если коснуться глаза?
+                            </div>
+                            <i style="color: grey">
+                                Коснувшись глаза, ты переродишься и начнёшь жизнь заново, потеряв все уровни и монеты.
+                                Зато получишь <b>множители опыта</b> для работ и навыков равные: <b>1 + макс. уровень навыка или работы / 10.</b>
+                                Это значит, что в новой жизни всё будет изучаться гораздо быстрее. <span style="color: rgb(200, 0, 0)">
+                                Есть чувство, что амулет изменится ещё раз после <b>двух столетий</b> жизни...</span>
+                            </i>
+                            </br>
+                            <button class="w3-button button" style="margin-bottom: 8px; margin-top: 8px" onClick="rebirthOne()">Touch the eye</button>
+                            </br>
+                        </li>
+                        <li style="margin: 8px;" id="rebirthNote3">
+                            <div style="margin-bottom: 8px;">
+                                Чутьё не обмануло: достигнув 200 лет, ты слышишь зловещий гул из амулета.
+                                На поверхности появляется рот и, хихикая, произносит: «Раз уж дошёл так далеко... готов ли ты принять зло?»
+                            </div>
+                            <i style="color: rgb(200, 0, 0)">
+                                Приняв зло, ты сбросишь все уровни, монеты и даже максимальные уровни.
+                                Будешь перерождён с чистого листа, но откроешь новую ветку навыков и получишь
+                                <b><span id="evilGainDisplay"></span> зла</b>, что сильно повлияет на будущие жизни.
+                            </i>
+                            </br>
+                                <button class="w3-button button" style="margin-bottom: 8px; margin-top: 8px" onClick="rebirthTwo()">Принять зло</button>
+                            </br>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab" id="settings">
+                    <ul>
+                        <li>
+                            <h2 id="languageLabel">Язык</h2>
+                            <select id="languageSelect" class="w3-select" style="width:200px"></select>
+                        </li>
+                        <li>
+                            <h2>Импорт/экспорт сохранения</h2>
+                            <button class="w3-button button" onClick="importGameData()">Импорт</button>
+                            <button class="w3-button button" onClick="exportGameData()">Экспорт</button>
+                            <form style="margin-top: 16px"> 
+                                <input id="importExportBox" type="text" style="width:300px; height:30px"></input>
+                            </form>
+                        </li>
+                        <li>
+                            <h2>Переключить светлую/тёмную тему</h2>
+                            <button class="w3-button button" onClick="setLightDarkMode()">Переключить</button>
+                        </li>
+                        <li>
+                            <h2>Присоединяйтесь к Discord-сообществу!</h2>
+                            <a href="https://discord.gg/fTRS4pHGka" target="_blank">
+                                <img src="https://cdn.icon-icons.com/icons2/2108/PNG/512/discord_icon_130958.png" width="100" height="100"></img>
+                            </a>
+                        </li>
+                        <li>
+                            <h2>Полный сброс игры</h2>
+                            <button class="w3-button button w3-red" onClick="resetGameData()">Сбросить</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="debug-panel" class="debug-panel hidden">
+        <div id="debug-panel-header">
+            <span>Debug HUD</span>
+            <button id="debug-panel-close">X</button>
+        </div>
+        <pre id="debug-panel-content"></pre>
+    </div>
+</body>
+
+<script type="text/javascript" src="js/HackTimer.js"></script>
+<script type="text/javascript" src="js/classes.js"></script>
+<script type="text/javascript" src="js/i18n.js"></script>
+<script type="text/javascript" src="js/main.js"></script>
+
+</html>
+
+
