@@ -36,7 +36,7 @@
 .dark .w3-table th,
 .dark .w3-table-all th,
 .dark .w3-bordered th {
-    border-bottom: 1px solid #3a3a3a !important;
+    border-bottom: none !important;
 }
 
 .dark .w3-table tr:nth-child(even),
@@ -74,7 +74,6 @@
     background: rgb(60, 60, 60);
     color: white;
     border: none;
-    border-bottom: 1px solid #3a3a3a;
 }
 .dark .entropy-table td {
     border: none;

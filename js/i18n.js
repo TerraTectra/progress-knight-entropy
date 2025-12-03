@@ -196,6 +196,7 @@ const translations = {
         meaningLabel: { en: "Meaning", ru: "Смысл" },
         tagPassive: { en: "PASSIVE", ru: "ПАССИВНО" },
         tagActive: { en: "ACTIVE", ru: "АКТИВНО" },
+        skillUnavailable: { en: "Not available in this version.", ru: "Недоступно в этой версии." },
         settingsLanguageLabel: { en: "Language", ru: "Язык" },
         settingsLanguageRu: { en: "Russian", ru: "Русский" },
         settingsLanguageEn: { en: "English", ru: "Английский" },

@@ -2444,32 +2444,9 @@ function updateRequiredRows(data, categoryType) {
                 } else {
                     levelElement.classList.remove("hiddenTask")
                     for (requirement of requirements) {
-                        if (requirement.universe) {
-                            if (!universeGatedRequirementMet(requirement.universe)) {
-                                messages.push((tUi("universeRequirement") || "Universe") + " " + requirement.universe + "+")
-                            }
-                            continue
-                        }
-                        if (requirement.age) {
-                            var ageWord = tUi("ageLabel") || "Age"
-                            var currentAge = daysToYears(gameData.days)
-                            if (currentAge < requirement.age) {
-                                messages.push(ageWord + " " + format(currentAge) + "/" + format(requirement.age))
-                            }
-                            continue
-                        }
-                        if (requirement.meaning) {
-                            var meaningWord = tUi("meaningLabel") || "Meaning"
-                            var currentMeaning = gameData.meaning || 0
-                            if (currentMeaning < requirement.meaning) {
-                                messages.push(meaningWord + " " + format(currentMeaning) + "/" + format(requirement.meaning))
-                            }
-                            continue
-                        }
                         if (requirement.task) {
                             var task = gameData.taskData[requirement.task]
                             if (!task || typeof task.level !== "number") {
-                                messages.push(tName(requirement.task) + " unavailable")
                                 continue
                             }
                             if (task.level >= requirement.requirement) continue
@@ -2535,6 +2512,13 @@ function updateTaskRows() {
         var focusTag = row.getElementsByClassName("focusTag")[0]
         if (focusTag) {
             focusTag.classList.remove("job-tag", "job-tag-passive", "job-tag-active")
+            focusTag.textContent = ""
+            var nameCell = row.querySelector(".name")
+            if (nameCell) {
+                nameCell.classList.add("job-name-cell")
+                var title = nameCell.querySelector(".progress-text")
+                if (title) title.classList.add("job-title")
+            }
             if (isCycleOverseerActive()) {
                 var focusTask = getFocusedTask()
                 if (focusTask && task == focusTask) {
@@ -2543,11 +2527,7 @@ function updateTaskRows() {
                 } else if (focusTask) {
                     focusTag.textContent = tUi("tagPassive") || "PASSIVE"
                     focusTag.classList.add("job-tag", "job-tag-passive")
-                } else {
-                    focusTag.textContent = ""
                 }
-            } else {
-                focusTag.textContent = ""
             }
         }
 

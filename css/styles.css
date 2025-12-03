@@ -77,6 +77,18 @@ td {
     vertical-align: middle;
 }
 
+.job-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.job-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .job-tag-passive {
     background-color: #2d5cff;
     color: #fff;
@@ -118,7 +130,7 @@ td {
 .w3-table th,
 .w3-table-all th,
 .w3-bordered th {
-    border-bottom: 1px solid #d0d0d0 !important;
+    border-bottom: none !important;
 }
 
 .w3-table tr:nth-child(even),
@@ -392,7 +404,7 @@ jobTable button {
     font-weight: 700;
     color: inherit;
     letter-spacing: normal;
-    border-bottom: 1px solid #ddd;
+    border-bottom: none;
     padding-bottom: 6px;
 }
 
@@ -410,7 +422,6 @@ jobTable button {
     color: #000000;
     font-weight: 700;
     border: none;
-    border-bottom: 1px solid #d0d0d0;
     padding: 8px 10px;
     text-align: left;
 }
