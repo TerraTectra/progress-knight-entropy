@@ -5019,6 +5019,9 @@ function startGame() {
 
     loadGameData()
     ensureEntropyState()
+    ensureEntropyUpgradesState()
+    ensureEntropyPatternsState()
+    ensureEntropyArtifactsState()
 
     if (gameData.entropy.entropyUnlocked) {
         gameData.entropy.seeds = Math.max(gameData.entropy.seeds || 0, 1)
