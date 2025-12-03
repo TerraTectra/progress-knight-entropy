@@ -3270,10 +3270,6 @@ function renderObserverScaffold() {
         }
     })
 }
-    updateEntropyUpgradeUI()
-    updateArtifactUI()
-    updatePatternUI()
-}
 
 function setSignDisplay() {
     var signDisplay = document.getElementById("signDisplay")

@@ -75,20 +75,6 @@ td {
     display: none !important;
 }
 
-/* Hide Entropy button and tab until unlocked; inline styles from setTab() can override */
-#entropyTabButton,
-#entropy {
-    display: none;
-    visibility: hidden;
-}
-
-/* Show Entropy button and tab when unlocked; allow setTab() to hide via inline display */
-body.entropy-visible #entropyTabButton,
-body.entropy-visible #entropy {
-    display: inline-block;
-    visibility: visible;
-}
-
 .button {
     border: 1px solid black !important;
 }
