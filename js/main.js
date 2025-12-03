@@ -1313,7 +1313,7 @@ function checkForcedRebirth() {
     if ((gameData.universeIndex || 1) < 8) return
     var strain = gameData.cycleStrain || 0
     if (strain >= 18) {
-        alert("The cycle collapses under strain. You are forced to rebirth.")
+        alert(tUi("story_cycle_collapse"))
         rebirthOne()
     }
 }
@@ -1482,7 +1482,7 @@ function buyEntropyUpgrade(branch, key) {
         gameData.entropy.unifiedArchitecture = true
         if (gameData.universeTokens === undefined) gameData.universeTokens = 0
         gameData.universeTokens += 1
-        alert("You no longer grow. You have stabilized the structure of your reality.")
+        alert(tUi("story_stabilized"))
     }
     saveGameData()
     updateEntropyUpgradeUI()
@@ -1958,11 +1958,11 @@ function updateMeaning() {
     gameData.meaning = Math.max(0, Math.min(100, gameData.meaning + delta))
     if (gameData.meaning >= 10 && !gameData.meaningMilestones["10"]) {
         gameData.meaningMilestones["10"] = true
-        alert("A spark of meaning emerges amidst the numbers.")
+        alert(tUi("story_meaning_spark"))
     }
     if (gameData.meaning >= 30 && !gameData.meaningMilestones["30"]) {
         gameData.meaningMilestones["30"] = true
-        alert("Your actions feel anchored—numbers start to matter again.")
+        alert(tUi("story_meaning_anchored"))
     }
 
     if ((gameData.universeIndex || 1) >= 9) {
@@ -2144,19 +2144,19 @@ function moveToNextUniverse() {
     var nextIndex = (gameData.universeIndex || 1) + 1
     var answeredPrompt = !!gameData.hasAnsweredFirstTimePrompt
     if (nextIndex == 2) {
-        alert("Universe II: Sharper gains and costs. Happiness is more fragile.")
+        alert(tUi("story_universe_2"))
     } else if (nextIndex == 3) {
-        alert("Universe III: Patterns run deeper. Repetition is rewarded; rapid switching bleeds momentum.")
+        alert(tUi("story_universe_3"))
     } else if (nextIndex == 4) {
-        alert("Universe IV: Fragile Human. Youth surges, age and overwork erode. Pace yourself.")
+        alert(tUi("story_universe_4"))
     } else if (nextIndex == 5) {
-        alert("Universe V: Compressed Life. Idle years rush by with little gain; focused moments are dense—but aging and burnout still bite.")
+        alert(tUi("story_universe_5"))
     } else if (nextIndex == 6) {
-        alert("Universe VI: World of Choice. Each life grants limited major decisions; paths can exclude one another.")
+        alert(tUi("story_universe_6"))
     } else if (nextIndex == 7) {
-        alert("Universe VII: Death of Meaning. Numbers alone do not satisfy—meaningful acts steady happiness and unlock deeper insight.")
+        alert(tUi("story_universe_7"))
     } else if (nextIndex == 8) {
-        alert("Universe VIII: Distorted Cycle. The loop is unstable—pressure can trigger forced rebirth and distort time.")
+        alert(tUi("story_universe_8"))
     }
     resetForNextUniverse(nextIndex, gameData.universeTokens, answeredPrompt)
 }
@@ -2518,16 +2518,75 @@ function refreshCategoryHeaders() {
     })
 }
 
+function getUiTextWithFallback(key, fallbackKey) {
+    var text = tUi(key)
+    if (text === key && fallbackKey) {
+        var fallback = tUi(fallbackKey)
+        if (fallback !== fallbackKey) {
+            text = fallback
+        }
+    }
+    return text === key ? "" : text
+}
+
+function setElementText(id, key, fallbackKey) {
+    var element = document.getElementById(id)
+    if (!element) return
+    element.textContent = getUiTextWithFallback(key, fallbackKey)
+}
+
+function setElementHtml(id, key, fallbackKey) {
+    var element = document.getElementById(id)
+    if (!element) return
+    element.innerHTML = getUiTextWithFallback(key, fallbackKey)
+}
+
+function setElementPlaceholder(id, key, fallbackKey) {
+    var element = document.getElementById(id)
+    if (!element) return
+    element.placeholder = getUiTextWithFallback(key, fallbackKey)
+}
+
+function setEntropyUpgradeText(branch, key) {
+    var nameId = "upgrade-" + branch + "-" + key + "-name"
+    var descId = "upgrade-" + branch + "-" + key + "-desc"
+    var nameKey = "entropy_upgrade_" + branch + "_" + key + "_name"
+    var descKey = "entropy_upgrade_" + branch + "_" + key + "_desc"
+    setElementText(nameId, nameKey)
+    var nameEl = document.getElementById(nameId)
+    var def = (ENTROPY_UPGRADE_DEFINITIONS[branch] || {})[key] || {}
+    if (nameEl && !nameEl.textContent) {
+        nameEl.textContent = def.name || ""
+    }
+    var descEl = document.getElementById(descId)
+    if (descEl) {
+        var text = getUiTextWithFallback(descKey) || def.description || ""
+        descEl.textContent = text
+    }
+}
+
+function setEntropyArtifactText(key) {
+    setElementText("artifact-" + key + "-name", "entropy_artifact_" + key + "_name")
+    var descEl = document.getElementById("artifact-" + key + "-desc")
+    if (descEl) descEl.textContent = getUiTextWithFallback("entropy_artifact_" + key + "_desc")
+}
+
+function setEntropyPatternText(key) {
+    setElementText("pattern-" + key + "-name", "entropy_pattern_" + key + "_name")
+    var descEl = document.getElementById("pattern-" + key + "-desc")
+    if (descEl) descEl.textContent = getUiTextWithFallback("entropy_pattern_" + key + "_desc")
+}
+
 function initSettingsUI() {
     var select = document.getElementById("languageSelect")
     if (select) {
         select.innerHTML = ""
         var optionRu = document.createElement("option")
         optionRu.value = LANG.RU
-        optionRu.textContent = tUi("settingsLanguageRu")
+        optionRu.textContent = getUiTextWithFallback("settings_language_ru", "settingsLanguageRu")
         var optionEn = document.createElement("option")
         optionEn.value = LANG.EN
-        optionEn.textContent = tUi("settingsLanguageEn")
+        optionEn.textContent = getUiTextWithFallback("settings_language_en", "settingsLanguageEn")
         select.appendChild(optionRu)
         select.appendChild(optionEn)
         select.value = getCurrentLanguage()
@@ -2535,31 +2594,128 @@ function initSettingsUI() {
             setCurrentLanguage(this.value)
         }
     }
-    var label = document.getElementById("languageLabel")
-    if (label) {
-        label.textContent = tUi("settingsLanguageLabel")
-    }
+    setElementText("languageLabel", "settings_language_label", "settingsLanguageLabel")
+}
+
+function refreshTabLabels() {
+    var tabs = [
+        { id: "jobTabButton", key: "tab_jobs", legacyKey: "tabJobs" },
+        { id: "skillsTabButton", key: "tab_skills", legacyKey: "tabSkills" },
+        { id: "shopTabButton", key: "tab_shop", legacyKey: "tabShop" },
+        { id: "entropyTabButton", key: "tab_entropy", legacyKey: "tabEntropy" },
+        { id: "rebirthTabButton", key: "tab_amulet", legacyKey: "tabRebirth" },
+        { id: "settingsTabButton", key: "tab_settings", legacyKey: "tabSettings" },
+    ]
+    tabs.forEach(function(tab) {
+        var element = document.getElementById(tab.id)
+        if (!element) return
+        var text = tUi(tab.key)
+        if (text === tab.key && tab.legacyKey) {
+            var fallback = tUi(tab.legacyKey)
+            if (fallback !== tab.legacyKey) {
+                text = fallback
+            }
+        }
+        element.textContent = text
+    })
+}
+
+function refreshSettingsLabels() {
+    setElementText("importExportTitle", "settings_import_title")
+    setElementText("importButton", "settings_import_button")
+    setElementText("exportButton", "settings_export_button")
+    setElementPlaceholder("importExportBox", "settings_import_placeholder")
+    setElementText("themeTitle", "settings_theme_title")
+    setElementText("themeToggleButton", "settings_theme_button")
+    setElementText("discordTitle", "settings_discord_title")
+    setElementText("resetTitle", "settings_reset_title")
+    setElementText("resetButton", "settings_reset_button")
+    setElementText("resetModalTitle", "settings_reset_modal_title")
+    setElementHtml("resetModalBody", "settings_reset_modal_body")
+    setElementText("resetModalCancel", "settings_reset_modal_cancel")
+    setElementText("resetModalConfirm", "settings_reset_modal_confirm")
+}
+
+function refreshEntropyLabels() {
+    setElementText("entropyLedgerTitle", "entropy_section_ledger")
+    setElementText("entropyLedgerNote", "entropy_ledger_note")
+    setElementText("entropySeedLabel", "entropy_seeds_label")
+    setElementText("entropyInsightLabel", "entropy_insight_label")
+    setElementText("entropyMaxInsightLabel", "entropy_max_insight_label")
+    setElementText("entropyEPLabel", "entropy_ep_label")
+    setElementText("entropyFocusLabel", "entropy_focus_label")
+    setElementText("entropyFocusDisplay", "entropy_focus_disabled")
+    setElementText("cycleOverseerButton", "entropy_overseer_button_unlock")
+    setElementText("entropyOverseerNote", "entropy_overseer_note")
+
+    setElementText("entropyWorkTitle", "entropy_section_work")
+    setElementText("entropyStudiesTitle", "entropy_section_studies")
+    setElementText("entropyVelocityTitle", "entropy_section_velocity")
+    setElementText("entropyStabilityTitle", "entropy_section_stability")
+    setElementText("entropyMetaTitle", "entropy_section_meta")
+    setElementText("entropyArtifactTitle", "entropy_section_artifacts")
+    setElementText("entropyPatternTitle", "entropy_section_patterns")
+
+    setElementText("entropyVelocityHeaderUpgrade", "entropy_col_upgrade")
+    setElementText("entropyVelocityHeaderLevel", "entropy_col_level")
+    setElementText("entropyVelocityHeaderCost", "entropy_col_cost")
+    setElementText("entropyStabilityHeaderUpgrade", "entropy_col_upgrade")
+    setElementText("entropyStabilityHeaderLevel", "entropy_col_level")
+    setElementText("entropyStabilityHeaderCost", "entropy_col_cost")
+    setElementText("entropyMetaHeaderUpgrade", "entropy_col_upgrade")
+    setElementText("entropyMetaHeaderLevel", "entropy_col_level")
+    setElementText("entropyMetaHeaderCost", "entropy_col_cost")
+    setElementText("entropyArtifactHeaderName", "entropy_col_artifact")
+    setElementText("entropyArtifactHeaderStatus", "entropy_col_status")
+    setElementText("entropyArtifactHeaderCost", "entropy_col_cost")
+    setElementText("entropyPatternHeaderName", "entropy_col_pattern")
+    setElementText("entropyPatternHeaderLevel", "entropy_col_level")
+
+    var velocityUpgrades = ["temporalMomentum", "earlyCompression", "chainProgression", "momentumPersistence", "wealthFocus", "masteryFocus"]
+    var stabilityUpgrades = ["entropyStability", "lifeContinuity", "balancedGrowth", "shortBrilliantLife", "longSteadyLife", "earlyPeak", "lateBloom", "smoothing", "quietMind", "patternAttunement"]
+    var metaUpgrades = ["unifiedArchitecture"]
+    velocityUpgrades.forEach(function(key) { setEntropyUpgradeText("velocity", key) })
+    stabilityUpgrades.forEach(function(key) { setEntropyUpgradeText("stability", key) })
+    metaUpgrades.forEach(function(key) { setEntropyUpgradeText("meta", key) })
+
+    ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"].forEach(setEntropyArtifactText)
+    ["laborCycle", "scholarLoop", "compressedLife", "stableCycle", "opportunist"].forEach(setEntropyPatternText)
+}
+
+function refreshNarrativeTexts() {
+    setElementHtml("amuletStory25", "story_amulet_intro_25")
+    setElementHtml("rebirthNote1", "story_amulet_note_45")
+    setElementHtml("rebirthNote2Text", "story_amulet_note_65")
+    setElementHtml("rebirthNote2Hint", "story_amulet_hint_65")
+    setElementHtml("rebirthNote3Text", "story_amulet_note_200")
+    setElementHtml("rebirthNote3Hint", "story_amulet_hint_200")
+    setElementText("rebirthOneButton", "story_amulet_btn_touch_eye")
+    setElementText("rebirthTwoButton", "story_amulet_btn_accept_evil")
+    setElementText("deathTitle", "death_title")
+    setElementText("deathSubtitle", "death_subtitle")
+
+    setElementText("introTitle", "intro_title")
+    setElementHtml("introBody", "intro_body")
+    setElementHtml("introHint", "intro_hint")
+    setElementText("introContinueButton", "intro_continue")
+
+    var debugTitle = document.getElementById("debug-panel-title")
+    if (debugTitle) debugTitle.textContent = tUi("debug_panel_title")
+    var debugClose = document.getElementById("debug-panel-close")
+    if (debugClose) debugClose.textContent = tUi("debug_panel_close") || "X"
 }
 
 function refreshUI() {
-    var jobTab = document.getElementById("jobTabButton")
-    if (jobTab) jobTab.textContent = tUi("tabJobs")
-    var skillsTab = document.querySelector("div.tabButton[onclick=\"setTab(this, 'skills')\"]")
-    if (skillsTab) skillsTab.textContent = tUi("tabSkills")
-    var shopTab = document.getElementById("shopTabButton")
-    if (shopTab) shopTab.textContent = tUi("tabShop")
-    var entropyTab = document.getElementById("entropyTabButton")
-    if (entropyTab) entropyTab.textContent = tUi("tabEntropy")
-    var rebirthTab = document.getElementById("rebirthTabButton")
-    if (rebirthTab) rebirthTab.textContent = tUi("tabRebirth")
-    var settingsTab = document.querySelector("div.tabButton[onclick=\"setTab(this, 'settings')\"]")
-    if (settingsTab) settingsTab.textContent = tUi("tabSettings")
+    refreshTabLabels()
 
     refreshCategoryHeaders()
     refreshRowNames()
     refreshRowTooltips()
     updateUniverseUI()
     initSettingsUI()
+    refreshSettingsLabels()
+    refreshEntropyLabels()
+    refreshNarrativeTexts()
 
     var observerTitle = document.querySelector("#observerPanel h3")
     if (observerTitle) observerTitle.textContent = tUi("observerTitle")
@@ -2788,49 +2944,49 @@ function updateEntropyUpgradeUI() {
             if (!unlocked) {
                 costElement.textContent = "-"
                 buttonElement.disabled = true
-                buttonElement.textContent = "Locked"
+                buttonElement.textContent = tUi("status_locked")
                 continue
             }
 
             if (uaFinal && key != "unifiedArchitecture") {
                 costElement.textContent = "-"
                 buttonElement.disabled = true
-                buttonElement.textContent = "Frozen"
+                buttonElement.textContent = tUi("status_frozen")
                 continue
             }
 
             if (!meetsUAReq && key == "unifiedArchitecture") {
                 costElement.textContent = cost
                 buttonElement.disabled = true
-                buttonElement.textContent = "Req."
+                buttonElement.textContent = tUi("status_req")
                 continue
             }
 
             if (exclusiveBlocked) {
-                costElement.textContent = "Locked"
+                costElement.textContent = tUi("status_locked")
                 buttonElement.disabled = true
-                buttonElement.textContent = "Taken"
+                buttonElement.textContent = tUi("status_taken")
                 continue
             }
 
             if (atAbsoluteMax) {
-                costElement.textContent = "Max"
+                costElement.textContent = tUi("status_max")
                 buttonElement.disabled = true
-                buttonElement.textContent = "Max"
+                buttonElement.textContent = tUi("status_max")
                 continue
             }
 
             if (!canIncrease) {
-                costElement.textContent = "Capped"
+                costElement.textContent = tUi("status_capped")
                 buttonElement.disabled = true
-                buttonElement.textContent = "Capped"
+                buttonElement.textContent = tUi("status_capped")
                 continue
             }
 
             if (atEffectiveMax) {
-                costElement.textContent = "Max"
+                costElement.textContent = tUi("status_max")
                 buttonElement.disabled = true
-                buttonElement.textContent = "Max"
+                buttonElement.textContent = tUi("status_max")
                 continue
             }
 
@@ -2839,11 +2995,11 @@ function updateEntropyUpgradeUI() {
             costElement.style.color = ep >= cost ? "inherit" : "red"
             if (!extraReqMet) {
                 buttonElement.disabled = true
-                buttonElement.textContent = "Req."
+                buttonElement.textContent = tUi("status_req")
                 continue
             }
             buttonElement.disabled = ep < cost
-            buttonElement.textContent = "Buy"
+            buttonElement.textContent = tUi("action_buy")
         }
     }
 }
@@ -2873,27 +3029,27 @@ function updateArtifactUI() {
         if (uaFinal) requirementMet = false
 
         if (!requirementMet) {
-            levelElement.textContent = "Locked (requirements unmet)"
+            levelElement.textContent = tUi("status_locked_requirements")
             costElement.textContent = cost
             buttonElement.disabled = true
             continue
         }
 
         if (owned) {
-            levelElement.textContent = "Owned"
+            levelElement.textContent = tUi("status_owned")
             costElement.textContent = "-"
             buttonElement.disabled = true
             continue
         }
 
         if (ownedCount >= 2) {
-            levelElement.textContent = "Blocked (artifact limit reached)"
+            levelElement.textContent = tUi("status_blocked_limit")
             costElement.textContent = cost
             buttonElement.disabled = true
             continue
         }
 
-        levelElement.textContent = "Not owned"
+        levelElement.textContent = tUi("status_not_owned")
         costElement.textContent = cost
         costElement.style.color = (gameData.entropy.EP >= cost) ? "inherit" : "red"
         buttonElement.disabled = gameData.entropy.EP < cost
@@ -2998,12 +3154,30 @@ function updateText() {
         var overseerButton = document.getElementById("cycleOverseerButton")
         if (overseerButton) {
             overseerButton.disabled = gameData.entropy.overseer || gameData.entropy.EP < cycleOverseerCost
-            overseerButton.textContent = gameData.entropy.overseer ? "Cycle Overseer unlocked" : "Unlock Cycle Overseer (" + cycleOverseerCost + " EP)"
+            if (gameData.entropy.overseer) {
+                overseerButton.textContent = tUi("entropy_overseer_button_unlocked")
+            } else {
+                var unlockText = tUi("entropy_overseer_button_unlock")
+                if (unlockText && typeof unlockText === "string" && unlockText.indexOf("{cost}") !== -1) {
+                    unlockText = unlockText.replace("{cost}", cycleOverseerCost)
+                } else {
+                    unlockText = unlockText || ("Unlock Cycle Overseer (" + cycleOverseerCost + " EP)")
+                }
+                overseerButton.textContent = unlockText
+            }
         }
         var focusLabel = document.getElementById("entropyFocusDisplay")
         if (focusLabel) {
             var focusTask = getFocusedTask()
-        focusLabel.textContent = gameData.entropy.overseer ? (focusTask ? focusTask.name + " (full power)" : "None selected") : "Disabled"
+            if (!gameData.entropy.overseer) {
+                focusLabel.textContent = tUi("entropy_focus_disabled")
+            } else if (focusTask) {
+                var suffix = tUi("entropy_focus_suffix_full_power")
+                focusLabel.textContent = focusTask.name + (suffix ? " " + suffix : "")
+            } else {
+                focusLabel.textContent = tUi("entropy_focus_none")
+            }
+        }
     }
 
     updateUniverseUI()
@@ -3190,19 +3364,17 @@ function enforceEntropyTabVisibility() {
     var tabRow = document.getElementById("tabRow");
     var tabContainer = tabRow && tabRow.parentElement ? tabRow.parentElement : null;
 
-    // We only require the real tab elements; the requirement section is optional.
     if (!entropyTabButton || !entropyTabSection) {
         return;
     }
 
-    // Entropy tab is visible only after Entropy is unlocked and at least one seed exists
-    // (this is exactly the moment when the Almanach is bound and Entropy becomes real).
+    // Entropy tab is visible only after Entropy is unlocked and at least one seed exists.
     var unlocked = typeof isEntropyUnlocked === "function"
         ? isEntropyUnlocked()
         : !!(gameData && gameData.entropy && gameData.entropy.entropyUnlocked);
     var hasSeeds = !!(gameData && gameData.entropy && gameData.entropy.seeds && gameData.entropy.seeds > 0);
 
-    // Also respect the "Entropy tab" Requirement, if present, so we stay in sync
+    // Also respect the "Entropy tab" Requirement, if present.
     var tabReq = gameData && gameData.requirements && gameData.requirements["Entropy tab"];
     var requirementAllowsTab = true;
     if (tabReq && typeof tabReq.isCompleted === "function") {
@@ -3212,58 +3384,62 @@ function enforceEntropyTabVisibility() {
     var visible = unlocked && hasSeeds && requirementAllowsTab;
 
     if (visible) {
+        // Flag on body: can be used for styling, but no longer forces visibility.
         if (document && document.body && document.body.classList) {
             document.body.classList.add("entropy-visible");
         }
+
+        // Show Entropy tab button and content by removing the .hidden gate.
         entropyTabButton.classList.remove("hidden");
         entropyTabSection.classList.remove("hidden");
-        if (tabContainer && typeof tabContainer.classList !== "undefined") {
+
+        if (tabContainer && tabContainer.classList) {
             tabContainer.classList.remove("entropy-hidden");
         }
-        if (entropyBlock && typeof entropyBlock.classList !== "undefined") {
+
+        if (entropyBlock && entropyBlock.classList) {
             entropyBlock.classList.remove("hidden");
         }
-        entropyTabButton.style.removeProperty("display");
-        entropyTabSection.style.removeProperty("display");
-        entropyTabButton.style.removeProperty("visibility");
-        entropyTabSection.style.removeProperty("visibility");
+
         if (entropyRequirementSection) {
             entropyRequirementSection.classList.remove("hidden");
-            entropyRequirementSection.style.removeProperty("display");
-            entropyRequirementSection.style.removeProperty("visibility");
+        }
+
+        if (tabReq && typeof tabReq.completed !== "undefined") {
+            tabReq.completed = true;
         }
     } else {
         if (document && document.body && document.body.classList) {
             document.body.classList.remove("entropy-visible");
         }
+
+        // Hide Entropy tab button and content by applying the .hidden gate.
         entropyTabButton.classList.add("hidden");
         entropyTabSection.classList.add("hidden");
-        if (tabContainer && typeof tabContainer.classList !== "undefined") {
+
+        if (tabContainer && tabContainer.classList) {
             tabContainer.classList.add("entropy-hidden");
         }
-        if (entropyBlock && typeof entropyBlock.classList !== "undefined") {
+
+        if (entropyBlock && entropyBlock.classList) {
             entropyBlock.classList.add("hidden");
         }
-        entropyTabButton.style.setProperty("display", "none", "important");
-        entropyTabSection.style.setProperty("display", "none", "important");
-        entropyTabButton.style.setProperty("visibility", "hidden", "important");
-        entropyTabSection.style.setProperty("visibility", "hidden", "important");
+
         if (entropyRequirementSection) {
             entropyRequirementSection.classList.add("hidden");
-            entropyRequirementSection.style.setProperty("display", "none", "important");
-            entropyRequirementSection.style.setProperty("visibility", "hidden", "important");
         }
+
         if (tabReq && typeof tabReq.completed !== "undefined") {
             tabReq.completed = false;
         }
 
         // Safety: if the current active tab is Entropy while it becomes locked again,
-        // bump the player back to the jobs tab so they don't stare at an empty/locked panel.
-        if (typeof currentTab !== "undefined"
-             && currentTab === "entropy"
-             && typeof setTab === "function"
-             && typeof jobTabButton !== "undefined") {
-            setTab(jobTabButton, "jobs");
+        // bump the player back to the jobs tab so they don't stare at a locked panel.
+        if (typeof currentTab !== "undefined" && currentTab === "entropy" && typeof setTab === "function") {
+            var jobsTabButton = document.getElementById("jobsTabButton");
+            if (jobsTabButton) {
+                setTab(jobsTabButton, "jobs");
+            }
         }
     }
 }
@@ -3325,11 +3501,11 @@ function allStandardContentUnlocked() {
 }
 
 function showAlmanacDiscoveryDialog() {
-    alert("At age 55, you uncover a heavy Almanach of Entropy. Its pages whisper of patterns, but its power remains dormant-for now.")
+    alert(tUi("story_almanach_found"))
 }
 
 function showEntropyUnlockedDialogOnce() {
-    alert("You jolt awake at 14 once more. The Almanach is bound to you now-its entropy lessons will follow every life from here on.")
+    alert(tUi("story_almanach_bound"))
 }
 
 function maybeUnlockAlmanac() {
@@ -4012,7 +4188,7 @@ function bindEntropyOnFirstRebirth() {
     gameData.entropy.entropyUnlocked = true
     gameData.entropy.seeds = Math.max(gameData.entropy.seeds || 0, 1)
     initEntropyGame()
-    alert("You jolt awake at 14 once more. The Almanach is bound to you now-its entropy lessons will follow every life from here on.")
+    alert(tUi("story_almanach_bound"))
 }
 
 function maybeUnlockEntropyOnRebirth() {
@@ -4577,7 +4753,7 @@ function importGameData() {
     var importExportBox = document.getElementById("importExportBox")
     var raw = (importExportBox.value || "").trim()
     if (!raw) {
-        showSettingsMessage("No data to import", "error")
+        showSettingsMessage(tUi("settings_msg_no_data"), "error")
         return
     }
     try {
@@ -4588,11 +4764,11 @@ function importGameData() {
         }
         gameData = parsed
         saveGameData()
-        showSettingsMessage("Save loaded successfully", "success")
+        showSettingsMessage(tUi("settings_msg_import_success"), "success")
         setTimeout(function() { location.reload() }, 200)
     } catch (e) {
         console.error("Import failed:", e)
-        showSettingsMessage("Invalid save data. Please check and try again.", "error")
+        showSettingsMessage(tUi("settings_msg_invalid_save"), "error")
     }
 }
 
@@ -4602,7 +4778,7 @@ function exportGameData() {
     if (typeof importExportBox.select === "function") {
         importExportBox.select()
     }
-    showSettingsMessage("Save exported. Copy the text above.", "info")
+    showSettingsMessage(tUi("settings_msg_export_success"), "info")
 }
 
 function initBaseGame() {

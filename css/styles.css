@@ -75,24 +75,24 @@ td {
     display: none !important;
 }
 
+/* Hide Entropy button and tab until unlocked; inline styles from setTab() can override */
+#entropyTabButton,
+#entropy {
+    display: none;
+    visibility: hidden;
+}
+
+/* Show Entropy button and tab when unlocked; allow setTab() to hide via inline display */
+body.entropy-visible #entropyTabButton,
+body.entropy-visible #entropy {
+    display: inline-block;
+    visibility: visible;
+}
+
 .button {
     border: 1px solid black !important;
 }
 
-/* Entropy tab hard-gate: hidden until explicitly unlocked via JS */
-#entropyTabButton,
-#entropy {
-    display: none !important;
-    visibility: hidden !important;
-}
-body.entropy-visible #entropyTabButton {
-    display: inline-block !important;
-    visibility: visible !important;
-}
-body.entropy-visible #entropy {
-    display: block !important;
-    visibility: visible !important;
-}
 
 .item-button {
     background-color: white;
