@@ -3139,7 +3139,10 @@ function updateText() {
     document.getElementById("happinessDisplay").textContent = getHappiness().toFixed(1)
 
     document.getElementById("evilDisplay").textContent = gameData.evil.toFixed(1)
-    document.getElementById("evilGainDisplay").textContent = getEvilGain().toFixed(1)
+    var evilGainEl = document.getElementById("evilGainDisplay")
+    if (evilGainEl) {
+        evilGainEl.textContent = getEvilGain().toFixed(1)
+    }
 
     document.getElementById("timeWarpingDisplay").textContent = "x" + gameData.taskData["Time warping"].getEffect().toFixed(2)
     var warpBtn = document.getElementById("timeWarpingButton")
