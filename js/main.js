@@ -2276,7 +2276,10 @@ function createRequiredRow(categoryName) {
     requiredRow.id = "required " + categoryName
     var td = requiredRow.querySelector("td")
     if (td && td.childNodes.length > 0) {
-        td.childNodes[0].textContent = (tUi("requiredPrefix") || "Required:") + " "
+        var label = td.querySelector(".required-label")
+        if (label) {
+            label.textContent = (tUi("requiredPrefix") || "Required:") + " "
+        }
     }
     return requiredRow
 }
@@ -2368,7 +2371,11 @@ function updateRequiredRows(data, categoryType) {
     for (requiredRow of requiredRows) {
         var nextEntity = null
         var catName = requiredRow.id && requiredRow.id.startsWith("required ") ? requiredRow.id.substring(9) : requiredRow.id
-        var category = categoryType[catName] 
+        var label = requiredRow.querySelector(".required-label")
+        if (label) {
+            label.textContent = (tUi("requiredPrefix") || "Required:") + " "
+        }
+        var category = categoryType[catName]
         if (category == null) {continue}
         for (i = 0; i < category.length; i++) {
             var entityName = category[i]

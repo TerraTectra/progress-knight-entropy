@@ -90,40 +90,27 @@ td {
     white-space: normal;
     word-break: break-word;
     line-height: 1.2;
+    border: 1px solid black;
 }
 
 .item-button:hover {
     cursor: pointer;
-}
-
-.item-button:not(.shop-btn-locked):not(.shop-btn-unaffordable):not(.shop-btn-available):hover {
     background-color: rgb(192, 192, 192);
 }
 
 .item-button.shop-btn-locked {
-    background-color: #2f2f2f;
-    color: #9aa3b5;
-    border-color: #555 !important;
+    opacity: 0.5;
     cursor: not-allowed;
-    opacity: 0.7;
 }
 
 .item-button.shop-btn-unaffordable {
-    background-color: #5c1f1f;
-    color: #ffd6d1;
-    border-color: #c04a4a !important;
+    border-color: #aa2222 !important;
+    color: #ffaaaa;
     cursor: not-allowed;
 }
 
 .item-button.shop-btn-available {
-    background-color: #1f3a5f;
-    color: #e9f0ff;
-    border-color: #4b7bd8 !important;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.item-button.shop-btn-available:hover {
-    background-color: #2b4d7a;
+    /* Base style inherited */
 }
 
 button:focus {
@@ -339,11 +326,12 @@ jobTable button {
 }
 
 .entropy-card {
-    background: #1f2430;
-    border: 1px solid #2b3243;
-    border-radius: 10px;
+    background: white;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
     padding: 14px 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    box-shadow: none;
+    color: inherit;
 }
 
 .entropy-section-title {
@@ -351,14 +339,14 @@ jobTable button {
     margin-bottom: 10px;
     font-size: 18px;
     font-weight: 700;
-    color: #d4e5ff;
-    letter-spacing: 0.01em;
-    border-bottom: 1px solid #31394d;
+    color: inherit;
+    letter-spacing: normal;
+    border-bottom: 1px solid #ddd;
     padding-bottom: 6px;
 }
 
 .entropy-muted {
-    color: #8f9bb0;
+    color: #666666;
 }
 
 .entropy-table {
@@ -367,23 +355,23 @@ jobTable button {
 }
 
 .entropy-table th {
-    background: #252c3c;
-    color: #dfe8ff;
+    background: #f1f1f1;
+    color: #000000;
     font-weight: 700;
-    border: 1px solid #2f3646;
+    border: 1px solid #cccccc;
     padding: 8px 10px;
     text-align: left;
 }
 
 .entropy-table td {
-    border: 1px solid #2f3646;
+    border: 1px solid #cccccc;
     padding: 8px 10px;
     vertical-align: top;
-    color: #e7ecf5;
+    color: inherit;
 }
 
 .entropy-table tr:hover {
-    background: rgba(86, 139, 255, 0.08);
+    background: #f5f5f5;
 }
 
 .entropy-table td:last-child {
@@ -396,7 +384,7 @@ jobTable button {
 }
 
 .entropy-table div[id*="-desc"] {
-    color: #9badc7;
+    color: #555555;
     font-size: 12px;
     line-height: 1.35;
     white-space: normal;
