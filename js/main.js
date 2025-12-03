@@ -1418,10 +1418,26 @@ function getExclusiveGroupChoice(groupId, skipKey) {
 }
 
 function meetsUnifiedArchitectureRequirements() {
-    var hasVelocity = getEntropyUpgradeBranchTotal("velocity") > 0
-    var hasStability = getEntropyUpgradeBranchTotal("stability") > 0
-    var spent = getTotalSpentEpOnUpgrades()
-    return hasVelocity && hasStability && spent >= 20
+    var state = getUnifiedArchitectureRequirementState()
+    return state.allMet
+}
+
+function getUnifiedArchitectureRequirementState() {
+    ensureEntropyPatternsState()
+    var seedsCurrent = (gameData.entropy && gameData.entropy.seeds) ? gameData.entropy.seeds : 0
+    var seedsRequired = 1
+    var patterns = ["laborCycle", "scholarLoop", "stableCycle", "opportunist", "compressedLife"]
+    var patternReqs = patterns.map(function(name) {
+        return { name: name, level: getPatternLevel(name), required: 1 }
+    })
+    var allPatternsMet = patternReqs.every(function(p) { return p.level >= p.required })
+    var allMet = seedsCurrent >= seedsRequired && allPatternsMet
+    return {
+        seeds: seedsCurrent,
+        seedsRequired: seedsRequired,
+        patterns: patternReqs,
+        allMet: allMet
+    }
 }
 
 function meetsExtraEntropyUpgradeRequirements(branch, key) {
@@ -3188,10 +3204,40 @@ function updateEntropyUpgradeUI() {
             var atAbsoluteMax = level >= absoluteMax
             var atEffectiveMax = level >= effectiveMax
             var cost = getEntropyUpgradeCost(branch, key)
+            var uaReqState = key === "unifiedArchitecture" ? getUnifiedArchitectureRequirementState() : null
             var meetsUAReq = key != "unifiedArchitecture" || meetsUnifiedArchitectureRequirements()
             var groupId = getExclusiveGroupId(branch, key)
             var groupChosen = getExclusiveGroupChoice(groupId, key)
             var exclusiveBlocked = groupId && groupChosen && groupChosen !== key
+
+            if (key === "unifiedArchitecture") {
+                var reqContainer = document.getElementById("ua-requirements")
+                if (!reqContainer) {
+                    reqContainer = document.createElement("div")
+                    reqContainer.id = "ua-requirements"
+                    reqContainer.className = "ua-reqs"
+                    var nameEl = document.getElementById("upgrade-meta-unifiedArchitecture-name")
+                    if (nameEl && nameEl.parentElement) {
+                        nameEl.parentElement.appendChild(reqContainer)
+                    }
+                }
+                if (reqContainer && uaReqState) {
+                    var title = tUi("entropy_unifiedArchitecture_requirements_title") || "Requirements:"
+                    var seedsLabel = tUi("entropy_unifiedArchitecture_requirements_seeds") || "Seeds"
+                    var patternsLabel = tUi("entropy_unifiedArchitecture_requirements_patterns") || "Patterns"
+                    var html = "<div class='ua-req-title'>" + title + "</div><ul>"
+                    var seedsMet = uaReqState.seeds >= uaReqState.seedsRequired
+                    html += "<li class='" + (seedsMet ? "ua-req-met" : "ua-req-missing") + "'>" + seedsLabel + ": " + uaReqState.seeds + " / " + uaReqState.seedsRequired + "</li>"
+                    var patternsMet = uaReqState.patterns.every(function(p){return p.level >= p.required})
+                    html += "<li class='" + (patternsMet ? "ua-req-met" : "ua-req-missing") + "'>" + patternsLabel + ":</li>"
+                    uaReqState.patterns.forEach(function(p) {
+                        var lineClass = p.level >= p.required ? "ua-req-met" : "ua-req-missing"
+                        html += "<li class='" + lineClass + "' style='margin-left:8px;'>" + tName(p.name) + ": " + p.level + " / " + p.required + "</li>"
+                    })
+                    html += "</ul>"
+                    reqContainer.innerHTML = html
+                }
+            }
 
             levelElement.textContent = level + "/" + absoluteMax
             costElement.style.color = "inherit"
@@ -3214,7 +3260,25 @@ function updateEntropyUpgradeUI() {
                 costElement.textContent = cost
                 buttonElement.disabled = true
                 buttonElement.textContent = tUi("status_req")
+                var missingMsg = tUi("entropy_unifiedArchitecture_requirement_missing") || ""
+                if (uaReqState) {
+                    var missingParts = []
+                    if (uaReqState.seeds < uaReqState.seedsRequired) {
+                        missingParts.push((tUi("entropy_unifiedArchitecture_requirements_seeds") || "Seeds") + ": " + uaReqState.seeds + "/" + uaReqState.seedsRequired)
+                    }
+                    uaReqState.patterns.forEach(function(p) {
+                        if (p.level < p.required) {
+                            missingParts.push(tName(p.name) + ": " + p.level + "/" + p.required)
+                        }
+                    })
+                    if (missingParts.length > 0) {
+                        missingMsg = missingMsg ? missingMsg + " " + missingParts.join(", ") : missingParts.join(", ")
+                    }
+                }
+                buttonElement.title = missingMsg
                 continue
+            } else if (key == "unifiedArchitecture") {
+                buttonElement.title = ""
             }
 
             if (exclusiveBlocked) {
