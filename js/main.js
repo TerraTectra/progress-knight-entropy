@@ -971,6 +971,20 @@ function isEntropyOnlySkill(taskOrName) {
     return false
 }
 
+function isEntropyJob(taskOrName) {
+    var name = null
+    if (taskOrName) {
+        name = taskOrName.name || taskOrName
+    }
+    if (!name) return false
+    for (var categoryName in entropyJobCategories) {
+        if (!entropyJobCategories.hasOwnProperty(categoryName)) continue
+        var list = entropyJobCategories[categoryName] || []
+        if (list.indexOf(name) !== -1) return true
+    }
+    return false
+}
+
 function getEntropyUpgradeLevel(branch, key) {
     if (!gameData.entropyUpgrades || !gameData.entropyUpgrades[branch]) return 0
     return gameData.entropyUpgrades[branch][key] || 0
@@ -2788,7 +2802,15 @@ function setEntropyArtifactText(key) {
 function setEntropyPatternText(key) {
     setElementText("pattern-" + key + "-name", "entropy_pattern_" + key + "_name")
     var descEl = document.getElementById("pattern-" + key + "-desc")
-    if (descEl) descEl.textContent = getUiTextWithFallback("entropy_pattern_" + key + "_desc")
+    var descText = getUiTextWithFallback("entropy_pattern_" + key + "_desc")
+    if (descEl) {
+        descEl.textContent = descText
+        descEl.title = descText || ""
+    }
+    var nameEl = document.getElementById("pattern-" + key + "-name")
+    if (nameEl && descText) {
+        nameEl.title = descText
+    }
 }
 
 function initSettingsUI() {
@@ -2861,6 +2883,18 @@ function refreshEntropyLabels() {
     setElementText("entropyFocusDisplay", "entropy_focus_disabled")
     setElementText("cycleOverseerButton", "entropy_overseer_button_unlock")
     setElementText("entropyOverseerNote", "entropy_overseer_note")
+    var overseerTooltip = tUi("entropy_overseer_tooltip") || ""
+    var overseerBtn = document.getElementById("cycleOverseerButton")
+    if (overseerBtn) overseerBtn.title = overseerTooltip
+    var overseerNote = document.getElementById("entropyOverseerNote")
+    if (overseerNote) overseerNote.title = overseerTooltip
+    var focusTooltip = tUi("entropy_focus_tooltip") || ""
+    var focusLabel = document.getElementById("entropyFocusLabel")
+    var focusDisplay = document.getElementById("entropyFocusDisplay")
+    if (focusLabel) focusLabel.title = focusTooltip
+    if (focusDisplay) focusDisplay.title = focusTooltip
+    var uaNameEl = document.getElementById("upgrade-meta-unifiedArchitecture-name")
+    if (uaNameEl) uaNameEl.title = tUi("entropy_unifiedArchitecture_tooltip") || uaNameEl.title || ""
 
     setElementText("entropyWorkTitle", "entropy_section_work")
     setElementText("entropyStudiesTitle", "entropy_section_studies")
@@ -3935,6 +3969,9 @@ function shouldAutoSwitch(currentTask, nextTask) {
 
 function autoPromote() {
     if (!gameData.autoSwitchJobs) return
+    if (isEntropyJob(gameData.currentJob) && gameData.currentJob.getMaxXp && gameData.currentJob.xp < gameData.currentJob.getMaxXp()) {
+        return
+    }
     var nextEntity = getNextEntity(gameData.taskData, jobCategories, gameData.currentJob.name)
     if (nextEntity == null) {
         nextEntity = getNextEntity(gameData.taskData, entropyJobCategories, gameData.currentJob.name)
@@ -4241,6 +4278,9 @@ function ensureEntropyPatternsState() {
     if (!gameData.entropyPatterns.dominantMemory) {
         gameData.entropyPatterns.dominantMemory = {name: null, level: 0}
     }
+    if (!gameData.entropyPatterns.discovered) {
+        gameData.entropyPatterns.discovered = {}
+    }
 }
 
 function ensureEntropyArtifactsState() {
@@ -4465,11 +4505,28 @@ function updateEntropyPatternsOnRebirth() {
     var stableScore = longLife ? clamp01(fractionMixed) : 0
     var opportunistScore = lifeStats.autoSwitchUsed ? clamp01(fractionMixed) : 0
 
+    var patternKeys = ["laborCycle", "scholarLoop", "compressedLife", "stableCycle", "opportunist"]
+    var prevLevels = {}
+    patternKeys.forEach(function(key) {
+        prevLevels[key] = (patterns[key] && patterns[key].level) || 0
+    })
+
     addPatternXp("laborCycle", laborScore)
     addPatternXp("scholarLoop", scholarScore)
     addPatternXp("compressedLife", compressedScore)
     addPatternXp("stableCycle", stableScore)
     addPatternXp("opportunist", opportunistScore)
+
+    var newlyDiscovered = []
+    patternKeys.forEach(function(key) {
+        var newLevel = (patterns[key] && patterns[key].level) || 0
+        if (prevLevels[key] <= 0 && newLevel >= 1) {
+            if (!gameData.entropyPatterns.discovered[key]) {
+                gameData.entropyPatterns.discovered[key] = true
+                newlyDiscovered.push(key)
+            }
+        }
+    })
 
     lifeStats.rebirthCount = (lifeStats.rebirthCount || 0) + 1
 
@@ -4490,6 +4547,15 @@ function updateEntropyPatternsOnRebirth() {
         }
         var currentSeeds = gameData.entropy.seeds || 0
         gameData.entropy.seeds = Math.max(currentSeeds, targetSeeds)
+    }
+
+    if (newlyDiscovered.length > 0) {
+        var prefix = tUi("entropy_pattern_discovered_prefix") || "New pattern discovered:"
+        newlyDiscovered.forEach(function(key) {
+            var name = getUiTextWithFallback("entropy_pattern_" + key + "_name") || key
+            var desc = getUiTextWithFallback("entropy_pattern_" + key + "_desc") || ""
+            alert(prefix + " " + name + (desc ? " — " + desc : ""))
+        })
     }
 
     lifeStats.ticksInJobs = 0
