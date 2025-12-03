@@ -4472,6 +4472,26 @@ function updateEntropyPatternsOnRebirth() {
     addPatternXp("opportunist", opportunistScore)
 
     lifeStats.rebirthCount = (lifeStats.rebirthCount || 0) + 1
+
+    if (gameData.entropy && gameData.entropy.entropyUnlocked) {
+        var totalPatternLevel =
+            getPatternLevel("laborCycle") +
+            getPatternLevel("scholarLoop") +
+            getPatternLevel("compressedLife") +
+            getPatternLevel("stableCycle") +
+            getPatternLevel("opportunist")
+        var rebirths = lifeStats.rebirthCount || 0
+        var targetSeeds = 1
+        if (rebirths >= 3 && totalPatternLevel >= 5) {
+            targetSeeds = 2
+        }
+        if (rebirths >= 7 && totalPatternLevel >= 12) {
+            targetSeeds = 3
+        }
+        var currentSeeds = gameData.entropy.seeds || 0
+        gameData.entropy.seeds = Math.max(currentSeeds, targetSeeds)
+    }
+
     lifeStats.ticksInJobs = 0
     lifeStats.ticksInSkills = 0
     lifeStats.currentLifeTicks = 0
