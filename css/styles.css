@@ -268,7 +268,122 @@ quickTaskDisplay .progress-text.name {
         height: 24px;
         margin-bottom: 6px;
     }
-    quickTaskDisplay .progress-text.name {
-        font-size: 12px;
+quickTaskDisplay .progress-text.name {
+    font-size: 12px;
+}
+
+/* ------------------------------------
+   Entropy tab layout and styling
+------------------------------------ */
+#entropy {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.entropy-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.entropy-ledger-work,
+.entropy-study {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.entropy-upgrades {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.entropy-artifacts,
+.entropy-patterns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.entropy-card {
+    background: #1f2430;
+    border: 1px solid #2b3243;
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.entropy-section-title {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #d4e5ff;
+    letter-spacing: 0.01em;
+    border-bottom: 1px solid #31394d;
+    padding-bottom: 6px;
+}
+
+.entropy-muted {
+    color: #8f9bb0;
+}
+
+.entropy-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.entropy-table th {
+    background: #252c3c;
+    color: #dfe8ff;
+    font-weight: 700;
+    border: 1px solid #2f3646;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.entropy-table td {
+    border: 1px solid #2f3646;
+    padding: 8px 10px;
+    vertical-align: top;
+    color: #e7ecf5;
+}
+
+.entropy-table tr:hover {
+    background: rgba(86, 139, 255, 0.08);
+}
+
+.entropy-table td:last-child {
+    text-align: right;
+}
+
+.entropy-table button {
+    width: 100%;
+    text-align: center;
+}
+
+.entropy-table div[id*="-desc"] {
+    color: #9badc7;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.entropy-section p {
+    margin: 4px 0;
+    color: #e7ecf5;
+}
+
+@media (max-width: 720px) {
+    .entropy-section-title {
+        font-size: 16px;
     }
+    .entropy-card {
+        padding: 12px 12px;
+    }
+}
 }

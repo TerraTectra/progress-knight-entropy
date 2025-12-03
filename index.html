@@ -312,33 +312,33 @@
                 </div>
 
                 <div class="tab hidden" id="entropy">
-                    <div class="w3-row">
-                        <div class="w3-half">
-                            <h3 id="entropyLedgerTitle"></h3>
-                            <div id="entropyLedgerNote" style="color: gray; margin-bottom: 6px;"></div>
+                    <div class="entropy-section entropy-ledger-work">
+                        <div class="entropy-card">
+                            <h3 class="entropy-section-title" id="entropyLedgerTitle"></h3>
+                            <div id="entropyLedgerNote" class="entropy-muted" style="margin-bottom: 6px;"></div>
                             <p><span id="entropySeedLabel"></span> <span id="entropySeedDisplay">0</span></p>
                             <p><span id="entropyInsightLabel"></span> <span id="entropyInsightDisplay">0</span></p>
                             <p><span id="entropyMaxInsightLabel"></span> <span id="entropyMaxInsightDisplay">0</span></p>
                             <p><span id="entropyEPLabel"></span> <span id="entropyEPDisplay">0</span></p>
                             <p><span id="entropyFocusLabel"></span> <span id="entropyFocusDisplay">Disabled</span></p>
                             <button class="w3-button button" id="cycleOverseerButton" onClick="unlockCycleOverseer()"></button>
-                            <div id="entropyOverseerNote" style="color: gray; margin-top: 8px;"></div>
+                            <div id="entropyOverseerNote" class="entropy-muted" style="margin-top: 8px;"></div>
                         </div>
-                        <div class="w3-half">
-                            <h3 id="entropyWorkTitle"></h3>
-                            <table id="entropyJobTable" class="w3-table w3-bordered"></table>
-                        </div>
-                    </div>
-                    <div class="w3-row" style="margin-top: 12px;">
-                        <div class="w3-half">
-                            <h3 id="entropyStudiesTitle"></h3>
-                            <table id="entropySkillTable" class="w3-table w3-bordered"></table>
+                        <div class="entropy-card">
+                            <h3 class="entropy-section-title" id="entropyWorkTitle"></h3>
+                            <table id="entropyJobTable" class="w3-table w3-bordered entropy-table"></table>
                         </div>
                     </div>
-                    <div class="w3-row" id="entropyUpgradeSection" style="margin-top: 12px;">
-                        <div class="w3-third">
-                            <h3 id="entropyVelocityTitle"></h3>
-                            <table class="w3-table w3-bordered">
+                    <div class="entropy-section entropy-study">
+                        <div class="entropy-card">
+                            <h3 class="entropy-section-title" id="entropyStudiesTitle"></h3>
+                            <table id="entropySkillTable" class="w3-table w3-bordered entropy-table"></table>
+                        </div>
+                    </div>
+                    <div class="entropy-section entropy-upgrades" id="entropyUpgradeSection">
+                        <div class="entropy-card entropy-upgrade-group">
+                            <h3 class="entropy-section-title" id="entropyVelocityTitle"></h3>
+                            <table class="w3-table w3-bordered entropy-table">
                                 <tr>
                                     <th id="entropyVelocityHeaderUpgrade" style="width: 45%;"></th>
                                     <th id="entropyVelocityHeaderLevel" style="width: 15%;"></th>
@@ -401,9 +401,9 @@
                                 </tr>
                             </table>
                         </div>
-                        <div class="w3-third">
-                            <h3 id="entropyStabilityTitle"></h3>
-                            <table class="w3-table w3-bordered">
+                        <div class="entropy-card entropy-upgrade-group">
+                            <h3 class="entropy-section-title" id="entropyStabilityTitle"></h3>
+                            <table class="w3-table w3-bordered entropy-table">
                                 <tr>
                                     <th id="entropyStabilityHeaderUpgrade" style="width: 45%;"></th>
                                     <th id="entropyStabilityHeaderLevel" style="width: 15%;"></th>
@@ -502,9 +502,9 @@
                                 </tr>
                             </table>
                         </div>
-                        <div class="w3-third">
-                            <h3 id="entropyMetaTitle"></h3>
-                            <table class="w3-table w3-bordered">
+                        <div class="entropy-card entropy-upgrade-group">
+                            <h3 class="entropy-section-title" id="entropyMetaTitle"></h3>
+                            <table class="w3-table w3-bordered entropy-table">
                                 <tr>
                                     <th id="entropyMetaHeaderUpgrade" style="width: 45%;"></th>
                                     <th id="entropyMetaHeaderLevel" style="width: 15%;"></th>
@@ -523,10 +523,10 @@
                             </table>
                         </div>
                     </div>
-                    <div class="w3-row" id="entropyArtifactSection" style="margin-top: 12px;">
-                        <div class="w3-third">
-                            <h3 id="entropyArtifactTitle"></h3>
-                            <table class="w3-table w3-bordered">
+                    <div class="entropy-section entropy-artifacts" id="entropyArtifactSection">
+                        <div class="entropy-card">
+                            <h3 class="entropy-section-title" id="entropyArtifactTitle"></h3>
+                            <table class="w3-table w3-bordered entropy-table">
                                 <tr>
                                     <th id="entropyArtifactHeaderName" style="width: 45%;"></th>
                                     <th id="entropyArtifactHeaderStatus" style="width: 20%;"></th>
@@ -572,10 +572,10 @@
                             </table>
                         </div>
                     </div>
-                    <div class="w3-row" id="entropyPatternSection" style="margin-top: 12px;">
-                        <div class="w3-third">
-                            <h3 id="entropyPatternTitle"></h3>
-                            <table class="w3-table w3-bordered">
+                    <div class="entropy-section entropy-patterns" id="entropyPatternSection">
+                        <div class="entropy-card">
+                            <h3 class="entropy-section-title" id="entropyPatternTitle"></h3>
+                            <table class="w3-table w3-bordered entropy-table">
                                 <tr>
                                     <th id="entropyPatternHeaderName" style="width: 60%;"></th>
                                     <th id="entropyPatternHeaderLevel" style="width: 40%;"></th>
