@@ -194,6 +194,8 @@ const translations = {
         requiredPrefix: { en: "Required:", ru: "Требуется:" },
         universeRequirement: { en: "Universe", ru: "Вселенная" },
         meaningLabel: { en: "Meaning", ru: "Смысл" },
+        tagPassive: { en: "PASSIVE", ru: "ПАССИВНО" },
+        tagActive: { en: "ACTIVE", ru: "АКТИВНО" },
         settingsLanguageLabel: { en: "Language", ru: "Язык" },
         settingsLanguageRu: { en: "Russian", ru: "Русский" },
         settingsLanguageEn: { en: "English", ru: "Английский" },

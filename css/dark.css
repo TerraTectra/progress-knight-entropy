@@ -27,13 +27,15 @@
 .dark .w3-table th,
 .dark .w3-table-all td,
 .dark .w3-table-all th,
-.dark .w3-bordered tr,
+.dark .w3-bordered td,
+.dark .w3-bordered th,
 .dark .w3-table-all tr {
     border: none !important;
 }
 
 .dark .w3-table th,
-.dark .w3-table-all th {
+.dark .w3-table-all th,
+.dark .w3-bordered th {
     border-bottom: 1px solid #3a3a3a !important;
 }
 

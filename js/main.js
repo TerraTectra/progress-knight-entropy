@@ -2534,14 +2534,15 @@ function updateTaskRows() {
 
         var focusTag = row.getElementsByClassName("focusTag")[0]
         if (focusTag) {
+            focusTag.classList.remove("job-tag", "job-tag-passive", "job-tag-active")
             if (isCycleOverseerActive()) {
                 var focusTask = getFocusedTask()
                 if (focusTask && task == focusTask) {
-                    focusTag.textContent = "FOCUSED"
-                    focusTag.style.color = "#ffffff"
+                    focusTag.textContent = tUi("tagActive") || "ACTIVE"
+                    focusTag.classList.add("job-tag", "job-tag-active")
                 } else if (focusTask) {
-                    focusTag.textContent = "PASSIVE"
-                    focusTag.style.color = "#d8d8d8"
+                    focusTag.textContent = tUi("tagPassive") || "PASSIVE"
+                    focusTag.classList.add("job-tag", "job-tag-passive")
                 } else {
                     focusTag.textContent = ""
                 }
@@ -3742,9 +3743,11 @@ function getIncome() {
         var task = gameData.taskData[key]
         if (!(task instanceof Job)) continue
         var requirement = gameData.requirements[task.name]
-        if (requirement && !requirement.isCompleted()) continue
+        var unlocked = (!requirement) || requirement.isCompleted()
+        if (!unlocked) continue
         var mult = task.name === focusJobName ? 1 : PASSIVE_JOB_INCOME_MULTIPLIER
-        income += task.getIncome() * mult
+        var baseIncome = task.getIncome() || 0
+        income += baseIncome * mult
     }
     return income * compression.money * jitter
 }
