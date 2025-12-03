@@ -3978,6 +3978,13 @@ function ensureEntropyArtifactsState() {
     }
 }
 
+function ensureEntropyBackfills() {
+    ensureEntropyState()
+    ensureEntropyUpgradesState()
+    ensureEntropyPatternsState()
+    ensureEntropyArtifactsState()
+}
+
 function ensureAutoSwitchState() {
     if (gameData.autoSwitchJobs === undefined) {
         gameData.autoSwitchJobs = false
@@ -4396,10 +4403,7 @@ function loadGameData() {
         initObserverDataIfNeeded()
     }
 
-    ensureEntropyState()
-    ensureEntropyUpgradesState()
-    ensureEntropyPatternsState()
-    ensureEntropyArtifactsState()
+    ensureEntropyBackfills()
     ensureRequirementsBackfill()
     ensureAutoSwitchState()
     ensureSkipSkillsState()
@@ -4981,10 +4985,7 @@ function startGame() {
     autoSwitchFlagsPresentInSave = !!(savedGameData && savedGameData.hasOwnProperty("autoSwitchJobs") && savedGameData.hasOwnProperty("autoSwitchSkills"))
 
     ensureUniverseState()
-    ensureEntropyState()
-    ensureEntropyUpgradesState()
-    ensureEntropyPatternsState()
-    ensureEntropyArtifactsState()
+    ensureEntropyBackfills()
     ensureFirstTimePromptState()
     ensureLanguageState()
     ensureMetaState()
@@ -5018,10 +5019,7 @@ function startGame() {
     }
 
     loadGameData()
-    ensureEntropyState()
-    ensureEntropyUpgradesState()
-    ensureEntropyPatternsState()
-    ensureEntropyArtifactsState()
+    ensureEntropyBackfills()
 
     if (gameData.entropy.entropyUnlocked) {
         gameData.entropy.seeds = Math.max(gameData.entropy.seeds || 0, 1)
