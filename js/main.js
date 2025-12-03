@@ -2611,6 +2611,7 @@ function updateShopAutoPickState() {
 }
 
 function updateShopRecommendation() {
+    if (!autoPickShopElement) autoPickShopElement = document.getElementById("autoPickShopCheckbox")
     var table = document.getElementById("itemTable")
     if (!table) return
 
@@ -2621,6 +2622,7 @@ function updateShopRecommendation() {
     recommendedShopItem = null
 
     if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) return
+    var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
 
     ensureShopState()
 
@@ -2683,17 +2685,15 @@ function updateShopRecommendation() {
         if (row) {
             row.classList.add("shop-row-auto-picked")
         }
-        if (autoPickShopElement && autoPickShopElement.checked) {
-            if (gameData.coins >= bestCandidateCost) {
-                if (bestCandidateCategory === "Properties") {
-                    setProperty(bestCandidate.name)
-                } else if (bestCandidateCategory === "Misc") {
-                    setMisc(bestCandidate.name)
-                }
-                updateItemRows()
-                updateShopRecommendation()
-                return
+        if (shouldAutoBuy && gameData.coins >= bestCandidateCost) {
+            if (bestCandidateCategory === "Properties") {
+                setProperty(bestCandidate.name)
+            } else if (bestCandidateCategory === "Misc") {
+                setMisc(bestCandidate.name)
             }
+            updateItemRows()
+            updateShopRecommendation()
+            return
         }
     }
 }
