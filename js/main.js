@@ -2676,10 +2676,10 @@ function refreshEntropyLabels() {
     var metaUpgrades = ["unifiedArchitecture"]
     velocityUpgrades.forEach(function(key) { setEntropyUpgradeText("velocity", key) })
     stabilityUpgrades.forEach(function(key) { setEntropyUpgradeText("stability", key) })
-    metaUpgrades.forEach(function(key) { setEntropyUpgradeText("meta", key) })
+    metaUpgrades.forEach(function(key) { setEntropyUpgradeText("meta", key) });
 
-    ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"].forEach(setEntropyArtifactText)
-    ["laborCycle", "scholarLoop", "compressedLife", "stableCycle", "opportunist"].forEach(setEntropyPatternText)
+    ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"].forEach(setEntropyArtifactText);
+    ["laborCycle", "scholarLoop", "compressedLife", "stableCycle", "opportunist"].forEach(setEntropyPatternText);
 }
 
 function refreshNarrativeTexts() {
@@ -2706,6 +2706,7 @@ function refreshNarrativeTexts() {
 }
 
 function refreshUI() {
+    ensureEntropyBackfills()
     refreshTabLabels()
 
     refreshCategoryHeaders()
