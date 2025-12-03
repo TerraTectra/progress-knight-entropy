@@ -619,7 +619,7 @@ const ENTROPY_UPGRADE_DEFINITIONS = {
         patternAttunement: {name: "Pattern Attunement", description: "Tiny uplift to pattern effects, heavily capped."},
     },
     meta: {
-        unifiedArchitecture: {name: "Unified Architecture", description: "Finalize entropy; freeze further growth once stabilized."},
+        unifiedArchitecture: {name: "Unified Architecture", description: "Finalize this universe's entropy, gain a stability token, and unlock travel to the next universe."},
     },
 }
 
@@ -2870,6 +2870,12 @@ function refreshEntropyLabels() {
     setElementText("entropyArtifactTitle", "entropy_section_artifacts")
     setElementText("entropyPatternTitle", "entropy_section_patterns")
 
+    var seedHint = tUi("entropy_seeds_hint")
+    var seedLabelEl = document.getElementById("entropySeedLabel")
+    var seedDisplayEl = document.getElementById("entropySeedDisplay")
+    if (seedLabelEl) seedLabelEl.title = seedHint || ""
+    if (seedDisplayEl) seedDisplayEl.title = seedHint || ""
+
     setElementText("entropyVelocityHeaderUpgrade", "entropy_col_upgrade")
     setElementText("entropyVelocityHeaderLevel", "entropy_col_level")
     setElementText("entropyVelocityHeaderCost", "entropy_col_cost")
@@ -3300,7 +3306,11 @@ function updateUniverseUI() {
     if ((gameData.universeIndex || 1) >= 7) {
         meaningText = " | Meaning: " + (gameData.meaning || 0).toFixed(1)
     }
-    indicator.textContent += choices + meaningText
+    var tokensText = ""
+    if (gameData.universeTokens !== undefined && gameData.universeTokens > 0) {
+        tokensText = " | Tokens: " + gameData.universeTokens
+    }
+    indicator.textContent += choices + meaningText + tokensText
     var csDisplay = document.getElementById("cycleStrainDisplay")
     if (csDisplay) {
         if ((gameData.universeIndex || 1) >= 8) {
