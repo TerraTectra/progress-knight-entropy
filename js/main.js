@@ -2686,10 +2686,15 @@ function updateShopRecommendation() {
             row.classList.add("shop-row-auto-picked")
         }
         if (shouldAutoBuy && gameData.coins >= bestCandidateCost) {
-            if (bestCandidateCategory === "Properties") {
-                setProperty(bestCandidate.name)
-            } else if (bestCandidateCategory === "Misc") {
-                setMisc(bestCandidate.name)
+            var button = row ? row.getElementsByClassName("button")[0] : null
+            if (button && !button.disabled && typeof button.click === "function") {
+                button.click()
+            } else {
+                if (bestCandidateCategory === "Properties") {
+                    setProperty(bestCandidate.name)
+                } else if (bestCandidateCategory === "Misc") {
+                    setMisc(bestCandidate.name)
+                }
             }
             updateItemRows()
             updateShopRecommendation()
