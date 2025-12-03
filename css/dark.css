@@ -73,6 +73,19 @@
     color: #ffaaaa;
 }
 
+.dark .shop-controls {
+    margin-bottom: 8px;
+}
+
+.dark .shop-row-auto-picked {
+    outline: 2px solid #6ad17a;
+    background-color: rgba(106, 209, 122, 0.1);
+}
+
+.dark .shop-row-auto-picked .item-button {
+    border-color: #6ad17a !important;
+}
+
 .dark .entropy-card {
     background-color: rgb(46, 46, 46);
     border-color: rgb(73, 73, 73);

@@ -212,6 +212,19 @@ button:focus {
     outline: none;
 }
 
+.shop-controls {
+    margin-bottom: 8px;
+}
+
+.shop-row-auto-picked {
+    outline: 2px solid #4caf50;
+    background-color: rgba(76, 175, 80, 0.08);
+}
+
+.shop-row-auto-picked .item-button {
+    border-color: #4caf50 !important;
+}
+
 .scroll {
     overflow-y: auto;
 }

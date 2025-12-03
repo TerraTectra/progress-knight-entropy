@@ -23,6 +23,7 @@ var gameData = {
     hasAnsweredFirstTimePrompt: false,
     autoSwitchJobs: false,
     autoSwitchSkills: false,
+    settings: {autoPickShop: false},
 
     entropy: {
         unlocked: false,
@@ -112,6 +113,9 @@ var metaWeights = {patterns: 1, aging: 1, burnout: 1, compression: 1, meaning: 1
 var metaTunesSpent = 0
 var observerData = null
 var debugMode = false
+var autoPickShopElement = null
+var recommendedShopItem = null
+var shopAutoPickLabelElement = null
 
 const observerIntellectConfigs = {
     1: {name: "Fool", performanceFactor: 0.7, existenceFactor: 0.5},
@@ -2124,6 +2128,10 @@ function setTab(element, selectedTab) {
         tab.style.display = "none"
     })
     document.getElementById(selectedTab).style.display = "block"
+    if (selectedTab === "shop") {
+        updateItemRows()
+        updateShopRecommendation()
+    }
 
     var tabButtons = document.getElementsByClassName("tabButton")
     for (tabButton of tabButtons) {
@@ -2573,6 +2581,104 @@ function updateItemRows() {
         active.style.backgroundColor = gameData.currentMisc.includes(item) || item == gameData.currentProperty ? color : "white"
         row.getElementsByClassName("effect")[0].textContent = item.getEffectDescription()
         formatCoins(effectiveCost, row.getElementsByClassName("expense")[0])
+    }
+}
+
+function updateShopAutoPickState() {
+    if (!autoPickShopElement) autoPickShopElement = document.getElementById("autoPickShopCheckbox")
+    if (!shopAutoPickLabelElement) shopAutoPickLabelElement = document.getElementById("autoPickShopLabel")
+
+    var labelText = tUi("autoPickShopLabel") || "Auto-pick shop items"
+    var tooltip = tUi("autoPickShopTooltip") || ""
+
+    if (shopAutoPickLabelElement) {
+        shopAutoPickLabelElement.textContent = labelText
+        shopAutoPickLabelElement.title = tooltip
+    }
+    if (autoPickShopElement) {
+        autoPickShopElement.title = tooltip
+        autoPickShopElement.checked = !!(gameData.settings && gameData.settings.autoPickShop)
+        if (!autoPickShopElement.dataset.bound) {
+            autoPickShopElement.addEventListener("change", function() {
+                if (!gameData.settings) gameData.settings = {}
+                gameData.settings.autoPickShop = !!autoPickShopElement.checked
+                saveGameData()
+                updateShopRecommendation()
+            })
+            autoPickShopElement.dataset.bound = "1"
+        }
+    }
+}
+
+function updateShopRecommendation() {
+    var table = document.getElementById("itemTable")
+    if (!table) return
+
+    var rows = table.getElementsByTagName("tr")
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].classList.remove("shop-row-auto-picked")
+    }
+    recommendedShopItem = null
+
+    if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) return
+
+    ensureShopState()
+
+    var incomePerDay = getIncome()
+    var baseExpenses = getExpense()
+    var costFactor = getUniverseConfig().costFactor || 1
+    var currentPropertyExpense = (gameData.currentProperty ? gameData.currentProperty.getExpense() : 0) * costFactor
+
+    var bestCandidate = null
+    var bestNet = -Infinity
+
+    for (var itemName in gameData.itemData) {
+        if (!gameData.itemData.hasOwnProperty(itemName)) continue
+        var item = gameData.itemData[itemName]
+        if (!item) continue
+
+        var categoryName = getItemCategoryName(itemName)
+        if (!categoryName || !itemCategories[categoryName]) continue
+
+        var requirement = gameData.requirements[itemName]
+        if (requirement) {
+            if (typeof requirement.isCompleted === "function") {
+                if (!requirement.isCompleted()) continue
+            } else if (requirement.completed === false) {
+                continue
+            }
+        }
+        if (isItemPurchased(itemName)) continue
+
+        var effectiveCost = getEffectiveItemCost(item)
+        if (gameData.coins < effectiveCost) continue
+
+        var candidateExpense = item.getExpense() * costFactor
+        var candidateExpenses = baseExpenses
+
+        if (categoryName === "Properties") {
+            candidateExpenses = baseExpenses - currentPropertyExpense + candidateExpense
+        } else if (categoryName === "Misc") {
+            candidateExpenses = baseExpenses + candidateExpense
+        } else {
+            continue
+        }
+
+        var candidateNet = incomePerDay - candidateExpenses
+        if (candidateNet < 0) continue
+
+        if (candidateNet > bestNet) {
+            bestNet = candidateNet
+            bestCandidate = item
+        }
+    }
+
+    if (bestCandidate) {
+        recommendedShopItem = bestCandidate.name
+        var row = document.getElementById("row " + bestCandidate.name)
+        if (row) {
+            row.classList.add("shop-row-auto-picked")
+        }
     }
 }
 
@@ -4576,6 +4682,8 @@ function loadGameData() {
         replaceSaveDict(gameData.itemData, gameDataSave.itemData)
 
         gameData = gameDataSave
+        if (!gameData.settings) gameData.settings = {autoPickShop: false}
+        if (gameData.settings.autoPickShop === undefined) gameData.settings.autoPickShop = false
         observerData = gameData.observerData || observerData || {initialized: false}
         initObserverDataIfNeeded()
     }
@@ -4612,6 +4720,8 @@ function updateUI() {
     if (entropyJobSection) entropyJobSection.style.display = isEntropyUnlocked() ? "block" : "none"
     var entropySkillSection = document.getElementById("entropySkillsSection")
     if (entropySkillSection) entropySkillSection.style.display = isEntropyUnlocked() ? "block" : "none"
+    updateShopAutoPickState()
+    updateShopRecommendation()
     updateText()
     if (isObserverMode()) {
         initObserverDataIfNeeded()
@@ -4658,13 +4768,13 @@ function update() {
         decaySwitchPenalty()
         decayBurnout()
         updateMeaning()
-    updateCycleStrain()
-    tryMetaTune()
-    recordLifeTickParticipation()
-    increaseDays()
-    maybeUnlockAlmanac()
-    autoPromote()
-    autoLearn()
+        updateCycleStrain()
+        tryMetaTune()
+        recordLifeTickParticipation()
+        increaseDays()
+        maybeUnlockAlmanac()
+        autoPromote()
+        autoLearn()
         tickTasks()
         applyExpenses()
     }
@@ -4686,6 +4796,7 @@ function resetGameData() {
         meaning: 0,
         meaningMilestones: {},
         cycleStrain: 0,
+        settings: {autoPickShop: false},
         metaAwareness: 0,
         metaWeights: {patterns: 1, aging: 1, burnout: 1, compression: 1, meaning: 1, cycle: 1},
         metaTunesSpent: 0,

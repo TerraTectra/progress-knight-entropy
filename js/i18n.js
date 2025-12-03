@@ -197,6 +197,8 @@ const translations = {
         tagPassive: { en: "PASSIVE", ru: "ПАССИВНО" },
         tagActive: { en: "ACTIVE", ru: "АКТИВНО" },
         skillUnavailable: { en: "Not available in this version.", ru: "Недоступно в этой версии." },
+        autoPickShopLabel: { en: "Auto-pick shop items", ru: "Автовыбор предметов магазина" },
+        autoPickShopTooltip: { en: "Highlight the best item whose upkeep keeps Net/day positive.", ru: "Подсвечивать лучший предмет, при котором Чистый доход/день остаётся положительным." },
         settingsLanguageLabel: { en: "Language", ru: "Язык" },
         settingsLanguageRu: { en: "Russian", ru: "Русский" },
         settingsLanguageEn: { en: "English", ru: "Английский" },
