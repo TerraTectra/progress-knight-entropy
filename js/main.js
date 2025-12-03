@@ -2630,6 +2630,8 @@ function updateShopRecommendation() {
     var currentPropertyExpense = (gameData.currentProperty ? gameData.currentProperty.getExpense() : 0) * costFactor
 
     var bestCandidate = null
+    var bestCandidateCategory = null
+    var bestCandidateCost = 0
     var bestNet = -Infinity
 
     for (var itemName in gameData.itemData) {
@@ -2670,6 +2672,8 @@ function updateShopRecommendation() {
         if (candidateNet > bestNet) {
             bestNet = candidateNet
             bestCandidate = item
+            bestCandidateCategory = categoryName
+            bestCandidateCost = effectiveCost
         }
     }
 
@@ -2678,6 +2682,18 @@ function updateShopRecommendation() {
         var row = document.getElementById("row " + bestCandidate.name)
         if (row) {
             row.classList.add("shop-row-auto-picked")
+        }
+        if (autoPickShopElement && autoPickShopElement.checked) {
+            if (gameData.coins >= bestCandidateCost) {
+                if (bestCandidateCategory === "Properties") {
+                    setProperty(bestCandidate.name)
+                } else if (bestCandidateCategory === "Misc") {
+                    setMisc(bestCandidate.name)
+                }
+                updateItemRows()
+                updateShopRecommendation()
+                return
+            }
         }
     }
 }
