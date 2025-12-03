@@ -1,0 +1,343 @@
+You are an engineer + balance/UX/QA agent on Progress Knight: Entropy.
+
+Repo: TerraTectra/progress-knight-entropy
+Branch: main (current live build on GitHub Pages)
+
+The users current feedback (live build matches main):
+
+Grid lines (table net) are still visually heavy, especially on Magic / Entropy sections. They want a cleaner look closer to original PK (no full grid, just subtle separators).
+
+Magic block still looks wrong:
+
+Requirement line shows things like:
+Требуется: Оркестровка жизни Уровень 0/20, undefined unavailable, Universe 6+ required
+
+This looks broken and confusing.
+
+Active / passive work and income model are still unsatisfying / partially broken:
+
+Picking an active job is unreliable / feels broken.
+
+Passive jobs do not generate income.
+
+User proposal: get rid of the need for an active job and allow passive jobs to generate income, but at a reduced rate so the game stays balanced.
+
+Your tasks:
+
+A) Simplify the table visuals to remove the grid look.
+
+B) Clean up Magic requirements and text so the block looks intentional and not buggy.
+
+C) Rework the job system so:
+
+The game no longer requires an active job to earn income.
+
+All trained jobs generate income passively at a reduced rate.
+
+Optionally having a focused (active) job still makes sense and gives a meaningful bonus.
+
+Passive/active XP gain for jobs and skills is fixed and behaves consistently.
+
+Do NOT regress entropy mechanics, settings, artifacts, or previous bugfixes.
+
+
+A. Remove the heavy table grid
+
+
+Goal: tables should be visually closer to classic PK: no full cell grid, just subtle separators (e.g. header bottom border) and alternating row backgrounds.
+
+In css/styles.css and css/dark.css, find global table and cell rules, something like:
+
+table, td, th 
+    border: 1px solid ...;
+    /* or similar grid-generating rules */
+
+
+
+Change them so:
+
+No per-cell borders:
+
+table 
+    border-collapse: collapse;
+
+
+td, th 
+    border: none;
+
+
+
+Provide only subtle separation on headers:
+
+th 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);  /* adjust for light theme */
+
+
+
+If you need row separation, use background-color striping instead of borders (same as original PK), reusing existing row classes if present.
+
+Double-check that:
+
+Jobs, Skills, Magic, Entropy, Shop tables all follow the same clean style.
+
+No extra outer grid appears specifically on Magic or Entropy panels.
+
+
+B. Fix Magic block text / requirements
+
+
+Goal: Magic skills should look like a real skill group, with clean requirement text and no undefined/unavailable/Universe 6+ junk.
+
+Inspect skill data:
+
+In js/classes.js (or wherever skills are defined), locate the Magic group. It may include skills like:
+
+Глубокие исследования, Долголетие, Оркестровка жизни, Установки, Цикл etc.
+
+Check each Magic skill:
+
+name key / translation key,
+
+effect text key,
+
+requirements structure (likely an object listing prerequisite skills/levels, maybe universe requirements).
+
+Fix Magic requirements:
+
+For the current version, do not use Universe-level requirements in Magic requirement text. Remove or neutralize any universeRequired field for Magic skills that causes strings like Universe 6+ required.
+
+If some Magic skills are intended as future content only:
+
+Either hide their rows entirely,
+
+Or show them as locked with a clear, single-line message:
+
+EN: "Not available in this version."
+
+RU: "Недоступно в этой версии."
+
+Do not concatenate this with other requirements; treat it as a standalone message.
+
+Fix translations:
+
+In js/i18n.js, inside translations.ui (or wherever UI text is held), ensure that:
+
+Magic skill names and effects have proper entries in both EN and RU.
+
+Requirement text template that produces the Требуется:  line:
+
+For Magic, it should include only valid parts (e.g. skill-level requirements).
+
+Do not include unresolved/missing parts that produce undefined unavailable or similar.
+
+A reasonable result for the Magic header requirement line under the block would be something like:
+
+RU: "Требуется: Концентрация уровня 25/200, Медитация уровня 0/200."
+
+EN: "Requires: Concentration level 25/200, Meditation level 0/200."
+
+Rendering:
+
+In js/main.js, where the Skills tab renders categories including Magic:
+
+Use the same header/footer pattern for Magic as other categories.
+
+Ensure the Magic requirement text is built with the cleaned-up template and doesnt include raw undefined parts.
+
+Verify in browser that:
+
+Under Магия there is a single, coherent requirement line.
+
+No undefined, unavailable raw tokens, or Universe spam.
+
+
+C. Rework job system: passive income + fixed XP logic
+
+
+Goal:
+
+The player always earns income from jobs even if they dont explicitly pick an active job.
+
+One job may still be focused/active and give more income, but its optional.
+
+Passive XP for jobs and skills works again.
+
+The result is balanced; well use a conservative passive multiplier of 0.25 (25%) so multiple jobs dont explode the economy.
+
+Concrete design:
+
+Introduce constants (top of js/main.js or in config section):
+
+const PASSIVE_JOB_INCOME_MULTIPLIER = 0.25;   // 25% of full job income
+const PASSIVE_JOB_XP_MULTIPLIER      = 0.5;    // e.g. 50% XP when not focused
+const PASSIVE_SKILL_XP_MULTIPLIER    = 0.5;    // similar for skills
+
+
+(You can adjust XP multipliers slightly if original PK already had different numbers; preserve original feel where possible.)
+
+Keep a single currentJobId and currentSkillId for UI highlighting and focus bonus, but do not rely on them for income existence.
+
+Income update logic
+
+Find where job income is currently computed (update(), updateJobs(), or similar):
+
+It likely loops over jobs and, previously, only the active job generated income.
+
+Change it to:
+
+let totalIncomePerTick = 0;
+
+for (const job of allJobs) 
+    if (!job.isUnlocked) continue;
+
+    const baseIncome = job.getIncomePerTick(); // existing function / formula
+
+    if (!baseIncome) continue;
+
+    const isFocused = (job.id === currentJobId);
+
+    const multiplier = isFocused ? 1 : PASSIVE_JOB_INCOME_MULTIPLIER;
+
+    totalIncomePerTick += baseIncome * multiplier;
+
+
+// apply totalIncomePerTick to money and to Income/day / Net/day display
+
+
+If currentJobId is null (no focused job selected), all jobs still earn at passive rate (multiplier = PASSIVE_JOB_INCOME_MULTIPLIER for all).
+
+This preserves idle income while still giving a meaningful bonus (x4) when focusing on one job.
+
+Job XP (active vs passive)
+
+Find where job XP is applied (likely within the same loop or in updateJobXP()):
+
+Ensure every unlocked job accrues XP each tick:
+
+const xpBase = job.getXpPerTick(); // existing formula
+const xpMultiplier = isFocused ? 1 : PASSIVE_JOB_XP_MULTIPLIER;
+job.xp += xpBase * xpMultiplier;
+
+
+This fixes the current state where passive work doesnt level and active work isnt engaged when selected.
+
+Skill XP (active vs passive)
+
+For skills, find the corresponding update, e.g. updateSkills() or similar.
+
+Apply the same pattern:
+
+for (const skill of allSkills) 
+    if (!skill.isUnlocked) continue;
+
+    const baseXp = skill.getXpPerTick(); // existing logic
+
+    const isFocusedSkill = (skill.id === currentSkillId);
+    const multiplier = isFocusedSkill ? 1 : PASSIVE_SKILL_XP_MULTIPLIER;
+
+    skill.xp += baseXp * multiplier;
+
+
+
+This restores passive skill training (currently broken according to user) while keeping focused training clearly faster.
+
+Fix active job selection / UI
+
+Ensure that clicking a job row to set it as active:
+
+Properly sets currentJobId and updates the left sidebar Current job label.
+
+Does not disable other jobs passive operation.
+
+Review any recent changes that prevented active job selection:
+
+Look in setCurrentJob(...) (or equivalent):
+
+Remove conditions that prevent changing the active job when there is a passive/entropy flag.
+
+Ensure it only does:
+
+update currentJobId,
+
+update some UI state (highlighting row),
+
+maybe reset timers where appropriate.
+
+Balance considerations
+
+With PASSIVE_JOB_INCOME_MULTIPLIER = 0.25:
+
+If you have e.g. 3 low-tier jobs, their combined passive income is 75% of what a single focused job was before.
+
+High-tier jobs still dominate since they have higher base income.
+
+Focused job gives x4 income vs its passive state, retaining strategic choice.
+
+If needed, adjust XP multipliers to keep the pace close to original PK:
+
+but leave income multiplier at 0.25 unless tests show it is too weak.
+
+Regression checks
+
+Make sure that:
+
+Entropy Work with entropy still uses the job system correctly:
+
+It should be treated as one of the jobs, generating income (if intended) and XP according to the same passive/active rules.
+
+Auto-promote / auto-learn features still work and dont conflict with the new income model.
+
+
+D. Testing  deployment
+
+
+Local tests:
+
+Start a new game:
+
+Without clicking any job, verify money starts increasing (slowly) thanks to passive jobs.
+
+Select a job manually and check that:
+
+Its row is highlighted as current job.
+
+Income/day and Net/day noticeably increase compared to all-passive state.
+
+Check skills:
+
+Pick a main skill.
+
+Verify:
+
+Focused skill grows significantly faster.
+
+Other unlocked skills still gain XP (slower but non-zero).
+
+Go to Magic:
+
+Magic header and rows show clean requirements and text.
+
+No undefined or Universe 6+ required in the main requirement line.
+
+Check tables:
+
+No heavy cell grid; only subtle header separator and maybe striped rows.
+
+Push:
+
+git status
+git diff
+
+git add js/main.js js/classes.js js/i18n.js css/styles.css css/dark.css   and any other file you changed
+git commit -m "Rework job income to support passive earnings, restore passive XP, clean up Magic block and table grid"
+git push origin main
+
+
+After GitHub Pages updates:
+
+Verify the same behavior on:
+https://terratectra.github.io/progress-knight-entropy/
+
+Ensure there are no JS console errors and all three areas (jobs income, Magic block, table visuals) work as intended.
+
+END OF PROMPT

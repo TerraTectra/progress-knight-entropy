@@ -13,13 +13,38 @@
     color: white !important
 }
 
-.dark .w3-bordered tr, .w3-table-all tr {
-    border-bottom: 1px solid rgb(73, 73, 73);
-}
-
 .dark .w3-button:hover {
     background-color: rgb(82, 82, 82) !important;
     color: white !important
+}
+
+.dark .w3-table,
+.dark .w3-table-all {
+    border-collapse: collapse;
+}
+
+.dark .w3-table td,
+.dark .w3-table th,
+.dark .w3-table-all td,
+.dark .w3-table-all th,
+.dark .w3-bordered tr,
+.dark .w3-table-all tr {
+    border: none !important;
+}
+
+.dark .w3-table th,
+.dark .w3-table-all th {
+    border-bottom: 1px solid #3a3a3a !important;
+}
+
+.dark .w3-table tr:nth-child(even),
+.dark .w3-table-all tr:nth-child(even) {
+    background-color: #2d2d2d;
+}
+
+.dark .w3-table tr:nth-child(odd),
+.dark .w3-table-all tr:nth-child(odd) {
+    background-color: transparent;
 }
 
 .dark .item-button {
@@ -46,10 +71,11 @@
 .dark .entropy-table th {
     background: rgb(60, 60, 60);
     color: white;
-    border-color: rgb(73, 73, 73);
+    border: none;
+    border-bottom: 1px solid #3a3a3a;
 }
 .dark .entropy-table td {
-    border-color: rgb(73, 73, 73);
+    border: none;
 }
 .dark .entropy-table tr:hover {
     background: rgba(255, 255, 255, 0.05);

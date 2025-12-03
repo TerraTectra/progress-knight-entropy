@@ -80,6 +80,35 @@ td {
 }
 
 
+.w3-table,
+.w3-table-all {
+    border-collapse: collapse;
+}
+
+.w3-table td,
+.w3-table th,
+.w3-table-all td,
+.w3-table-all th,
+.w3-bordered tr,
+.w3-table-all tr {
+    border: none !important;
+}
+
+.w3-table th,
+.w3-table-all th {
+    border-bottom: 1px solid #d0d0d0 !important;
+}
+
+.w3-table tr:nth-child(even),
+.w3-table-all tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+.w3-table tr:nth-child(odd),
+.w3-table-all tr:nth-child(odd) {
+    background-color: transparent;
+}
+
 .item-button {
     background-color: white;
     text-align: center;
@@ -358,13 +387,14 @@ jobTable button {
     background: #f1f1f1;
     color: #000000;
     font-weight: 700;
-    border: 1px solid #cccccc;
+    border: none;
+    border-bottom: 1px solid #d0d0d0;
     padding: 8px 10px;
     text-align: left;
 }
 
 .entropy-table td {
-    border: 1px solid #cccccc;
+    border: none;
     padding: 8px 10px;
     vertical-align: top;
     color: inherit;

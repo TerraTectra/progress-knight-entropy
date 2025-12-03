@@ -429,6 +429,9 @@ const updateSpeed = 20
 const baseLifespan = 365 * 70
 
 const baseGameSpeed = 4
+const PASSIVE_JOB_INCOME_MULTIPLIER = 0.25
+const PASSIVE_JOB_XP_MULTIPLIER = 0.5
+const PASSIVE_SKILL_XP_MULTIPLIER = 0.5
 const BASE_AUTO_SWITCH_THRESHOLD = 0.2
 const ENTROPY_EARLY_LIFE_MAX_AGE = 25
 const ENTROPY_EARLY_XP_MULT = 1.5
@@ -2407,7 +2410,7 @@ function updateRequiredRows(data, categoryType) {
         }
 
         if (nextEntity == null) {
-            requiredRow.classList.add("hiddenTask")           
+            requiredRow.classList.add("hiddenTask")
         } else {
             requiredRow.classList.remove("hiddenTask")
             var requirementObject = gameData.requirements[nextEntity.name]
@@ -2429,7 +2432,7 @@ function updateRequiredRows(data, categoryType) {
                 continue
             }
 
-            var finalText = ""
+            var messages = []
             if (data == gameData.taskData) {
                 if (requirementObject instanceof EvilRequirement) {
                     evilElement.classList.remove("hiddenTask")
@@ -2441,22 +2444,40 @@ function updateRequiredRows(data, categoryType) {
                 } else {
                     levelElement.classList.remove("hiddenTask")
                     for (requirement of requirements) {
-                        if (requirement.universe && !universeGatedRequirementMet(requirement.universe)) {
-                            finalText += " Universe " + requirement.universe + "+ required,"
+                        if (requirement.universe) {
+                            if (!universeGatedRequirementMet(requirement.universe)) {
+                                messages.push((tUi("universeRequirement") || "Universe") + " " + requirement.universe + "+")
+                            }
                             continue
                         }
-                        var task = gameData.taskData[requirement.task]
-                        if (!task || typeof task.level !== "number") {
-                            finalText += " " + tName(requirement.task) + " unavailable,"
+                        if (requirement.age) {
+                            var ageWord = tUi("ageLabel") || "Age"
+                            var currentAge = daysToYears(gameData.days)
+                            if (currentAge < requirement.age) {
+                                messages.push(ageWord + " " + format(currentAge) + "/" + format(requirement.age))
+                            }
                             continue
                         }
-                        if (task.level >= requirement.requirement) continue
-                        var levelWord = tUi("columnLevel") || "Level"
-                        var text = " " + tName(requirement.task) + " " + levelWord + " " + format(task.level) + "/" + format(requirement.requirement) + ","
-                        finalText += text
+                        if (requirement.meaning) {
+                            var meaningWord = tUi("meaningLabel") || "Meaning"
+                            var currentMeaning = gameData.meaning || 0
+                            if (currentMeaning < requirement.meaning) {
+                                messages.push(meaningWord + " " + format(currentMeaning) + "/" + format(requirement.meaning))
+                            }
+                            continue
+                        }
+                        if (requirement.task) {
+                            var task = gameData.taskData[requirement.task]
+                            if (!task || typeof task.level !== "number") {
+                                messages.push(tName(requirement.task) + " unavailable")
+                                continue
+                            }
+                            if (task.level >= requirement.requirement) continue
+                            var levelWord = tUi("columnLevel") || "Level"
+                            messages.push(tName(requirement.task) + " " + levelWord + " " + format(task.level) + "/" + format(requirement.requirement))
+                        }
                     }
-                    finalText = finalText.substring(0, finalText.length - 1)
-                    levelElement.textContent = finalText
+                    levelElement.textContent = messages.join(", ")
                 }
             } else if (data == gameData.itemData) {
                 coinElement.classList.remove("hiddenTask")
@@ -3654,6 +3675,39 @@ function doCurrentTask(task) {
     addInsight(task, true)
 }
 
+function tickTasks() {
+    var focusJob = gameData.currentJob
+    var focusSkill = gameData.currentSkill
+    var overseerFocus = isCycleOverseerActive() ? getFocusedTask() : null
+    if (overseerFocus instanceof Job) {
+        focusJob = overseerFocus
+    } else if (overseerFocus instanceof Skill) {
+        focusSkill = overseerFocus
+    }
+
+    for (key in gameData.taskData) {
+        var task = gameData.taskData[key]
+        var requirement = gameData.requirements[task.name]
+        if (requirement && !requirement.isCompleted()) continue
+        var isJob = task instanceof Job
+        var isSkill = task instanceof Skill
+        var isFocus = (isJob && focusJob && task.name == focusJob.name) || (isSkill && focusSkill && task.name == focusSkill.name)
+        var xpMult = isFocus ? 1 : (isJob ? PASSIVE_JOB_XP_MULTIPLIER : PASSIVE_SKILL_XP_MULTIPLIER)
+        var compression = getLifeCompressionFactors(isFocus)
+        var baseXp = task.getXpGain()
+        if (isJob && !isFocus && highTierJobs.includes(task.name) && gameData.taskData["Reality Architecture"]) {
+            baseXp /= gameData.taskData["Reality Architecture"].getEffect()
+        }
+        var xpGain = baseXp * xpMult * (compression.xp || 1)
+        addXpFlat(task, applySpeed(xpGain))
+        if (task.name == "Read Almanach" && isEntropyFullyUnlocked()) {
+            gameData.entropy.insight += applySpeed(getInsightGain(task) * xpMult)
+        }
+    }
+
+    increaseCoins()
+}
+
 function ensureActiveSelections() {
     if (!gameData || !gameData.taskData) return
     if (!gameData.currentJob || !gameData.taskData[gameData.currentJob.name]) {
@@ -3665,15 +3719,6 @@ function ensureActiveSelections() {
 }
 
 function getIncome() {
-    var income = 0
-    if (isCycleOverseerActive()) {
-        var focusTask = getFocusedTask()
-        if (focusTask && focusTask instanceof Job) {
-            income += focusTask.getIncome()
-        }
-    } else {
-        income += gameData.currentJob.getIncome()
-    }
     var compression = getLifeCompressionFactors(true)
     var jitter = 1
     if ((gameData.universeIndex || 1) >= 8) {
@@ -3681,6 +3726,25 @@ function getIncome() {
         if (strain > 5) {
             jitter += (Math.random() * 0.08 - 0.04) * Math.min((strain - 5) / 5, 1)
         }
+    }
+    var focusJobName = null
+    if (isCycleOverseerActive()) {
+        var focusTask = getFocusedTask()
+        if (focusTask && focusTask instanceof Job) {
+            focusJobName = focusTask.name
+        }
+    }
+    if (!focusJobName && gameData.currentJob) {
+        focusJobName = gameData.currentJob.name
+    }
+    var income = 0
+    for (key in gameData.taskData) {
+        var task = gameData.taskData[key]
+        if (!(task instanceof Job)) continue
+        var requirement = gameData.requirements[task.name]
+        if (requirement && !requirement.isCompleted()) continue
+        var mult = task.name === focusJobName ? 1 : PASSIVE_JOB_INCOME_MULTIPLIER
+        income += task.getIncome() * mult
     }
     return income * compression.money * jitter
 }
@@ -4618,21 +4682,7 @@ function update() {
     maybeUnlockAlmanac()
     autoPromote()
     autoLearn()
-        if (isCycleOverseerActive()) {
-            var focusTask = getFocusedTask()
-            if (focusTask) {
-                doCurrentTask(focusTask)
-                for (key in gameData.taskData) {
-                    applyPassiveXp(gameData.taskData[key], focusTask)
-                }
-            } else {
-                doCurrentTask(gameData.currentJob)
-                doCurrentTask(gameData.currentSkill)
-            }
-        } else {
-            doCurrentTask(gameData.currentJob)
-            doCurrentTask(gameData.currentSkill)
-        }
+        tickTasks()
         applyExpenses()
     }
     updateUI()

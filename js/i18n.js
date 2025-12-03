@@ -192,6 +192,8 @@ const translations = {
         automationAutoPromote: { en: "Auto-promote", ru: "Авто-повышение" },
         automationAutoLearn: { en: "Auto-learn", ru: "Авто-обучение" },
         requiredPrefix: { en: "Required:", ru: "Требуется:" },
+        universeRequirement: { en: "Universe", ru: "Вселенная" },
+        meaningLabel: { en: "Meaning", ru: "Смысл" },
         settingsLanguageLabel: { en: "Language", ru: "Язык" },
         settingsLanguageRu: { en: "Russian", ru: "Русский" },
         settingsLanguageEn: { en: "English", ru: "Английский" },
