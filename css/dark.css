@@ -38,6 +38,14 @@
 .dark .w3-bordered th {
     border-bottom: none !important;
 }
+.dark .w3-table tr,
+.dark .w3-table-all tr,
+.dark .w3-bordered tr {
+    border: none !important;
+    border-bottom: 0 !important;
+    border-top: 0 !important;
+    box-shadow: none !important;
+}
 
 .dark .w3-table tr:nth-child(even),
 .dark .w3-table-all tr:nth-child(even) {

@@ -39,9 +39,23 @@ td {
     word-break: break-word;
     line-height: 14px;
 }
+.progress-text.name {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.progress-status {
+    flex-shrink: 0;
+}
 
 .progress-bar {
     position: relative;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
     background-color: rgb(12, 101, 173);
     cursor: pointer;
     width: 200px;
@@ -52,19 +66,17 @@ td {
 
 .progress-fill {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     height: 100%;
     background-color: rgb(46, 148, 231)
 }
 
 .progress-status {
-    position: absolute;
-    right: 4px;
-    top: 0px;
+    position: relative;
     font-size: 10px;
     color: #ffffff;
     opacity: 0.9;
+    z-index: 1;
 }
 
 .job-tag {
@@ -87,6 +99,8 @@ td {
 .job-title {
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
+    white-space: nowrap;
 }
 
 .job-tag-passive {
@@ -132,6 +146,14 @@ td {
 .w3-bordered th {
     border-bottom: none !important;
 }
+.w3-table tr,
+.w3-table-all tr,
+.w3-bordered tr {
+    border: none !important;
+    border-bottom: 0 !important;
+    border-top: 0 !important;
+    box-shadow: none !important;
+}
 
 .w3-table tr:nth-child(even),
 .w3-table-all tr:nth-child(even) {
@@ -141,6 +163,16 @@ td {
 .w3-table tr:nth-child(odd),
 .w3-table-all tr:nth-child(odd) {
     background-color: transparent;
+}
+
+.requiredRow td {
+    padding-top: 2px;
+    padding-bottom: 4px;
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+.requiredRow .levels {
+    white-space: normal;
 }
 
 .item-button {
