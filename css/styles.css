@@ -94,7 +94,36 @@ td {
 
 .item-button:hover {
     cursor: pointer;
+}
+
+.item-button:not(.shop-btn-locked):not(.shop-btn-unaffordable):not(.shop-btn-available):hover {
     background-color: rgb(192, 192, 192);
+}
+
+.item-button.shop-btn-locked {
+    background-color: #2f2f2f;
+    color: #9aa3b5;
+    border-color: #555 !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.item-button.shop-btn-unaffordable {
+    background-color: #5c1f1f;
+    color: #ffd6d1;
+    border-color: #c04a4a !important;
+    cursor: not-allowed;
+}
+
+.item-button.shop-btn-available {
+    background-color: #1f3a5f;
+    color: #e9f0ff;
+    border-color: #4b7bd8 !important;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.item-button.shop-btn-available:hover {
+    background-color: #2b4d7a;
 }
 
 button:focus {
@@ -254,7 +283,7 @@ jobTable button {
 }
 
 /* Compact labels for quick task bars */
-quickTaskDisplay .progress-text.name {
+#quickTaskDisplay .progress-text.name {
     font-size: 13px;
     font-weight: 500;
     line-height: 1;
@@ -263,13 +292,14 @@ quickTaskDisplay .progress-text.name {
 }
 
 @media (max-width: 480px) {
-    quickTaskDisplay .progress-bar {
+    #quickTaskDisplay .progress-bar {
         max-width: 100%;
         height: 24px;
         margin-bottom: 6px;
     }
-quickTaskDisplay .progress-text.name {
-    font-size: 12px;
+    #quickTaskDisplay .progress-text.name {
+        font-size: 12px;
+    }
 }
 
 /* ------------------------------------
@@ -385,5 +415,4 @@ quickTaskDisplay .progress-text.name {
     .entropy-card {
         padding: 12px 12px;
     }
-}
 }

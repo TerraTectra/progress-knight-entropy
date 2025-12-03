@@ -299,11 +299,19 @@
                 <div class="tab" id="jobs">
                     <table id="jobTable" class="w3-table w3-bordered">
                     </table>
+                    <div id="entropyJobsSection" class="entropy-card" style="display:none; margin-top:12px;">
+                        <h3 class="entropy-section-title" id="entropyWorkTitle"></h3>
+                        <table id="entropyJobTable" class="w3-table w3-bordered entropy-table"></table>
+                    </div>
                 </div>
 
                 <div class="tab" id="skills">
                     <table id="skillTable" class="w3-table w3-bordered">
                     </table>
+                    <div id="entropySkillsSection" class="entropy-card" style="display:none; margin-top:12px;">
+                        <h3 class="entropy-section-title" id="entropyStudiesTitle"></h3>
+                        <table id="entropySkillTable" class="w3-table w3-bordered entropy-table"></table>
+                    </div>
                 </div>
 
                 <div class="tab" id="shop">
@@ -323,16 +331,6 @@
                             <p><span id="entropyFocusLabel"></span> <span id="entropyFocusDisplay">Disabled</span></p>
                             <button class="w3-button button" id="cycleOverseerButton" onClick="unlockCycleOverseer()"></button>
                             <div id="entropyOverseerNote" class="entropy-muted" style="margin-top: 8px;"></div>
-                        </div>
-                        <div class="entropy-card">
-                            <h3 class="entropy-section-title" id="entropyWorkTitle"></h3>
-                            <table id="entropyJobTable" class="w3-table w3-bordered entropy-table"></table>
-                        </div>
-                    </div>
-                    <div class="entropy-section entropy-study">
-                        <div class="entropy-card">
-                            <h3 class="entropy-section-title" id="entropyStudiesTitle"></h3>
-                            <table id="entropySkillTable" class="w3-table w3-bordered entropy-table"></table>
                         </div>
                     </div>
                     <div class="entropy-section entropy-upgrades" id="entropyUpgradeSection">

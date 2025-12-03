@@ -3,6 +3,8 @@ var gameData = {
     universeTokens: 0,
     taskData: {},
     itemData: {},
+    purchasedItems: {},
+    categoryPurchaseCounts: {},
 
     coins: 0,
     days: 365 * 14,
@@ -898,8 +900,8 @@ function getEntropySynergy() {
 
 function getPassiveAgeFactor() {
     var age = daysToYears(gameData.days)
-    var factor = 0
-    if (age < 25) factor = 0
+    var factor = 0.2
+    if (age < 25) factor = 0.2
     else if (age < 35) factor = 0.5
     else if (age < 55) factor = 1
     else factor = 1.2
@@ -2180,11 +2182,15 @@ function unlockCycleOverseer() {
 
 function setProperty(propertyName) {
     var property = gameData.itemData[propertyName]
+    if (!property) return
+    if (!purchaseItemIfNeeded(property)) return
     gameData.currentProperty = property
 }
 
 function setMisc(miscName) {
     var misc = gameData.itemData[miscName]
+    if (!misc) return
+    if (!purchaseItemIfNeeded(misc)) return
     if (gameData.currentMisc.includes(misc)) {
         for (i = 0; i < gameData.currentMisc.length; i++) {
             if (gameData.currentMisc[i] == misc) {
@@ -2194,6 +2200,56 @@ function setMisc(miscName) {
     } else {
         gameData.currentMisc.push(misc)
     }
+}
+
+function getItemCategoryName(itemName) {
+    for (var category in itemCategories) {
+        if (!itemCategories.hasOwnProperty(category)) continue
+        if (itemCategories[category].indexOf(itemName) !== -1) {
+            return category
+        }
+    }
+    return null
+}
+
+function isFreeStarterItem(itemName) {
+    return itemName === "Homeless"
+}
+
+function getCategoryPurchaseCount(categoryName) {
+    if (!categoryName) return 0
+    if (!gameData.categoryPurchaseCounts) return 0
+    return gameData.categoryPurchaseCounts[categoryName] || 0
+}
+
+function isItemPurchased(itemName) {
+    if (!gameData.purchasedItems) return false
+    return !!gameData.purchasedItems[itemName]
+}
+
+function getEffectiveItemCost(item) {
+    if (!item) return 0
+    var categoryName = getItemCategoryName(item.name)
+    var alreadyPurchased = getCategoryPurchaseCount(categoryName) > 0
+    return alreadyPurchased ? item.getExpense() : 0
+}
+
+function purchaseItemIfNeeded(item) {
+    if (!item) return false
+    ensureShopState()
+    if (isItemPurchased(item.name)) return true
+    var cost = getEffectiveItemCost(item)
+    if (gameData.coins < cost) return false
+    if (cost > 0) {
+        gameData.coins -= cost
+    }
+    gameData.purchasedItems[item.name] = true
+    var categoryName = getItemCategoryName(item.name)
+    if (categoryName && !isFreeStarterItem(item.name)) {
+        var current = getCategoryPurchaseCount(categoryName)
+        gameData.categoryPurchaseCounts[categoryName] = current + 1
+    }
+    return true
 }
 
 function createData(data, baseData) {
@@ -2480,12 +2536,34 @@ function updateItemRows() {
         var row = document.getElementById("row " + item.name)
         if (!row) continue
         var button = row.getElementsByClassName("button")[0]
-        button.disabled = gameData.coins < item.getExpense()
+        var requirement = gameData.requirements[item.name]
+        var unlocked = !requirement || requirement.isCompleted()
+        var purchased = isItemPurchased(item.name)
+        var effectiveCost = purchased ? item.getExpense() : getEffectiveItemCost(item)
+        var canAffordPurchase = gameData.coins >= (purchased ? item.getExpense() : effectiveCost)
+        var canAffordExpense = gameData.coins >= item.getExpense()
+        var stateClass = "shop-btn-available"
+        var disableButton = false
+        if (!unlocked) {
+            stateClass = "shop-btn-locked"
+            disableButton = true
+        } else if (!purchased && !canAffordPurchase) {
+            stateClass = "shop-btn-unaffordable"
+            disableButton = true
+        } else if (purchased && !canAffordExpense) {
+            stateClass = "shop-btn-unaffordable"
+            disableButton = true
+        }
+        if (button) {
+            button.disabled = disableButton
+            button.classList.remove("shop-btn-locked", "shop-btn-unaffordable", "shop-btn-available")
+            button.classList.add(stateClass)
+        }
         var active = row.getElementsByClassName("active")[0]
         var color = itemCategories["Properties"].includes(item.name) ? headerRowColors["Properties"] : headerRowColors["Misc"]
         active.style.backgroundColor = gameData.currentMisc.includes(item) || item == gameData.currentProperty ? color : "white"
         row.getElementsByClassName("effect")[0].textContent = item.getEffectDescription()
-        formatCoins(item.getExpense(), row.getElementsByClassName("expense")[0])
+        formatCoins(effectiveCost, row.getElementsByClassName("expense")[0])
     }
 }
 
@@ -3569,6 +3647,16 @@ function doCurrentTask(task) {
     addInsight(task, true)
 }
 
+function ensureActiveSelections() {
+    if (!gameData || !gameData.taskData) return
+    if (!gameData.currentJob || !gameData.taskData[gameData.currentJob.name]) {
+        gameData.currentJob = gameData.taskData["Beggar"]
+    }
+    if (!gameData.currentSkill || !gameData.taskData[gameData.currentSkill.name]) {
+        gameData.currentSkill = gameData.taskData["Concentration"]
+    }
+}
+
 function getIncome() {
     var income = 0
     if (isCycleOverseerActive()) {
@@ -3982,6 +4070,35 @@ function ensureEntropyArtifactsState() {
     }
 }
 
+function ensureShopState() {
+    if (!gameData.purchasedItems) gameData.purchasedItems = {}
+    if (!gameData.categoryPurchaseCounts) gameData.categoryPurchaseCounts = {}
+
+    // Ensure currently equipped items are treated as purchased so legacy saves remain usable.
+    var activeNames = []
+    if (gameData.currentProperty && gameData.currentProperty.name) activeNames.push(gameData.currentProperty.name)
+    if (Array.isArray(gameData.currentMisc)) {
+        gameData.currentMisc.forEach(function(m) {
+            if (m && m.name) activeNames.push(m.name)
+        })
+    }
+    activeNames.forEach(function(name) {
+        if (isFreeStarterItem(name)) return
+        gameData.purchasedItems[name] = true
+    })
+
+    // Rebuild per-category counters based on purchased items.
+    var rebuiltCounts = {}
+    for (var itemName in gameData.purchasedItems) {
+        if (!gameData.purchasedItems[itemName]) continue
+        if (isFreeStarterItem(itemName)) continue
+        var categoryName = getItemCategoryName(itemName)
+        if (!categoryName) continue
+        rebuiltCounts[categoryName] = (rebuiltCounts[categoryName] || 0) + 1
+    }
+    gameData.categoryPurchaseCounts = rebuiltCounts
+}
+
 function ensureEntropyBackfills() {
     ensureEntropyState()
     ensureEntropyUpgradesState()
@@ -4250,6 +4367,8 @@ function rebirthReset() {
     gameData.currentSkill = gameData.taskData["Concentration"]
     gameData.currentProperty = gameData.itemData["Homeless"]
     gameData.currentMisc = []
+    gameData.purchasedItems = {}
+    gameData.categoryPurchaseCounts = {}
 
     for (taskName in gameData.taskData) {
         var task = gameData.taskData[taskName]
@@ -4413,6 +4532,7 @@ function loadGameData() {
     ensureSkipSkillsState()
     ensureUniverseState()
     ensureFirstTimePromptState()
+    ensureShopState()
     assignMethods()
     ensureCoinRequirementKeys()
 }
@@ -4434,6 +4554,10 @@ function updateUI() {
     enforceEntropySkillVisibility()
     updateQuickTaskDisplay("job")
     updateQuickTaskDisplay("skill")
+    var entropyJobSection = document.getElementById("entropyJobsSection")
+    if (entropyJobSection) entropyJobSection.style.display = isEntropyUnlocked() ? "block" : "none"
+    var entropySkillSection = document.getElementById("entropySkillsSection")
+    if (entropySkillSection) entropySkillSection.style.display = isEntropyUnlocked() ? "block" : "none"
     updateText()
     if (isObserverMode()) {
         initObserverDataIfNeeded()
@@ -4475,6 +4599,7 @@ function update() {
         }
         updateObserverMode(1 / updateSpeed)
     } else {
+        ensureActiveSelections()
         updateAutoSwitchState()
         decaySwitchPenalty()
         decayBurnout()
@@ -4528,6 +4653,8 @@ function resetGameData() {
         observerData: {initialized: false},
         taskData: {},
         itemData: {},
+        purchasedItems: {},
+        categoryPurchaseCounts: {},
         coins: 0,
         days: 365 * 14,
         evil: 0,
@@ -4993,6 +5120,7 @@ function startGame() {
     ensureFirstTimePromptState()
     ensureLanguageState()
     ensureMetaState()
+    ensureShopState()
 
     if (savedGameData && savedGameData.hasAnsweredFirstTimePrompt === true) {
         gameData.hasAnsweredFirstTimePrompt = true
