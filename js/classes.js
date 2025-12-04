@@ -181,7 +181,14 @@ class AgeRequirement extends Requirement {
     }
 
     getCondition(requirement) {
-        return daysToYears(gameData.days) >= requirement.requirement
+        var ageYears = daysToYears(gameData.days)
+        var reqAge = requirement.requirement
+        if (requirement.allowShortLife && typeof hasShortBrilliantLife === "function" && hasShortBrilliantLife()) {
+            if (typeof getShortLifeThresholdAgeYears === "function") {
+                reqAge = Math.min(reqAge, getShortLifeThresholdAgeYears())
+            }
+        }
+        return ageYears >= reqAge
     }
 }
 

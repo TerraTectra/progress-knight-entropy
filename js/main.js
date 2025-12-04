@@ -442,6 +442,8 @@ const ENTROPY_EARLY_XP_MULT = 1.5
 const ENTROPY_EARLY_MONEY_MULT = 1.5
 const entropyEarlyJobs = ["Beggar", "Farmer", "Fisherman", "Miner"]
 const ENTROPY_PATTERN_MAX_LEVEL = 10
+const SHORT_LIFE_THRESHOLD = 0.3
+const SHORT_LIFE_THRESHOLD_BONUS = 1.15
 const ENTROPY_ARTIFACT_COST_EP = {
     sigilMomentum: 10,
     chainConductor: 10,
@@ -1420,6 +1422,19 @@ function getExclusiveGroupChoice(groupId, skipKey) {
 function meetsUnifiedArchitectureRequirements() {
     var state = getUnifiedArchitectureRequirementState()
     return state.allMet
+}
+
+function hasShortBrilliantLife() {
+    return getEntropyUpgradeLevel("stability", "shortBrilliantLife") > 0
+}
+
+function getShortLifeThresholdAgeYears() {
+    var lifespanYears = daysToYears(getLifespan())
+    var factor = 1
+    if (hasShortBrilliantLife()) {
+        factor *= SHORT_LIFE_THRESHOLD_BONUS
+    }
+    return lifespanYears * SHORT_LIFE_THRESHOLD * factor
 }
 
 function getUnifiedArchitectureRequirementState() {
@@ -2961,6 +2976,10 @@ function refreshNarrativeTexts() {
     setElementHtml("rebirthNote3Hint", "story_amulet_hint_200")
     setElementText("rebirthOneButton", "story_amulet_btn_touch_eye")
     setElementText("rebirthTwoButton", "story_amulet_btn_accept_evil")
+    var eyeBtn = document.getElementById("rebirthOneButton")
+    if (eyeBtn) {
+        eyeBtn.title = tUi("entropy_short_life_hint") || ""
+    }
     setElementText("deathTitle", "death_title")
     setElementText("deathSubtitle", "death_subtitle")
 
@@ -4546,7 +4565,8 @@ function updateEntropyPatternsOnRebirth() {
     var fractionMixed = 1 - Math.abs(fractionJobs - fractionSkills)
     if (fractionMixed < 0) fractionMixed = 0
     var ageEnd = daysToYears(gameData.days)
-    var shortLife = ageEnd <= 30
+    var shortThreshold = getShortLifeThresholdAgeYears()
+    var shortLife = ageEnd <= shortThreshold
     var longLife = ageEnd >= 60
 
     function clamp01(x) {
@@ -5272,7 +5292,7 @@ function initBaseGame() {
         "The Arcane Association": new TaskRequirement(getElementsByClass("The Arcane Association"), [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
         "Dark magic": new EvilRequirement(getElementsByClass("Dark magic"), [{requirement: 1}]),
         "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 50}]),
-        "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25}]),
+        "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25, allowShortLife: true}]),
         "Rebirth note 1": new AgeRequirement([document.getElementById("rebirthNote1")], [{requirement: 45}]),
         "Rebirth note 2": new AgeRequirement([document.getElementById("rebirthNote2")], [{requirement: 65}]),
         "Rebirth note 3": new AgeRequirement([document.getElementById("rebirthNote3")], [{requirement: 200}]),
