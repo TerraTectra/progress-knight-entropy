@@ -2,21 +2,21 @@
     --pk-font-size-base: 14px;
     --pk-font-size-small: 12px;
     --pk-font-size-tiny: 11px;
-    --pk-bg: #0b1220;
-    --pk-panel: #0f172a;
-    --pk-panel-strong: #111c2d;
-    --pk-surface: #111827;
-    --pk-border: #1f2937;
-    --pk-border-strong: #2f3a4d;
-    --pk-text-main: #e5e7eb;
-    --pk-text-muted: #9ca3af;
-    --pk-accent: #38bdf8;
-    --pk-accent-strong: #2563eb;
-    --pk-progress-bg: #0f172a;
-    --pk-progress-fill: linear-gradient(90deg, #2563eb, #4f46e5);
-    --pk-button-bg: #1f2937;
-    --pk-button-hover: #253449;
-    --pk-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --pk-bg: #050505;
+    --pk-panel: #0f0f0f;
+    --pk-panel-strong: #131313;
+    --pk-surface: #161616;
+    --pk-border: #1e1e1e;
+    --pk-border-strong: #2a2a2a;
+    --pk-text-main: #e8e8e8;
+    --pk-text-muted: #9b9b9b;
+    --pk-accent: #f97316;
+    --pk-accent-strong: #f59e0b;
+    --pk-progress-bg: #0b0b0b;
+    --pk-progress-fill: linear-gradient(90deg, #4a4a4a, #8a8a8a);
+    --pk-button-bg: #121212;
+    --pk-button-hover: #1a1a1a;
+    --pk-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 body {
