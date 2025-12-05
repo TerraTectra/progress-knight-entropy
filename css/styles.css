@@ -216,6 +216,54 @@ button:focus {
     margin-bottom: 8px;
 }
 
+.shop-hint {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #eef4ff;
+    color: #1f2937;
+    font-size: 0.9em;
+}
+
+.shop-hint-close {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 1em;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.stagnation-hint {
+    margin: 10px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+}
+.stagnation-hint-header {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.stagnation-hint-body {
+    margin-bottom: 6px;
+    font-size: 0.95em;
+    color: #1f2937;
+}
+.stagnation-hint-list {
+    margin: 0 0 8px 18px;
+    padding: 0;
+    color: #111827;
+}
+.stagnation-hint-close {
+    display: inline-block;
+    margin-top: 4px;
+}
+
 .shop-row-auto-picked {
     outline: 2px solid #4caf50;
     background-color: rgba(76, 175, 80, 0.08);
@@ -223,6 +271,196 @@ button:focus {
 
 .shop-row-auto-picked .item-button {
     border-color: #4caf50 !important;
+}
+
+.title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.guide-trigger {
+    min-width: 90px;
+    height: 36px;
+}
+
+.universe-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #1f2937;
+    font-weight: 700;
+    border: 1px solid #d1d5db;
+}
+
+.universe-pill-u2 {
+    background: linear-gradient(120deg, #ede9fe, #f5f3ff);
+    border-color: #c4b5fd;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.18);
+}
+
+.guide-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+.guide-panel {
+    width: 720px;
+    max-width: 95vw;
+    max-height: 85vh;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.guide-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+.guide-close {
+    background: transparent;
+    border: none;
+    font-size: 1.1em;
+    cursor: pointer;
+}
+
+.universe-intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3200;
+}
+
+.universe-intro-panel {
+    width: 520px;
+    max-width: 92vw;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 10px;
+    box-shadow: 0 16px 38px rgba(0,0,0,0.35);
+    padding: 18px 18px 14px;
+}
+
+.universe-intro-header {
+    font-weight: 700;
+    font-size: 1.15em;
+    margin-bottom: 8px;
+}
+
+.universe-intro-body {
+    font-size: 0.98em;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.universe-intro-list {
+    margin: 0 0 8px 16px;
+    padding: 0;
+    color: #374151;
+    display: grid;
+    gap: 6px;
+}
+
+.universe-intro-actions {
+    text-align: right;
+}
+
+.universe-intro-close {
+    min-width: 120px;
+}
+
+.guide-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.guide-tab {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.guide-tab.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
+.guide-content {
+    padding: 12px 14px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.u2-artifact-card {
+    border: 1px solid #c4b5fd;
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.14);
+}
+
+.balance-debug {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    z-index: 2600;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #111827;
+    max-width: 320px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+}
+
+.balance-debug.hidden {
+    display: none;
+}
+
+.balance-debug .balance-debug-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.balance-debug .balance-debug-row {
+    margin: 2px 0;
+}
+
+.guide-section ul {
+    margin: 8px 0 0 16px;
+}
+
+.guide-footer {
+    padding: 10px 14px;
+    border-top: 1px solid #e5e7eb;
+    text-align: right;
 }
 
 .ua-reqs {
@@ -538,4 +776,126 @@ jobTable button {
     .entropy-card {
         padding: 12px 12px;
     }
+}
+
+/* ------------------------------------
+   Achievements & Challenges
+------------------------------------ */
+.achievement-group-title {
+    margin: 10px 0 6px;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.achievement-card,
+.challenge-card {
+    border: 1px solid #d1d5db;
+    border-left: 4px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.achievement-card.unlocked {
+    border-color: #2563eb;
+    border-left-color: #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+}
+
+.achievement-card.locked {
+    opacity: 0.72;
+}
+
+.achievement-text,
+.challenge-text {
+    flex: 1;
+}
+
+.achievement-name,
+.challenge-name {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.achievement-desc,
+.challenge-desc {
+    color: #4b5563;
+    line-height: 1.35;
+    font-size: 13px;
+}
+
+.achievement-status,
+.challenge-status {
+    min-width: 96px;
+    text-align: right;
+    font-weight: 700;
+    color: #2563eb;
+}
+
+.achievement-card.locked .achievement-status {
+    color: #6b7280;
+}
+
+.achievement-card .achievement-status .status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #111827;
+    font-size: 12px;
+}
+
+.achievement-card.unlocked .achievement-status .status-pill {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.challenge-status .status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #fbbf24;
+    color: #92400e;
+    font-size: 12px;
+}
+
+.challenge-card {
+    border-color: #d97706;
+    border-left-color: #d97706;
+    background: #fff7ed;
+}
+
+.achievement-overlay {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3300;
+    pointer-events: none;
+}
+
+.achievement-toast {
+    background: #111827;
+    color: #f9fafb;
+    padding: 12px 14px;
+    border-radius: 10px;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.35);
+    min-width: 260px;
+    max-width: 340px;
+    pointer-events: auto;
+}
+
+.achievement-toast-title {
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.achievement-toast-body {
+    color: #e5e7eb;
+    font-size: 14px;
+    line-height: 1.35;
 }

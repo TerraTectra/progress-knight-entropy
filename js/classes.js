@@ -28,7 +28,11 @@ class Task {
     }
 
     getXpGain() {
-        return applyMultipliers(10, this.xpMultipliers)
+        var globalMult = 1
+        if (typeof getGlobalXpMultiplier === "function") {
+            globalMult = getGlobalXpMultiplier()
+        }
+        return applyMultipliers(10, this.xpMultipliers) * globalMult
     }
 
     increaseXp() {
@@ -61,7 +65,11 @@ class Job extends Task {
     }
     
     getIncome() {
-        return applyMultipliers(this.baseData.income, this.incomeMultipliers) 
+        var globalMult = 1
+        if (typeof getGlobalMoneyMultiplier === "function") {
+            globalMult = getGlobalMoneyMultiplier()
+        }
+        return applyMultipliers(this.baseData.income, this.incomeMultipliers) * globalMult
     }
 }
 

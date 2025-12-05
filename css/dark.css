@@ -77,6 +77,71 @@
     margin-bottom: 8px;
 }
 
+.dark .shop-hint {
+    background: #1f2937;
+    color: #e5e7eb;
+}
+
+.dark .shop-hint-close {
+    color: #e5e7eb;
+}
+
+.dark .stagnation-hint {
+    background: #1f2937;
+    border: 1px solid #374151;
+    color: #e5e7eb;
+}
+.dark .stagnation-hint-body,
+.dark .stagnation-hint-list {
+    color: #e5e7eb;
+}
+
+.dark .guide-overlay {
+    background: rgba(0,0,0,0.65);
+}
+
+.dark .guide-panel {
+    background: #1f2937;
+    color: #e5e7eb;
+    border: 1px solid #374151;
+}
+
+.dark .guide-header {
+    border-bottom: 1px solid #374151;
+}
+
+.dark .guide-tabs {
+    border-bottom: 1px solid #374151;
+}
+
+.dark .guide-tab {
+    background: #111827;
+    border: 1px solid #374151;
+    color: #e5e7eb;
+}
+
+.dark .guide-tab.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.dark .guide-footer {
+    border-top: 1px solid #374151;
+}
+
+.dark .universe-pill {
+    background: #111827;
+    color: #e5e7eb;
+    border: 1px solid #374151;
+}
+
+.dark .universe-pill-u2 {
+    background: linear-gradient(120deg, #312e81, #1f2937);
+    border-color: #8b5cf6;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
 .dark .shop-row-auto-picked {
     outline: 2px solid #6ad17a;
     background-color: rgba(106, 209, 122, 0.1);
@@ -116,4 +181,74 @@
 }
 .dark .entropy-table div[id*=\"-desc\"] {
     color: #cccccc;
+}
+
+.dark .universe-intro-panel {
+    background: #1f2937;
+    color: #e5e7eb;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.65);
+}
+
+.dark .universe-intro-list {
+    color: #d1d5db;
+}
+
+.dark .u2-artifact-card {
+    border-color: #8b5cf6;
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.25);
+}
+
+.dark .balance-debug {
+    background: #111827;
+    border: 1px solid #374151;
+    color: #e5e7eb;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+
+/* Achievements & Challenges */
+.dark .achievement-card,
+.dark .challenge-card {
+    background: #111827;
+    border-color: #1f2937;
+    color: #e5e7eb;
+}
+
+.dark .achievement-card .achievement-desc,
+.dark .challenge-card .challenge-desc {
+    color: #cbd5e1;
+}
+
+.dark .achievement-card.locked {
+    opacity: 0.7;
+}
+
+.dark .challenge-card {
+    background: #1f2937;
+    border-color: #b45309;
+    border-left-color: #b45309;
+}
+
+.dark .challenge-status .status-pill {
+    background: #f59e0b;
+    color: #0f172a;
+}
+
+.dark .achievement-card .achievement-status .status-pill {
+    background: #1f2937;
+    color: #e5e7eb;
+}
+
+.dark .achievement-card.unlocked .achievement-status .status-pill {
+    background: #2563eb;
+    color: #f8fafc;
+}
+
+.dark .achievement-toast {
+    background: #0b1020;
+    color: #f8fafc;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5);
+}
+
+.dark .achievement-toast-body {
+    color: #e5e7eb;
 }

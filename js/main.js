@@ -1,6 +1,17 @@
 var gameData = {
     universeIndex: 1,
     universeTokens: 0,
+    majorChoiceSlotsTotal: 4,
+    majorChoicesUsed: 0,
+    majorChoicesChosen: {},
+    meaning: 0,
+    meaningMilestones: {},
+    cycleStrain: 0,
+    metaAwareness: 0,
+    metaWeights: {patterns: 1, aging: 1, burnout: 1, compression: 1, meaning: 1, cycle: 1},
+    metaTunesSpent: 0,
+    achievements: {unlocked: {}, lastUnlockedId: null},
+    observerData: {initialized: false},
     taskData: {},
     itemData: {},
     purchasedItems: {},
@@ -11,7 +22,13 @@ var gameData = {
     evil: 0,
     paused: false,
     timeWarpingEnabled: true,
-
+    shopHintDismissed: false,
+    stagnantLivesInRow: 0,
+    stagnationHintCooldownLives: 0,
+    stagnationHintPending: false,
+    stagnationBaseline: null,
+    patternLatticeStacks: 0,
+    synergy: {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1},
     rebirthOneCount: 0,
     rebirthTwoCount: 0,
 
@@ -24,6 +41,9 @@ var gameData = {
     autoSwitchJobs: false,
     autoSwitchSkills: false,
     settings: {autoPickShop: false},
+    seenUniverseIntro: {},
+    pendingUniverseIntro: null,
+    lastLifeShort: false,
 
     entropy: {
         unlocked: false,
@@ -86,7 +106,12 @@ var gameData = {
         chainConductor: false,
         loopAnchor: false,
         patternResonator: false,
+        u2_echoSeeds: false,
+        u2_fracturedTimeline: false,
+        u2_evilResonator: false,
+        u2_patternLattice: false,
     },
+    language: LANG.RU,
 }
 
 var tempData = {}
@@ -101,6 +126,7 @@ var lastEntropyUnlockedState = false
 var universeSwitchPenalty = 0
 var lastJobName = null
 var lastSkillName = null
+var achievementOverlayTimer = null
 
 var burnoutLevel = 0
 var lifeCompressionState = {activity: "idle"}
@@ -116,6 +142,7 @@ var debugMode = false
 var autoPickShopElement = null
 var recommendedShopItem = null
 var shopAutoPickLabelElement = null
+var guideActiveTab = "firstRun"
 
 const observerIntellectConfigs = {
     1: {name: "Fool", performanceFactor: 0.7, existenceFactor: 0.5},
@@ -255,6 +282,47 @@ function updateDebugPanel() {
     }
 
     el.textContent = lines.join("\n")
+}
+
+function updateBalanceDebugPanel() {
+    var panel = document.getElementById("balanceDebugPanel")
+    if (!panel) return
+    if (!DEBUG_BALANCE) {
+        panel.classList.add("hidden")
+        return
+    }
+    panel.classList.remove("hidden")
+
+    ensureSynergyState()
+    var mods = getUniverseModifiers()
+    var xpMult = getGlobalXpMultiplier()
+    var moneyMult = getGlobalMoneyMultiplier()
+    var entropyMult = (mods.entropyGainMultiplier || 1) * getPatternLatticeMultiplier()
+    var seedMult = (mods.seedGainMultiplier || 1) * (hasEntropyArtifact("u2_echoSeeds") ? BalanceConfig.artifacts.echoOfSeedsMultiplier : 1)
+    var costMult = mods.costScalingMultiplier || 1
+    var ftMult = hasEntropyArtifact("u2_fracturedTimeline") ? BalanceConfig.artifacts.fracturedTimelineCompressedXpMultiplier : 1
+    var echoMult = hasEntropyArtifact("u2_echoSeeds") ? BalanceConfig.artifacts.echoOfSeedsMultiplier : 1
+    var evilMult = hasEntropyArtifact("u2_evilResonator") && (gameData.evil || 0) > 0 ? BalanceConfig.artifacts.evilResonatorXpMultiplier : 1
+    var latticeStacks = gameData.patternLatticeStacks || 0
+    var latticeMult = getPatternLatticeMultiplier()
+    var synergy = gameData.synergy || {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1}
+    var diPct = (synergy.darkInsight || 0) * 100
+    var psbPct = ((synergy.patternStabilityBonus || 1) - 1) * 100
+    var thresholdPct = SHORT_LIFE_THRESHOLD * (hasShortBrilliantLife() ? SHORT_LIFE_THRESHOLD_BONUS : 1)
+    var thresholdDisplay = (thresholdPct * 100).toFixed(1)
+
+    var lines = []
+    lines.push("Universe: " + (gameData.universeIndex || 1))
+    lines.push("Global: XP x" + xpMult.toFixed(3) + " | Money x" + moneyMult.toFixed(3))
+    lines.push("Entropy x" + entropyMult.toFixed(3) + " | Seeds x" + seedMult.toFixed(3) + " | Costs x" + costMult.toFixed(3))
+    lines.push("Artifacts: EchoSeeds x" + echoMult.toFixed(2) + ", FracturedTimeline x" + ftMult.toFixed(2) + ", EvilResonator x" + evilMult.toFixed(2))
+    lines.push("Pattern Lattice: stacks " + latticeStacks + " -> x" + latticeMult.toFixed(3))
+    lines.push("Synergy: pressure " + (synergy.entropyPressure || 0).toFixed(2) + " | DarkInsight " + diPct.toFixed(1) + "% | Pattern→Entropy +" + psbPct.toFixed(1) + "%")
+    lines.push("Short life < " + thresholdDisplay + "% lifespan; last life short: " + (gameData.lastLifeShort ? "yes" : "no"))
+
+    panel.innerHTML = "<div class='balance-debug-title'>Balance debug</div>" + lines.map(function(l) {
+        return "<div class='balance-debug-row'>" + l + "</div>"
+    }).join("")
 }
 
 function initDebugUI() {
@@ -442,13 +510,20 @@ const ENTROPY_EARLY_XP_MULT = 1.5
 const ENTROPY_EARLY_MONEY_MULT = 1.5
 const entropyEarlyJobs = ["Beggar", "Farmer", "Fisherman", "Miner"]
 const ENTROPY_PATTERN_MAX_LEVEL = 10
-const SHORT_LIFE_THRESHOLD = 0.3
-const SHORT_LIFE_THRESHOLD_BONUS = 1.15
+const SHORT_LIFE_THRESHOLD = BalanceConfig.shortLife.thresholdPercent
+const SHORT_LIFE_THRESHOLD_BONUS = BalanceConfig.shortLife.thresholdBonusWithShortBrilliant
+const MIN_STAGNANT_LIVES = 3
+const STAGNATION_HINT_COOLDOWN_LIVES = 35
+const UNIVERSE_INDICATOR_ID = "universeIndicator"
 const ENTROPY_ARTIFACT_COST_EP = {
     sigilMomentum: 10,
     chainConductor: 10,
     loopAnchor: 12,
     patternResonator: 20,
+    u2_echoSeeds: 50,
+    u2_fracturedTimeline: 55,
+    u2_evilResonator: 60,
+    u2_patternLattice: 65,
 }
 const ENTROPY_UPGRADE_MAX_LEVELS = {
     temporalMomentum: 5,
@@ -490,6 +565,35 @@ const ENTROPY_UPGRADE_BASE_COST_EP = {
     unifiedArchitecture: 40,
 }
 
+const DEBUG_BALANCE = false
+
+const BalanceConfig = {
+    universe: {
+        // Baseline world
+        1: { xp: 1.0, money: 1.0, entropy: 1.0, seeds: 1.0, cost: 1.0 },
+        // Universe II: slightly harsher XP/money, faster Entropy/Seeds, pricier upgrades
+        2: { xp: 0.9, money: 0.9, entropy: 1.2, seeds: 1.3, cost: 1.2 },
+    },
+    shortLife: {
+        thresholdPercent: 0.3, // 30% of current lifespan counts as a short life
+        thresholdBonusWithShortBrilliant: 1.15, // Short Brilliant Life widens the short-life window
+        compressedLifeXpMultiplier: 1.0, // base; artifacts stack on top
+    },
+    artifacts: {
+        echoOfSeedsMultiplier: 1.2, // Seeds gain boost when artifact owned
+        fracturedTimelineCompressedXpMultiplier: 1.5, // Bonus XP for compressedLife on short lives
+        evilResonatorXpMultiplier: 1.1, // Global XP while Evil > 0
+        patternLatticeEntropyPerStack: 0.01, // +1% entropy/insight per pattern-level stack
+    },
+    synergy: {
+        entropyPressurePerUpgrade: 0.25,
+        entropyToEvilMultiplier: 0.002,
+        evilToPatternRate: 0.0015,
+        darkInsightCap: 0.25,
+        patternToEntropyRate: 0.01,
+    },
+}
+
 const ENTROPY_UPGRADE_COST_GROWTH = 1.5
 const ENTROPY_UPGRADE_BRANCH_SOFT_CAP = 6
 const ROMAN_NUMERALS = ["I","II","III","IV","V","VI","VII","VIII","IX","X"]
@@ -498,22 +602,26 @@ const universeConfigs = {
     1: {
         name: "Universe I",
         description: "The original world.",
-        moneyFactor: 1.0,
-        xpFactor: 1.0,
+        moneyFactor: BalanceConfig.universe[1].money,
+        xpFactor: BalanceConfig.universe[1].xp,
         happinessFactor: 1.0,
         extraTimeWarpFactor: 1.0,
-        costFactor: 1.0,
+        costFactor: BalanceConfig.universe[1].cost,
         patternResonance: 1,
+        entropyFactor: BalanceConfig.universe[1].entropy,
+        seedFactor: BalanceConfig.universe[1].seeds,
     },
     2: {
         name: "Universe II",
         description: "Sharper: gains and costs rise; happiness is brittle.",
-        moneyFactor: 1.15,
-        xpFactor: 1.15,
+        moneyFactor: BalanceConfig.universe[2].money,
+        xpFactor: BalanceConfig.universe[2].xp,
         happinessFactor: 0.95,
         extraTimeWarpFactor: 1.05,
-        costFactor: 1.05,
-        patternResonance: 1.02,
+        costFactor: BalanceConfig.universe[2].cost,
+        patternResonance: 1.05,
+        entropyFactor: BalanceConfig.universe[2].entropy,
+        seedFactor: BalanceConfig.universe[2].seeds,
     },
     3: {
         name: "Universe III",
@@ -594,9 +702,37 @@ const universeConfigs = {
     },
 }
 
-function getUniverseConfig() {
-    var u = gameData.universeIndex || 1
+function getUniverseConfig(targetIndex) {
+    var u = targetIndex || gameData.universeIndex || 1
     return universeConfigs[u] || universeConfigs[1]
+}
+
+function getUniverseModifiers() {
+    var idx = (gameData && gameData.universeIndex) || 1
+    var cfg = getUniverseConfig(idx)
+    var override = BalanceConfig.universe && BalanceConfig.universe[idx]
+    var xp = override && override.xp !== undefined ? override.xp : (cfg.xpFactor || 1)
+    var money = override && override.money !== undefined ? override.money : (cfg.moneyFactor || 1)
+    var entropy = override && override.entropy !== undefined ? override.entropy : (cfg.entropyFactor || 1)
+    var seeds = override && override.seeds !== undefined ? override.seeds : (cfg.seedFactor || 1)
+    var cost = override && override.cost !== undefined ? override.cost : (cfg.costFactor || 1)
+    return {
+        xpGainMultiplier: xp,
+        moneyGainMultiplier: money,
+        entropyGainMultiplier: entropy,
+        seedGainMultiplier: seeds,
+        costScalingMultiplier: cost,
+    }
+}
+
+function getGlobalXpMultiplier() {
+    var m = getUniverseModifiers().xpGainMultiplier || 1
+    m *= getEvilResonatorMultiplier()
+    return m
+}
+
+function getGlobalMoneyMultiplier() {
+    return getUniverseModifiers().moneyGainMultiplier || 1
 }
 
 const ENTROPY_UPGRADE_DEFINITIONS = {
@@ -992,6 +1128,20 @@ function getEntropyUpgradeLevel(branch, key) {
     return gameData.entropyUpgrades[branch][key] || 0
 }
 
+function getTotalEntropyUpgradeLevels() {
+    var total = 0
+    var branches = ["velocity", "stability"]
+    branches.forEach(function(branch) {
+        var data = gameData.entropyUpgrades && gameData.entropyUpgrades[branch]
+        if (!data) return
+        for (var k in data) {
+            if (!data.hasOwnProperty(k)) continue
+            total += data[k] || 0
+        }
+    })
+    return total
+}
+
 function getEntropyUpgradeMaxLevel(key) {
     return ENTROPY_UPGRADE_MAX_LEVELS[key] || 0
 }
@@ -1003,7 +1153,12 @@ function getEntropyUpgradeBaseCost(key) {
 function getEntropyUpgradeCost(branch, key) {
     var currentLevel = getEntropyUpgradeLevel(branch, key)
     var baseCost = getEntropyUpgradeBaseCost(key)
-    return Math.floor(baseCost * Math.pow(ENTROPY_UPGRADE_COST_GROWTH, currentLevel))
+    var mult = getUniverseModifiers().costScalingMultiplier || 1
+    if (branch === "artifact") {
+        // artifacts priced directly via ENTROPY_ARTIFACT_COST_EP; mult not applied here
+        mult = 1
+    }
+    return Math.floor(baseCost * Math.pow(ENTROPY_UPGRADE_COST_GROWTH, currentLevel) * mult)
 }
 
 function getEntropyUpgradeBranchTotal(branch) {
@@ -1043,6 +1198,9 @@ function getEffectiveUpgradeMaxLevel(branch, key) {
 }
 
 function canIncreaseEntropyUpgrade(branch, key) {
+    if (branch === "meta" && key === "unifiedArchitecture" && (gameData.universeIndex || 1) >= 2) {
+        return false
+    }
     var currentLevel = getEntropyUpgradeLevel(branch, key)
     var effectiveMax = getEffectiveUpgradeMaxLevel(branch, key)
     if (currentLevel >= effectiveMax) return false
@@ -1251,6 +1409,15 @@ function getPatternLevel(name) {
     if (!gameData.entropyPatterns || !gameData.entropyPatterns.patterns) return 0
     var pattern = gameData.entropyPatterns.patterns[name]
     return pattern && pattern.level ? pattern.level : 0
+}
+
+function getTotalPatternLevels() {
+    var total = 0
+    var names = ["laborCycle", "scholarLoop", "compressedLife", "stableCycle", "opportunist"]
+    names.forEach(function(name) {
+        total += getPatternLevel(name)
+    })
+    return total
 }
 
 function getPatternFactor_LaborCycle_forMoney() {
@@ -1481,10 +1648,17 @@ function buyEntropyArtifact(key) {
     if (!isEntropyUnlocked()) return false
     if (gameData.entropy && gameData.entropy.unifiedArchitecture) return false
     ensureEntropyArtifactsState()
-    var valid = ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"]
+    var valid = ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator", "u2_echoSeeds", "u2_fracturedTimeline", "u2_evilResonator", "u2_patternLattice"]
     if (valid.indexOf(key) === -1) return false
     if (gameData.entropyArtifacts[key]) return false
-    if (getOwnedArtifactCount() >= 2) return false
+    if (["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"].indexOf(key) !== -1) {
+        var baseOwned = 0
+        for (var baseKey of ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"]) {
+            if (gameData.entropyArtifacts[baseKey]) baseOwned += 1
+        }
+        if (baseOwned >= 2) return false
+    }
+    if (key.startsWith("u2_") && (gameData.universeIndex || 1) < 2) return false
     if (key == "patternResonator") {
         if (!gameData.entropyUpgrades || !gameData.entropyUpgrades.meta || gameData.entropyUpgrades.meta.unifiedArchitecture !== 1) return false
     }
@@ -1494,6 +1668,7 @@ function buyEntropyArtifact(key) {
     if (key === "chainConductor" && totalRebirths < 3) return false
     if (key === "loopAnchor" && totalPatternLevel < 6) return false
     if (key === "patternResonator" && totalPatternLevel < 10) return false
+    if (key.startsWith("u2_") && (gameData.universeIndex || 1) < 2) return false
     var cost = ENTROPY_ARTIFACT_COST_EP[key]
     if (gameData.entropy.EP < cost) return false
     gameData.entropy.EP -= cost
@@ -1532,6 +1707,13 @@ function buyEntropyUpgrade(branch, key) {
 
     gameData.entropy.EP -= cost
     gameData.entropyUpgrades[branch][key] = currentLevel + 1
+    ensureSynergyState()
+    if (typeof recomputeEntropyPressureFromUpgrades === "function") {
+        recomputeEntropyPressureFromUpgrades(gameData, getTotalEntropyUpgradeLevels())
+    } else {
+        var per = BalanceConfig.synergy.entropyPressurePerUpgrade || 0
+        gameData.synergy.entropyPressure = (gameData.synergy.entropyPressure || 0) + per
+    }
     if (key == "unifiedArchitecture") {
         gameData.entropy.unifiedArchitecture = true
         if (gameData.universeTokens === undefined) gameData.universeTokens = 0
@@ -2133,6 +2315,10 @@ function getEvilGain() {
     var evilControl = gameData.taskData["Evil control"]
     var bloodMeditation = gameData.taskData["Blood meditation"]
     var evil = evilControl.getEffect() * bloodMeditation.getEffect()
+    ensureSynergyState()
+    var pressure = gameData.synergy && gameData.synergy.entropyPressure ? gameData.synergy.entropyPressure : 0
+    var bonus = 1 + pressure * (BalanceConfig.synergy.entropyToEvilMultiplier || 0)
+    evil *= bonus
     return evil
 }
 
@@ -2196,6 +2382,7 @@ function setTimeWarping() {
 function moveToNextUniverse() {
     if (!gameData.entropy || !gameData.entropy.unifiedArchitecture) return
     if (!gameData.universeTokens || gameData.universeTokens < 1) return
+    if ((gameData.universeIndex || 1) >= 2) return
     var confirmMove = confirm("You have stabilized this universe. Spend your token to travel to the next one?")
     if (!confirmMove) return
     gameData.universeTokens -= 1
@@ -2268,6 +2455,18 @@ function getItemCategoryName(itemName) {
     return null
 }
 
+function isItemActive(item) {
+    if (!item) return false
+    var categoryName = getItemCategoryName(item.name)
+    if (categoryName === "Properties") {
+        return gameData.currentProperty === item
+    }
+    if (categoryName === "Misc") {
+        return Array.isArray(gameData.currentMisc) && gameData.currentMisc.indexOf(item) !== -1
+    }
+    return false
+}
+
 function isFreeStarterItem(itemName) {
     return itemName === "Homeless"
 }
@@ -2278,9 +2477,41 @@ function getCategoryPurchaseCount(categoryName) {
     return gameData.categoryPurchaseCounts[categoryName] || 0
 }
 
+function getPatternLevelsSnapshot() {
+    var snapshot = {}
+    if (gameData && gameData.entropyPatterns && gameData.entropyPatterns.patterns) {
+        var patt = gameData.entropyPatterns.patterns
+        for (var key in patt) {
+            if (!patt.hasOwnProperty(key)) continue
+            snapshot[key] = patt[key].level || 0
+        }
+    }
+    return snapshot
+}
+
+function captureStagnationBaseline() {
+    if (!gameData) return
+    var seeds = gameData.entropy && typeof gameData.entropy.seeds === "number" ? gameData.entropy.seeds : 0
+    gameData.stagnationBaseline = {
+        seeds: seeds,
+        patterns: getPatternLevelsSnapshot(),
+    }
+}
+
 function isItemPurchased(itemName) {
     if (!gameData.purchasedItems) return false
     return !!gameData.purchasedItems[itemName]
+}
+
+function hasNonStarterShopPurchase() {
+    if (!gameData || !gameData.purchasedItems) return false
+    for (var key in gameData.purchasedItems) {
+        if (!gameData.purchasedItems.hasOwnProperty(key)) continue
+        if (gameData.purchasedItems[key] && !isFreeStarterItem(key)) {
+            return true
+        }
+    }
+    return false
 }
 
 function getEffectiveItemCost(item) {
@@ -2629,6 +2860,135 @@ function updateItemRows() {
     }
 }
 
+function updateShopHintVisibility() {
+    var hint = document.getElementById("shopHint")
+    var hintText = document.getElementById("shopHintText")
+    var hintClose = document.getElementById("shopHintDismiss")
+    if (!hint) return
+
+    if (hintText) {
+        hintText.textContent = tUi("shopHintText") || "Shop items increase happiness and speed up your growth. Check the shop regularly."
+    }
+
+    if (hintClose && !hintClose.dataset.bound) {
+        hintClose.addEventListener("click", function() {
+            gameData.shopHintDismissed = true
+            saveGameData()
+            updateShopHintVisibility()
+        })
+        hintClose.dataset.bound = "1"
+    }
+
+    var alreadyBoughtSomething = hasNonStarterShopPurchase()
+    if (alreadyBoughtSomething && !gameData.shopHintDismissed) {
+        gameData.shopHintDismissed = true
+        saveGameData()
+    }
+
+    var hideHint = !!gameData.shopHintDismissed || alreadyBoughtSomething
+    hint.classList.toggle("hidden", hideHint)
+}
+
+function updateStagnationHintUI() {
+    var panel = document.getElementById("stagnationHintPanel")
+    if (!panel) return
+    var shouldShow = !!(gameData && gameData.stagnationHintPending)
+    panel.classList.toggle("hidden", !shouldShow)
+
+    var titleEl = document.getElementById("stagnationHintTitle")
+    var bodyEl = document.getElementById("stagnationHintBody")
+    var listEl = document.getElementById("stagnationHintList")
+    var closeBtn = document.getElementById("stagnationHintClose")
+
+    if (!shouldShow) return
+
+    if (titleEl) titleEl.textContent = tUi("stagnationTitle") || "Looks like you're stuck"
+    if (bodyEl) bodyEl.textContent = tUi("stagnationBody") || "Several lives passed without progress. Try these steps:"
+    if (listEl) {
+        var keys = ["stagnationList1", "stagnationList2", "stagnationList3", "stagnationList4", "stagnationList5"]
+        listEl.innerHTML = ""
+        keys.forEach(function(k) {
+            var li = document.createElement("li")
+            li.textContent = tUi(k) || ""
+            listEl.appendChild(li)
+        })
+    }
+    if (closeBtn) {
+        closeBtn.textContent = tUi("stagnationButton") || "Got it"
+        if (!closeBtn.dataset.bound) {
+            closeBtn.addEventListener("click", function() {
+                gameData.stagnationHintPending = false
+                saveGameData()
+                updateStagnationHintUI()
+            })
+            closeBtn.dataset.bound = "1"
+        }
+    }
+}
+
+function setGuideTab(tabId) {
+    guideActiveTab = tabId || "firstRun"
+    updateGuideTabUI()
+}
+
+function updateGuideTabUI() {
+    var tabs = document.querySelectorAll(".guide-tab")
+    tabs.forEach(function(tab) {
+        var isActive = tab.dataset && tab.dataset.guideTab === guideActiveTab
+        tab.classList.toggle("active", isActive)
+    })
+    var sections = document.querySelectorAll(".guide-section")
+    sections.forEach(function(sec) {
+        var isActive = sec.dataset && sec.dataset.guideContent === guideActiveTab
+        sec.classList.toggle("hidden", !isActive)
+    })
+}
+
+function showGuideOverlay(tabId) {
+    if (tabId) guideActiveTab = tabId
+    var overlay = document.getElementById("guideOverlay")
+    if (overlay) overlay.classList.remove("hidden")
+    updateGuideTabUI()
+}
+
+function hideGuideOverlay() {
+    var overlay = document.getElementById("guideOverlay")
+    if (overlay) overlay.classList.add("hidden")
+}
+
+function initGuideUI() {
+    var btn = document.getElementById("guideButton")
+    if (btn && !btn.dataset.bound) {
+        btn.addEventListener("click", function() {
+            var overlay = document.getElementById("guideOverlay")
+            var hidden = overlay ? overlay.classList.contains("hidden") : true
+            if (hidden) showGuideOverlay()
+            else hideGuideOverlay()
+        })
+        btn.dataset.bound = "1"
+    }
+    var close = document.getElementById("guideClose")
+    if (close && !close.dataset.bound) {
+        close.addEventListener("click", hideGuideOverlay)
+        close.dataset.bound = "1"
+    }
+    var closeFooter = document.getElementById("guideCloseFooter")
+    if (closeFooter && !closeFooter.dataset.bound) {
+        closeFooter.addEventListener("click", hideGuideOverlay)
+        closeFooter.dataset.bound = "1"
+    }
+    var tabButtons = document.querySelectorAll(".guide-tab")
+    tabButtons.forEach(function(tab) {
+        if (!tab.dataset.bound) {
+            tab.addEventListener("click", function() {
+                setGuideTab(tab.dataset.guideTab)
+            })
+            tab.dataset.bound = "1"
+        }
+    })
+    updateGuideTabUI()
+}
+
 function updateShopAutoPickState() {
     if (!autoPickShopElement) autoPickShopElement = document.getElementById("autoPickShopCheckbox")
     if (!shopAutoPickLabelElement) shopAutoPickLabelElement = document.getElementById("autoPickShopLabel")
@@ -2697,12 +3057,17 @@ function updateShopRecommendation() {
                 continue
             }
         }
-        if (isItemPurchased(itemName)) continue
 
-        var effectiveCost = getEffectiveItemCost(item)
+        var alreadyPurchased = isItemPurchased(itemName)
+        var isActive = isItemActive(item)
+        if (isActive) continue
+
+        var effectiveCost = alreadyPurchased ? 0 : getEffectiveItemCost(item)
         if (gameData.coins < effectiveCost) continue
 
         var candidateExpense = item.getExpense() * costFactor
+        var canCoverExpenseNow = gameData.coins >= candidateExpense
+
         var candidateExpenses = baseExpenses
 
         if (categoryName === "Properties") {
@@ -2715,6 +3080,8 @@ function updateShopRecommendation() {
 
         var candidateNet = incomePerDay - candidateExpenses
         if (candidateNet < 0) continue
+        if (!alreadyPurchased && !canCoverExpenseNow) continue
+        if (alreadyPurchased && !canCoverExpenseNow) continue
 
         if (candidateNet > bestNet) {
             bestNet = candidateNet
@@ -2732,9 +3099,10 @@ function updateShopRecommendation() {
         }
         if (shouldAutoBuy && gameData.coins >= bestCandidateCost) {
             var button = row ? row.getElementsByClassName("button")[0] : null
-            if (button && !button.disabled && typeof button.click === "function") {
+            var canUseButton = button && !button.disabled && typeof button.click === "function"
+            if (canUseButton) {
                 button.click()
-            } else {
+            } else if (!isItemActive(bestCandidate)) {
                 if (bestCandidateCategory === "Properties") {
                     setProperty(bestCandidate.name)
                 } else if (bestCandidateCategory === "Misc") {
@@ -2871,6 +3239,8 @@ function refreshTabLabels() {
         { id: "shopTabButton", key: "tab_shop", legacyKey: "tabShop" },
         { id: "entropyTabButton", key: "tab_entropy", legacyKey: "tabEntropy" },
         { id: "rebirthTabButton", key: "tab_amulet", legacyKey: "tabRebirth" },
+        { id: "achievementsTabButton", key: "tab_achievements" },
+        { id: "challengesTabButton", key: "tab_challenges" },
         { id: "settingsTabButton", key: "tab_settings", legacyKey: "tabSettings" },
     ]
     tabs.forEach(function(tab) {
@@ -2933,7 +3303,9 @@ function refreshEntropyLabels() {
     setElementText("entropyStabilityTitle", "entropy_section_stability")
     setElementText("entropyMetaTitle", "entropy_section_meta")
     setElementText("entropyArtifactTitle", "entropy_section_artifacts")
+    setElementText("entropyArtifactTitleU2", "entropy_u2_artifacts_title")
     setElementText("entropyPatternTitle", "entropy_section_patterns")
+    setElementText("entropyArtifactHintU2", "entropy_u2_artifacts_hint")
 
     var seedHint = tUi("entropy_seeds_hint")
     var seedLabelEl = document.getElementById("entropySeedLabel")
@@ -2953,6 +3325,9 @@ function refreshEntropyLabels() {
     setElementText("entropyArtifactHeaderName", "entropy_col_artifact")
     setElementText("entropyArtifactHeaderStatus", "entropy_col_status")
     setElementText("entropyArtifactHeaderCost", "entropy_col_cost")
+    setElementText("entropyArtifactU2HeaderName", "entropy_col_artifact")
+    setElementText("entropyArtifactU2HeaderStatus", "entropy_col_status")
+    setElementText("entropyArtifactU2HeaderCost", "entropy_col_cost")
     setElementText("entropyPatternHeaderName", "entropy_col_pattern")
     setElementText("entropyPatternHeaderLevel", "entropy_col_level")
 
@@ -2963,7 +3338,7 @@ function refreshEntropyLabels() {
     stabilityUpgrades.forEach(function(key) { setEntropyUpgradeText("stability", key) })
     metaUpgrades.forEach(function(key) { setEntropyUpgradeText("meta", key) });
 
-    ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"].forEach(setEntropyArtifactText);
+    ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator", "u2_echoSeeds", "u2_fracturedTimeline", "u2_evilResonator", "u2_patternLattice"].forEach(setEntropyArtifactText);
     ["laborCycle", "scholarLoop", "compressedLife", "stableCycle", "opportunist"].forEach(setEntropyPatternText);
 }
 
@@ -2994,6 +3369,60 @@ function refreshNarrativeTexts() {
     if (debugClose) debugClose.textContent = tUi("debug_panel_close") || "X"
 }
 
+function refreshGuideTexts() {
+    var btn = document.getElementById("guideButton")
+    if (btn) btn.textContent = tUi("guide_button") || "Guide"
+
+    var title = document.getElementById("guideTitle")
+    if (title) title.textContent = tUi("guide_title") || "Guide"
+
+    var tabLabels = {
+        firstRun: tUi("guide_tab_first_run") || "First run",
+        patternsSeeds: tUi("guide_tab_patterns_seeds") || "Patterns & Seeds",
+        entropyEvil: tUi("guide_tab_entropy_evil") || "Entropy & Evil",
+        stuck: tUi("guide_tab_stuck") || "If you're stuck",
+    }
+    document.querySelectorAll(".guide-tab").forEach(function(tab) {
+        var key = tab.dataset.guideTab
+        if (tabLabels[key]) tab.textContent = tabLabels[key]
+    })
+
+    var bodies = {
+        guideFirstRunBody: tUi("guide_first_run_body"),
+        guidePatternsBody: tUi("guide_patterns_body"),
+        guideEntropyBody: tUi("guide_entropy_body"),
+        guideStuckBody: tUi("guide_stuck_body"),
+    }
+    for (var id in bodies) {
+        var el = document.getElementById(id)
+        if (el) el.textContent = bodies[id] || ""
+    }
+
+    var lists = [
+        {id: "guideFirstRunList", keys: ["guide_first_run_bullet1", "guide_first_run_bullet2", "guide_first_run_bullet3"]},
+        {id: "guidePatternsList", keys: ["guide_patterns_bullet1", "guide_patterns_bullet2", "guide_patterns_bullet3"]},
+        {id: "guideEntropyList", keys: ["guide_entropy_bullet1", "guide_entropy_bullet2", "guide_entropy_bullet3"]},
+        {id: "guideStuckList", keys: ["guide_stuck_bullet1", "guide_stuck_bullet2", "guide_stuck_bullet3", "guide_stuck_bullet4", "guide_stuck_bullet5"]},
+    ]
+    lists.forEach(function(entry) {
+        var listEl = document.getElementById(entry.id)
+        if (!listEl) return
+        listEl.innerHTML = ""
+        entry.keys.forEach(function(k) {
+            var text = tUi(k)
+            if (!text) return
+            var li = document.createElement("li")
+            li.textContent = text
+            listEl.appendChild(li)
+        })
+    })
+
+    var close = document.getElementById("guideCloseFooter")
+    if (close) close.textContent = tUi("guide_close_button") || "Close"
+
+    updateGuideTabUI()
+}
+
 function refreshUI() {
     ensureEntropyBackfills()
     refreshTabLabels()
@@ -3006,6 +3435,7 @@ function refreshUI() {
     refreshSettingsLabels()
     refreshEntropyLabels()
     refreshNarrativeTexts()
+    refreshGuideTexts()
 
     var observerTitle = document.querySelector("#observerPanel h3")
     if (observerTitle) observerTitle.textContent = tUi("observerTitle")
@@ -3344,13 +3774,17 @@ function updateEntropyUpgradeUI() {
 
 function updateArtifactUI() {
     var section = document.getElementById("entropyArtifactSection")
+    var u2section = document.getElementById("entropyArtifactSectionU2")
     if (!section) return
     var unlocked = isEntropyUnlocked()
     section.style.display = unlocked ? "block" : "none"
+    if (u2section) u2section.style.display = (unlocked && (gameData.universeIndex || 1) >= 2) ? "block" : "none"
     if (!unlocked) return
     var artifactKeys = ["sigilMomentum", "chainConductor", "loopAnchor", "patternResonator"]
     var uaFinal = gameData.entropy && gameData.entropy.unifiedArchitecture
-    var ownedCount = getOwnedArtifactCount()
+    var baseOwned = 0
+    ensureEntropyArtifactsState()
+    artifactKeys.forEach(function(k){ if (gameData.entropyArtifacts && gameData.entropyArtifacts[k]) baseOwned += 1 })
     for (var key of artifactKeys) {
         var levelElement = document.getElementById("artifact-" + key + "-status")
         var costElement = document.getElementById("artifact-" + key + "-cost")
@@ -3380,7 +3814,7 @@ function updateArtifactUI() {
             continue
         }
 
-        if (ownedCount >= 2) {
+        if (baseOwned >= 2) {
             levelElement.textContent = tUi("status_blocked_limit")
             costElement.textContent = cost
             buttonElement.disabled = true
@@ -3391,6 +3825,30 @@ function updateArtifactUI() {
         costElement.textContent = cost
         costElement.style.color = (gameData.entropy.EP >= cost) ? "inherit" : "red"
         buttonElement.disabled = gameData.entropy.EP < cost
+    }
+
+    var universeUnlocked = (gameData.universeIndex || 1) >= 2
+    var u2Keys = ["u2_echoSeeds", "u2_fracturedTimeline", "u2_evilResonator", "u2_patternLattice"]
+    for (var key of u2Keys) {
+        var levelEl = document.getElementById("artifact-" + key + "-status")
+        var costEl = document.getElementById("artifact-" + key + "-cost")
+        var btnEl = document.getElementById("artifact-" + key + "-buy")
+        if (!levelEl || !costEl || !btnEl) continue
+        var owned = gameData.entropyArtifacts && gameData.entropyArtifacts[key]
+        var cost = ENTROPY_ARTIFACT_COST_EP[key]
+        var ep = gameData.entropy.EP || 0
+        if (!universeUnlocked) {
+            levelEl.textContent = tUi("status_locked_requirements") || "Locked"
+            costEl.textContent = "-"
+            btnEl.disabled = true
+            btnEl.textContent = tUi("status_locked") || "Locked"
+            continue
+        }
+        levelEl.textContent = owned ? (tUi("status_owned") || "Owned") : (tUi("status_not_owned") || "Not owned")
+        costEl.textContent = cost
+        costEl.style.color = owned ? "inherit" : (ep >= cost ? "inherit" : "red")
+        btnEl.disabled = owned || ep < cost
+        btnEl.textContent = owned ? (tUi("status_owned") || "Owned") : (tUi("action_buy") || "Buy")
     }
 }
 
@@ -3428,6 +3886,14 @@ function updateUniverseUI() {
         tokensText = " | Tokens: " + gameData.universeTokens
     }
     indicator.textContent += choices + meaningText + tokensText
+    var pill = document.getElementById(UNIVERSE_INDICATOR_ID)
+    if (pill) {
+        pill.textContent = (tUi("universe_indicator_label") || "Universe") + " " + (uIndex || 1)
+        var tooltip = uIndex >= 2 ? (tUi("universe_indicator_u2") || "") : (tUi("universe_indicator_u1") || "")
+        pill.title = tooltip
+        pill.classList.toggle("universe-pill-u2", uIndex >= 2)
+        pill.classList.toggle("universe-pill-u1", uIndex < 2)
+    }
     var csDisplay = document.getElementById("cycleStrainDisplay")
     if (csDisplay) {
         if ((gameData.universeIndex || 1) >= 8) {
@@ -3457,10 +3923,62 @@ function updateUniverseUI() {
         }
     }
     if (button) {
-        var canAdvance = gameData.entropy && gameData.entropy.unifiedArchitecture && gameData.universeTokens >= 1
+        var canAdvance = (gameData.universeIndex || 1) === 1 && gameData.entropy && gameData.entropy.unifiedArchitecture && gameData.universeTokens >= 1
         button.classList.toggle("hidden", !canAdvance)
         button.disabled = !canAdvance
     }
+}
+
+function showPendingUniverseIntro() {
+    if (!gameData.pendingUniverseIntro) return
+    showUniverseIntro(gameData.pendingUniverseIntro)
+}
+
+function showUniverseIntro(universeIndex) {
+    if (!universeIndex || universeIndex < 2) return
+    var overlay = document.getElementById("universeIntroOverlay")
+    if (!overlay) return
+    var title = document.getElementById("universeIntroTitle")
+    var body = document.getElementById("universeIntroBody")
+    var list = document.getElementById("universeIntroList")
+    var button = document.getElementById("universeIntroClose")
+    var cfg = getUniverseConfig(universeIndex)
+    var content = {
+        title: universeIndex === 2 ? (tUi("u2_intro_title") || "") : tUniverseName(universeIndex),
+        body: universeIndex === 2 ? (tUi("u2_intro_body") || "") : (cfg && cfg.description ? cfg.description : ""),
+        bullets: []
+    }
+    if (universeIndex === 2) {
+        content.bullets = [
+            tUi("u2_intro_bullet1") || "",
+            tUi("u2_intro_bullet2") || "",
+            tUi("u2_intro_bullet3") || ""
+        ].filter(Boolean)
+    }
+
+    overlay.classList.remove("hidden")
+    if (title) title.textContent = content.title
+    if (body) body.textContent = content.body
+    if (list) {
+        list.innerHTML = ""
+        content.bullets.forEach(function(line) {
+            var li = document.createElement("li")
+            li.textContent = line
+            list.appendChild(li)
+        })
+    }
+    if (button) {
+        button.textContent = tUi("u2_intro_button") || "Continue"
+    }
+    if (!gameData.seenUniverseIntro) gameData.seenUniverseIntro = {}
+    gameData.seenUniverseIntro[universeIndex] = true
+    gameData.pendingUniverseIntro = null
+    saveGameData()
+}
+
+function hideUniverseIntro() {
+    var overlay = document.getElementById("universeIntroOverlay")
+    if (overlay) overlay.classList.add("hidden")
 }
 
 function updateText() {
@@ -3525,7 +4043,118 @@ function updateText() {
         }
     }
 
+    setElementText("achievementsTitle", "achievements_title")
+    setElementText("challengesTitle", "challenges_title")
+
+    refreshGuideTexts()
     updateUniverseUI()
+}
+
+function renderAchievementsUI(force) {
+    var container = document.getElementById("achievementsList")
+    if (!container || !Array.isArray(ACHIEVEMENTS)) return
+    ensureAchievementsState()
+    var lang = typeof getCurrentLanguage === "function" ? getCurrentLanguage() : (gameData.language || LANG.RU)
+    var unlockedCount = 0
+    for (var id in gameData.achievements.unlocked) {
+        if (gameData.achievements.unlocked[id]) unlockedCount += 1
+    }
+    var shouldRebuild = force || container.getAttribute("data-lang") !== lang || container.getAttribute("data-unlocked-count") !== String(unlockedCount)
+    if (!shouldRebuild) return
+
+    var groups = {}
+    ACHIEVEMENTS.forEach(function(achv) {
+        var g = achv.group || "misc"
+        if (!groups[g]) groups[g] = []
+        groups[g].push(achv)
+    })
+    var order = ["progress", "entropy", "evil", "patterns", "lifetime"]
+    Object.keys(groups).forEach(function(g) {
+        if (order.indexOf(g) === -1) order.push(g)
+    })
+
+    var parts = []
+    order.forEach(function(group) {
+        var list = groups[group]
+        if (!list || list.length === 0) return
+        var groupLabelKey = "achv_group_" + group
+        var groupLabel = getUiTextWithFallback(groupLabelKey) || group
+        parts.push("<div class='achievement-group-title'>" + groupLabel + "</div>")
+        list.sort(function(a, b) {
+            var aUnlocked = !!gameData.achievements.unlocked[a.id]
+            var bUnlocked = !!gameData.achievements.unlocked[b.id]
+            if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1
+            var aName = tUi(a.nameKey) || a.id
+            var bName = tUi(b.nameKey) || b.id
+            return aName.localeCompare(bName)
+        })
+        list.forEach(function(achv) {
+            var unlocked = !!gameData.achievements.unlocked[achv.id]
+            var name = tUi(achv.nameKey) || achv.id
+            var desc = tUi(achv.descKey) || ""
+            var status = unlocked ? (tUi("achievement_status_unlocked") || "Unlocked") : (tUi("achievement_status_locked") || "Locked")
+            parts.push(
+                "<div class='achievement-card " + (unlocked ? "unlocked" : "locked") + "'>" +
+                    "<div class='achievement-text'>" +
+                        "<div class='achievement-name'>" + name + "</div>" +
+                        "<div class='achievement-desc'>" + desc + "</div>" +
+                    "</div>" +
+                    "<div class='achievement-status'><span class='status-pill'>" + status + "</span></div>" +
+                "</div>"
+            )
+        })
+    })
+    container.innerHTML = parts.join("")
+    container.setAttribute("data-lang", lang)
+    container.setAttribute("data-unlocked-count", String(unlockedCount))
+}
+
+function renderChallengesUI(force) {
+    var container = document.getElementById("challengesList")
+    if (!container || !Array.isArray(CHALLENGES)) return
+    var lang = typeof getCurrentLanguage === "function" ? getCurrentLanguage() : (gameData.language || LANG.RU)
+    var shouldRebuild = force || container.getAttribute("data-lang") !== lang
+    if (!shouldRebuild) return
+    var parts = []
+    CHALLENGES.forEach(function(challenge) {
+        var name = tUi(challenge.nameKey) || challenge.id
+        var desc = tUi(challenge.descKey) || ""
+        var status = tUi("challenge_status_placeholder") || "Coming soon"
+        parts.push(
+            "<div class='challenge-card'>" +
+                "<div class='challenge-text'>" +
+                    "<div class='challenge-name'>" + name + "</div>" +
+                    "<div class='challenge-desc'>" + desc + "</div>" +
+                "</div>" +
+                "<div class='challenge-status'><span class='status-pill'>" + status + "</span></div>" +
+            "</div>"
+        )
+    })
+    container.innerHTML = parts.join("")
+    container.setAttribute("data-lang", lang)
+}
+
+function maybeShowAchievementOverlay() {
+    if (!gameData || !gameData.achievements || !gameData.achievements.lastUnlockedId) return
+    var overlay = document.getElementById("achievementOverlay")
+    if (!overlay) return
+    var achId = gameData.achievements.lastUnlockedId
+    var ach = Array.isArray(ACHIEVEMENTS) ? ACHIEVEMENTS.find(function(a) { return a.id === achId }) : null
+    var titleEl = document.getElementById("achievementOverlayTitle")
+    var bodyEl = document.getElementById("achievementOverlayBody")
+    if (titleEl) {
+        titleEl.textContent = tUi("achievement_overlay_title") || "Achievement unlocked!"
+    }
+    if (bodyEl) {
+        bodyEl.textContent = ach ? (tUi(ach.nameKey) || achId) : achId
+    }
+    overlay.classList.remove("hidden")
+    if (achievementOverlayTimer) clearTimeout(achievementOverlayTimer)
+    achievementOverlayTimer = setTimeout(function() {
+        overlay.classList.add("hidden")
+    }, 3500)
+    gameData.achievements.lastUnlockedId = null
+    saveGameData()
 }
 
 function renderObserverScaffold() {
@@ -3872,12 +4501,17 @@ function getInsightGain(task) {
 function addInsight(task, isActive) {
     var gain = getInsightGain(task)
     if (!gain || !isActive) return
-    gameData.entropy.insight += applySpeed(gain)
+    var mult = getUniverseModifiers().entropyGainMultiplier || 1
+    var lattice = getPatternLatticeMultiplier()
+    gameData.entropy.insight += applySpeed(gain * mult * lattice)
 }
 
 function addXpFlat(task, amount) {
-    task.xp += amount
-    recordXpGainForPatterns(amount, task)
+    var mult = 1
+    if (typeof getGlobalXpMultiplier === "function") mult = getGlobalXpMultiplier()
+    var gain = amount * mult
+    task.xp += gain
+    recordXpGainForPatterns(gain, task)
     while (task.xp >= task.getMaxXp()) {
         task.xp -= task.getMaxXp()
         task.level += 1
@@ -4366,12 +5000,62 @@ function ensureEntropyPatternsState() {
     }
 }
 
+function ensureSynergyState() {
+    if (typeof initSynergyState === "function") {
+        initSynergyState(gameData)
+        return
+    }
+    if (!gameData.synergy) {
+        gameData.synergy = {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1}
+    } else {
+        if (gameData.synergy.entropyPressure === undefined || gameData.synergy.entropyPressure === null) gameData.synergy.entropyPressure = 0
+        if (gameData.synergy.darkInsight === undefined || gameData.synergy.darkInsight === null) gameData.synergy.darkInsight = 0
+        if (gameData.synergy.patternStabilityBonus === undefined || gameData.synergy.patternStabilityBonus === null) gameData.synergy.patternStabilityBonus = 1
+    }
+}
+
+function refreshSynergyDerived() {
+    ensureSynergyState()
+    var totalEntropyLevels = getTotalEntropyUpgradeLevels()
+    if (typeof recomputeEntropyPressureFromUpgrades === "function") {
+        recomputeEntropyPressureFromUpgrades(gameData, totalEntropyLevels)
+    } else {
+        gameData.synergy.entropyPressure = Math.max(0, totalEntropyLevels || 0) * (BalanceConfig.synergy.entropyPressurePerUpgrade || 0)
+    }
+    var totalPatternLevels = getTotalPatternLevels()
+    if (typeof recomputePatternStabilityBonus === "function") {
+        recomputePatternStabilityBonus(gameData, totalPatternLevels)
+    } else {
+        gameData.synergy.patternStabilityBonus = 1 + Math.max(0, totalPatternLevels || 0) * (BalanceConfig.synergy.patternToEntropyRate || 0)
+    }
+    if (typeof updateDarkInsightFromEvil === "function") {
+        updateDarkInsightFromEvil(gameData)
+    } else {
+        var rate = BalanceConfig.synergy.evilToPatternRate || 0
+        var cap = BalanceConfig.synergy.darkInsightCap || 0
+        gameData.synergy.darkInsight = Math.min(cap, Math.max(0, gameData.evil || 0) * rate)
+    }
+}
+
+function ensureAchievementsState() {
+    if (!gameData.achievements) {
+        gameData.achievements = {unlocked: {}, lastUnlockedId: null}
+    } else {
+        if (!gameData.achievements.unlocked) gameData.achievements.unlocked = {}
+        if (gameData.achievements.lastUnlockedId === undefined) gameData.achievements.lastUnlockedId = null
+    }
+}
+
 function ensureEntropyArtifactsState() {
     var defaults = {
         sigilMomentum: false,
         chainConductor: false,
         loopAnchor: false,
         patternResonator: false,
+        u2_echoSeeds: false,
+        u2_fracturedTimeline: false,
+        u2_evilResonator: false,
+        u2_patternLattice: false,
     }
     if (!gameData.entropyArtifacts) {
         gameData.entropyArtifacts = Object.assign({}, defaults)
@@ -4384,9 +5068,31 @@ function ensureEntropyArtifactsState() {
     }
 }
 
+function hasEntropyArtifact(key) {
+    ensureEntropyArtifactsState()
+    return !!(gameData.entropyArtifacts && gameData.entropyArtifacts[key])
+}
+
+function getPatternLatticeMultiplier() {
+    if (!hasEntropyArtifact("u2_patternLattice")) return 1
+    var stacks = gameData.patternLatticeStacks || 0
+    return 1 + (BalanceConfig.artifacts.patternLatticeEntropyPerStack * stacks)
+}
+
+function getEvilResonatorMultiplier() {
+    if (!hasEntropyArtifact("u2_evilResonator")) return 1
+    if ((gameData.evil || 0) <= 0) return 1
+    return BalanceConfig.artifacts.evilResonatorXpMultiplier
+}
+
 function ensureShopState() {
     if (!gameData.purchasedItems) gameData.purchasedItems = {}
     if (!gameData.categoryPurchaseCounts) gameData.categoryPurchaseCounts = {}
+    if (gameData.shopHintDismissed === undefined) gameData.shopHintDismissed = false
+    if (!Array.isArray(gameData.currentMisc)) gameData.currentMisc = []
+    if (!gameData.currentProperty && gameData.itemData && gameData.itemData["Homeless"]) {
+        gameData.currentProperty = gameData.itemData["Homeless"]
+    }
 
     // Ensure currently equipped items are treated as purchased so legacy saves remain usable.
     var activeNames = []
@@ -4418,6 +5124,31 @@ function ensureEntropyBackfills() {
     ensureEntropyUpgradesState()
     ensureEntropyPatternsState()
     ensureEntropyArtifactsState()
+    ensureStagnationState()
+    ensureAchievementsState()
+    ensureSynergyState()
+    refreshSynergyDerived()
+}
+
+function ensureStagnationState() {
+    if (gameData.stagnantLivesInRow === undefined || gameData.stagnantLivesInRow === null) {
+        gameData.stagnantLivesInRow = 0
+    }
+    if (gameData.stagnationHintCooldownLives === undefined || gameData.stagnationHintCooldownLives === null) {
+        gameData.stagnationHintCooldownLives = 0
+    }
+    if (gameData.stagnationHintPending === undefined) {
+        gameData.stagnationHintPending = false
+    }
+    if (!gameData.stagnationBaseline) {
+        captureStagnationBaseline()
+    }
+    if (gameData.patternLatticeStacks === undefined || gameData.patternLatticeStacks === null) {
+        gameData.patternLatticeStacks = 0
+    }
+    if (gameData.lastLifeShort === undefined || gameData.lastLifeShort === null) {
+        gameData.lastLifeShort = false
+    }
 }
 
 function ensureAutoSwitchState() {
@@ -4470,6 +5201,12 @@ function ensureUniverseState() {
     if (gameData.universeTokens === undefined) {
         gameData.universeTokens = 0
     }
+    if (!gameData.seenUniverseIntro) {
+        gameData.seenUniverseIntro = {}
+    }
+    if (gameData.pendingUniverseIntro === undefined) {
+        gameData.pendingUniverseIntro = null
+    }
     if (gameData.burnoutLevel === undefined) {
         gameData.burnoutLevel = 0
     }
@@ -4499,6 +5236,9 @@ function ensureUniverseState() {
     }
     if (gameData.metaTunesSpent === undefined) {
         gameData.metaTunesSpent = 0
+    }
+    if ((gameData.universeIndex || 1) >= 2 && !gameData.seenUniverseIntro[gameData.universeIndex]) {
+        gameData.pendingUniverseIntro = gameData.universeIndex
     }
     if (observerData === null) {
         observerData = {initialized: false}
@@ -4548,15 +5288,28 @@ function handleFirstTimePrompt() {
 }
 
 function applyEntropyRebirthGain() {
+    ensureSynergyState()
     var gain = Math.floor(Math.pow(gameData.entropy.insight, 0.6))
+    var mult = getUniverseModifiers().entropyGainMultiplier || 1
+    var lattice = getPatternLatticeMultiplier()
+    var patternBonus = (gameData.synergy && gameData.synergy.patternStabilityBonus) ? gameData.synergy.patternStabilityBonus : 1
+    gain = Math.floor(gain * mult * lattice * patternBonus)
     gameData.entropy.EP += gain
     gameData.entropy.maxInsightEver = Math.max(gameData.entropy.maxInsightEver, gameData.entropy.insight)
     gameData.entropy.insight = 0
+    if (typeof checkAchievements === "function") checkAchievements()
 }
 
 function updateEntropyPatternsOnRebirth() {
     if (gameData.entropy && gameData.entropy.unifiedArchitecture) return
     ensureEntropyPatternsState()
+    ensureSynergyState()
+    if (typeof updateDarkInsightFromEvil === "function") {
+        updateDarkInsightFromEvil(gameData)
+    }
+    var baseline = gameData.stagnationBaseline || {seeds: gameData.entropy && gameData.entropy.seeds ? gameData.entropy.seeds : 0, patterns: getPatternLevelsSnapshot()}
+    var seedsBefore = baseline.seeds || 0
+    var patternsBefore = baseline.patterns || {}
     var lifeStats = gameData.entropyPatterns.lifeStats
     var patterns = gameData.entropyPatterns.patterns
     var totalTicks = Math.max(0, lifeStats.currentLifeTicks || 0)
@@ -4567,6 +5320,7 @@ function updateEntropyPatternsOnRebirth() {
     var ageEnd = daysToYears(gameData.days)
     var shortThreshold = getShortLifeThresholdAgeYears()
     var shortLife = ageEnd <= shortThreshold
+    gameData.lastLifeShort = !!shortLife
     var longLife = ageEnd >= 60
 
     function clamp01(x) {
@@ -4577,7 +5331,9 @@ function updateEntropyPatternsOnRebirth() {
 
     function addPatternXp(name, score) {
         if (!patterns[name]) return
-        patterns[name].xp += Math.max(0, score || 0)
+        var di = (gameData.synergy && gameData.synergy.darkInsight) ? gameData.synergy.darkInsight : 0
+        var adjusted = Math.max(0, score || 0) * (1 + di)
+        patterns[name].xp += adjusted
         var level = Math.floor(Math.pow(patterns[name].xp, 0.5))
         if (level > ENTROPY_PATTERN_MAX_LEVEL) level = ENTROPY_PATTERN_MAX_LEVEL
         patterns[name].level = level
@@ -4585,7 +5341,10 @@ function updateEntropyPatternsOnRebirth() {
 
     var laborScore = clamp01(fractionJobs - 0.3)
     var scholarScore = clamp01(fractionSkills - 0.3)
-    var compressedScore = shortLife ? 1 : 0
+    var compressedScore = shortLife ? BalanceConfig.shortLife.compressedLifeXpMultiplier : 0
+    if (compressedScore > 0 && hasEntropyArtifact("u2_fracturedTimeline")) {
+        compressedScore *= BalanceConfig.artifacts.fracturedTimelineCompressedXpMultiplier
+    }
     var stableScore = longLife ? clamp01(fractionMixed) : 0
     var opportunistScore = lifeStats.autoSwitchUsed ? clamp01(fractionMixed) : 0
 
@@ -4612,15 +5371,28 @@ function updateEntropyPatternsOnRebirth() {
         }
     })
 
+    if (hasEntropyArtifact("u2_patternLattice")) {
+        var deltaStacks = 0
+        patternKeys.forEach(function(key) {
+            var newLevel = (patterns[key] && patterns[key].level) || 0
+            var prev = prevLevels[key] || 0
+            if (newLevel > prev) deltaStacks += (newLevel - prev)
+        })
+        if (deltaStacks > 0) {
+            gameData.patternLatticeStacks = (gameData.patternLatticeStacks || 0) + deltaStacks
+        }
+    }
+
+    var totalPatternLevel = getTotalPatternLevels()
+    if (typeof recomputePatternStabilityBonus === "function") {
+        recomputePatternStabilityBonus(gameData, totalPatternLevel)
+    } else {
+        gameData.synergy.patternStabilityBonus = 1 + totalPatternLevel * (BalanceConfig.synergy.patternToEntropyRate || 0)
+    }
+
     lifeStats.rebirthCount = (lifeStats.rebirthCount || 0) + 1
 
     if (gameData.entropy && gameData.entropy.entropyUnlocked) {
-        var totalPatternLevel =
-            getPatternLevel("laborCycle") +
-            getPatternLevel("scholarLoop") +
-            getPatternLevel("compressedLife") +
-            getPatternLevel("stableCycle") +
-            getPatternLevel("opportunist")
         var rebirths = lifeStats.rebirthCount || 0
         var targetSeeds = 1
         if (rebirths >= 3 && totalPatternLevel >= 5) {
@@ -4629,6 +5401,11 @@ function updateEntropyPatternsOnRebirth() {
         if (rebirths >= 7 && totalPatternLevel >= 12) {
             targetSeeds = 3
         }
+        var seedMult = getUniverseModifiers().seedGainMultiplier || 1
+        if (hasEntropyArtifact("u2_echoSeeds")) {
+            seedMult *= BalanceConfig.artifacts.echoOfSeedsMultiplier
+        }
+        targetSeeds = Math.ceil(targetSeeds * seedMult)
         var currentSeeds = gameData.entropy.seeds || 0
         gameData.entropy.seeds = Math.max(currentSeeds, targetSeeds)
     }
@@ -4638,8 +5415,38 @@ function updateEntropyPatternsOnRebirth() {
         newlyDiscovered.forEach(function(key) {
             var name = getUiTextWithFallback("entropy_pattern_" + key + "_name") || key
             var desc = getUiTextWithFallback("entropy_pattern_" + key + "_desc") || ""
-            alert(prefix + " " + name + (desc ? " — " + desc : ""))
+            alert(prefix + " " + name + (desc ? " - " + desc : ""))
         })
+    }
+
+    var seedsAfter = gameData.entropy && typeof gameData.entropy.seeds === "number" ? gameData.entropy.seeds : 0
+    var patternsAfter = getPatternLevelsSnapshot()
+    var stagnant = seedsAfter <= seedsBefore
+    if (stagnant) {
+        for (var key in patternsAfter) {
+            if (!patternsAfter.hasOwnProperty(key)) continue
+            var beforeLevel = patternsBefore[key] || 0
+            var afterLevel = patternsAfter[key] || 0
+            if (afterLevel > beforeLevel) {
+                stagnant = false
+                break
+            }
+        }
+    }
+
+    if (gameData.stagnationHintCooldownLives > 0) {
+        gameData.stagnationHintCooldownLives -= 1
+        if (gameData.stagnationHintCooldownLives < 0) gameData.stagnationHintCooldownLives = 0
+    }
+
+    if (stagnant) {
+        gameData.stagnantLivesInRow = (gameData.stagnantLivesInRow || 0) + 1
+        if (gameData.stagnantLivesInRow >= MIN_STAGNANT_LIVES && (gameData.stagnationHintCooldownLives || 0) <= 0) {
+            gameData.stagnationHintPending = true
+            gameData.stagnationHintCooldownLives = STAGNATION_HINT_COOLDOWN_LIVES
+        }
+    } else {
+        gameData.stagnantLivesInRow = 0
     }
 
     lifeStats.ticksInJobs = 0
@@ -4743,6 +5550,8 @@ function rebirthReset() {
         if (requirement.completed && permanentUnlocks.includes(key)) continue
         requirement.completed = false
     }
+
+    captureStagnationBaseline()
 }
 
 function getLifespan() {
@@ -4898,6 +5707,10 @@ function loadGameData() {
     ensureShopState()
     assignMethods()
     ensureCoinRequirementKeys()
+    ensureAchievementsState()
+    if (typeof checkAchievements === "function") {
+        checkAchievements()
+    }
 }
 
 function updateUI() {
@@ -4921,9 +5734,14 @@ function updateUI() {
     if (entropyJobSection) entropyJobSection.style.display = isEntropyUnlocked() ? "block" : "none"
     var entropySkillSection = document.getElementById("entropySkillsSection")
     if (entropySkillSection) entropySkillSection.style.display = isEntropyUnlocked() ? "block" : "none"
+    updateShopHintVisibility()
+    updateStagnationHintUI()
     updateShopAutoPickState()
     updateShopRecommendation()
     updateText()
+    renderAchievementsUI()
+    renderChallengesUI()
+    maybeShowAchievementOverlay()
     if (isObserverMode()) {
         initObserverDataIfNeeded()
         renderObserverScaffold()
@@ -4945,6 +5763,7 @@ function updateUI() {
         if (lifeRootContent) lifeRootContent.classList.remove("hidden")
         if (observerRoot) observerRoot.classList.add("hidden")
     }
+    updateBalanceDebugPanel()
     updateDebugPanel()
 }
 
@@ -4965,6 +5784,10 @@ function update() {
         updateObserverMode(1 / updateSpeed)
     } else {
         ensureActiveSelections()
+        ensureSynergyState()
+        if (typeof updateDarkInsightFromEvil === "function") {
+            updateDarkInsightFromEvil(gameData)
+        }
         updateAutoSwitchState()
         decaySwitchPenalty()
         decayBurnout()
@@ -4978,6 +5801,9 @@ function update() {
         autoLearn()
         tickTasks()
         applyExpenses()
+        if (typeof checkAchievements === "function") {
+            checkAchievements()
+        }
     }
     updateUI()
     checkForcedRebirth()
@@ -5012,12 +5838,23 @@ function resetGameData() {
         evil: 0,
         paused: false,
         timeWarpingEnabled: true,
+        shopHintDismissed: false,
         rebirthOneCount: 0,
         rebirthTwoCount: 0,
+        patternLatticeStacks: 0,
+        synergy: {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1},
+        stagnantLivesInRow: 0,
+        stagnationHintCooldownLives: 0,
+        stagnationHintPending: false,
+        stagnationBaseline: null,
+        seenUniverseIntro: {},
+        pendingUniverseIntro: null,
+        lastLifeShort: false,
         currentJob: null,
         currentSkill: null,
         currentProperty: null,
         currentMisc: null,
+        achievements: {unlocked: {}, lastUnlockedId: null},
         hasAnsweredFirstTimePrompt: false,
         autoSwitchJobs: false,
         autoSwitchSkills: false,
@@ -5069,6 +5906,10 @@ function resetGameData() {
             chainConductor: false,
             loopAnchor: false,
             patternResonator: false,
+            u2_echoSeeds: false,
+            u2_fracturedTimeline: false,
+            u2_evilResonator: false,
+            u2_patternLattice: false,
         },
         entropy: {
             unlocked: false,
@@ -5119,6 +5960,18 @@ function resetGameData() {
 }
 
 function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) {
+    var preservedLanguage = gameData.language || LANG.RU
+    var preservedSettings = gameData.settings || {}
+    var preservedShopHint = gameData.shopHintDismissed || false
+    var preservedEntropyUpgrades = JSON.parse(JSON.stringify(gameData.entropyUpgrades || {}))
+    var preservedEntropyPatterns = JSON.parse(JSON.stringify(gameData.entropyPatterns || {}))
+    var preservedEntropyArtifacts = JSON.parse(JSON.stringify(gameData.entropyArtifacts || {}))
+    var preservedSeeds = gameData.entropy && typeof gameData.entropy.seeds === "number" ? gameData.entropy.seeds : 0
+    var preservedMaxInsight = gameData.entropy && typeof gameData.entropy.maxInsightEver === "number" ? gameData.entropy.maxInsightEver : 0
+    var preservedPatternLatticeStacks = gameData.patternLatticeStacks || 0
+    var preservedIntroFlags = gameData.seenUniverseIntro || {}
+    var preservedAchievements = JSON.parse(JSON.stringify(gameData.achievements || {unlocked: {}, lastUnlockedId: null}))
+
     gameData = {
         universeIndex: universeIndex,
         universeTokens: universeTokens,
@@ -5139,8 +5992,15 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
         evil: 0,
         paused: false,
         timeWarpingEnabled: true,
+        shopHintDismissed: preservedShopHint,
         rebirthOneCount: 0,
         rebirthTwoCount: 0,
+        patternLatticeStacks: preservedPatternLatticeStacks,
+        achievements: {unlocked: {}, lastUnlockedId: null},
+        synergy: {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1},
+        seenUniverseIntro: preservedIntroFlags,
+        pendingUniverseIntro: (!preservedIntroFlags[universeIndex]) ? universeIndex : null,
+        lastLifeShort: false,
         currentJob: null,
         currentSkill: null,
         currentProperty: null,
@@ -5196,6 +6056,10 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
             chainConductor: false,
             loopAnchor: false,
             patternResonator: false,
+            u2_echoSeeds: false,
+            u2_fracturedTimeline: false,
+            u2_evilResonator: false,
+            u2_patternLattice: false,
         },
         entropy: {
             unlocked: false,
@@ -5207,7 +6071,40 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
             focusTask: null,
             unifiedArchitecture: false,
         },
+        settings: preservedSettings,
+        language: preservedLanguage,
+        stagnantLivesInRow: 0,
+        stagnationHintCooldownLives: 0,
+        stagnationHintPending: false,
+        stagnationBaseline: null,
+        patternLatticeStacks: preservedPatternLatticeStacks,
     }
+    // Restore meta progress that should persist across universes
+    if (gameData.entropy) {
+        gameData.entropy.unlocked = true
+        gameData.entropy.entropyUnlocked = true
+        gameData.entropy.seeds = preservedSeeds
+        gameData.entropy.maxInsightEver = preservedMaxInsight
+        gameData.entropy.insight = 0
+    }
+    if (preservedEntropyUpgrades && gameData.entropyUpgrades) {
+        // Preserve all but clear UA to prevent re-purchase in U2
+        gameData.entropyUpgrades = JSON.parse(JSON.stringify(preservedEntropyUpgrades))
+        if (gameData.entropyUpgrades.meta) {
+            gameData.entropyUpgrades.meta.unifiedArchitecture = 0
+        }
+    }
+    if (preservedEntropyPatterns && preservedEntropyPatterns.patterns) {
+        gameData.entropyPatterns.patterns = JSON.parse(JSON.stringify(preservedEntropyPatterns.patterns))
+    }
+    if (preservedEntropyArtifacts) {
+        gameData.entropyArtifacts = Object.assign({}, preservedEntropyArtifacts)
+    }
+    if (preservedAchievements) {
+        gameData.achievements = preservedAchievements
+    }
+    refreshSynergyDerived()
+    captureStagnationBaseline()
     baseInitialized = false
     entropyInitialized = false
     autoSwitchFlagsPresentInSave = false
@@ -5525,9 +6422,11 @@ function startGame() {
     if (gameData.meta && gameData.meta.introSeen === false) {
         showIntroModal()
     }
+    showPendingUniverseIntro()
     enforceEntropyTabVisibility()
     setTab(jobTabButton, "jobs")
     initDebugUI()
+    initGuideUI()
 
     update()
     setInterval(update, 1000 / updateSpeed)
@@ -5541,6 +6440,10 @@ document.addEventListener("DOMContentLoaded", function () {
     var btn = document.getElementById("introContinueButton");
     if (btn) {
         btn.addEventListener("click", hideIntroModal);
+    }
+    var u2Btn = document.getElementById("universeIntroClose")
+    if (u2Btn) {
+        u2Btn.addEventListener("click", hideUniverseIntro)
     }
 });
 

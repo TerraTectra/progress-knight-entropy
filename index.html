@@ -70,7 +70,11 @@
         </div>
     </div>
     <div class="w3-margin"> 
-        <h1 id="titleHeader">Progress Knight</h1>
+        <div class="title-bar">
+            <h1 id="titleHeader">Progress Knight</h1>
+            <span class="universe-pill" id="universeIndicator"></span>
+            <button id="guideButton" class="w3-button button guide-trigger"></button>
+        </div>
         <div style="width: 1220px; height: 600px"> 
             <div id="life-root" class="panel w3-padding" style="width: 300px; height: auto; float: left">
                 <span id="deathText">
@@ -178,6 +182,8 @@
                 <div class="w3-button w3-bar-item tabButton" id="shopTabButton" onClick="setTab(this, 'shop')"></div>
                 <div class="w3-button w3-bar-item tabButton hidden" id="entropyTabButton" onClick="setTab(this, 'entropy')"></div>
                 <div class="w3-button w3-bar-item tabButton" id="rebirthTabButton" onClick="setTab(this, 'rebirth')"></div>
+                <div class="w3-button w3-bar-item tabButton" id="achievementsTabButton" onClick="setTab(this, 'achievements')"></div>
+                <div class="w3-button w3-bar-item tabButton" id="challengesTabButton" onClick="setTab(this, 'challenges')"></div>
                 <div class="w3-button w3-bar-item tabButton" id="settingsTabButton" onClick="setTab(this, 'settings')" style="float: right"></div>
             </div>
 
@@ -317,6 +323,10 @@
                             <input type="checkbox" id="autoPickShopCheckbox">
                             <span id="autoPickShopLabel"></span>
                         </label>
+                    </div>
+                    <div id="shopHint" class="shop-hint hidden">
+                        <span id="shopHintText"></span>
+                        <button id="shopHintDismiss" class="shop-hint-close" aria-label="Dismiss hint">×</button>
                     </div>
                     <table id="itemTable" class="w3-table w3-bordered">
                     </table>
@@ -573,6 +583,56 @@
                             </table>
                         </div>
                     </div>
+                    <div class="entropy-section entropy-artifacts" id="entropyArtifactSectionU2">
+                        <div class="entropy-card u2-artifact-card">
+                            <h3 class="entropy-section-title" id="entropyArtifactTitleU2"></h3>
+                            <div class="entropy-muted" id="entropyArtifactHintU2" style="margin-bottom:6px;"></div>
+                            <table class="w3-table w3-bordered entropy-table">
+                                <tr>
+                                    <th style="width: 45%;" id="entropyArtifactU2HeaderName"></th>
+                                    <th style="width: 20%;" id="entropyArtifactU2HeaderStatus"></th>
+                                    <th style="width: 15%;" id="entropyArtifactU2HeaderCost"></th>
+                                    <th style="width: 20%;"></th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div id="artifact-u2_echoSeeds-name"></div>
+                                        <div id="artifact-u2_echoSeeds-desc" style="color: gray; font-size: 12px;"></div>
+                                    </td>
+                                    <td id="artifact-u2_echoSeeds-status">-</td>
+                                    <td id="artifact-u2_echoSeeds-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-u2_echoSeeds-buy" onClick="buyEntropyArtifact('u2_echoSeeds')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div id="artifact-u2_fracturedTimeline-name"></div>
+                                        <div id="artifact-u2_fracturedTimeline-desc" style="color: gray; font-size: 12px;"></div>
+                                    </td>
+                                    <td id="artifact-u2_fracturedTimeline-status">-</td>
+                                    <td id="artifact-u2_fracturedTimeline-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-u2_fracturedTimeline-buy" onClick="buyEntropyArtifact('u2_fracturedTimeline')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div id="artifact-u2_evilResonator-name"></div>
+                                        <div id="artifact-u2_evilResonator-desc" style="color: gray; font-size: 12px;"></div>
+                                    </td>
+                                    <td id="artifact-u2_evilResonator-status">-</td>
+                                    <td id="artifact-u2_evilResonator-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-u2_evilResonator-buy" onClick="buyEntropyArtifact('u2_evilResonator')">Buy</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div id="artifact-u2_patternLattice-name"></div>
+                                        <div id="artifact-u2_patternLattice-desc" style="color: gray; font-size: 12px;"></div>
+                                    </td>
+                                    <td id="artifact-u2_patternLattice-status">-</td>
+                                    <td id="artifact-u2_patternLattice-cost">-</td>
+                                    <td><button class="w3-button button" id="artifact-u2_patternLattice-buy" onClick="buyEntropyArtifact('u2_patternLattice')">Buy</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                     <div class="entropy-section entropy-patterns" id="entropyPatternSection">
                         <div class="entropy-card">
                             <h3 class="entropy-section-title" id="entropyPatternTitle"></h3>
@@ -622,6 +682,12 @@
                 </div>
 
                 <div class="tab" id="rebirth">
+                    <div id="stagnationHintPanel" class="stagnation-hint hidden">
+                        <div class="stagnation-hint-header" id="stagnationHintTitle"></div>
+                        <div class="stagnation-hint-body" id="stagnationHintBody"></div>
+                        <ul class="stagnation-hint-list" id="stagnationHintList"></ul>
+                        <button class="w3-button button stagnation-hint-close" id="stagnationHintClose"></button>
+                    </div>
                     <ul>
                         <li style="margin: 8px;" id="amuletStory25">
                         </li>
@@ -644,6 +710,20 @@
                             </br>
                         </li>
                     </ul>
+                </div>
+
+                <div class="tab" id="achievements">
+                    <div class="w3-card w3-padding">
+                        <h3 id="achievementsTitle"></h3>
+                        <div id="achievementsList"></div>
+                    </div>
+                </div>
+
+                <div class="tab" id="challenges">
+                    <div class="w3-card w3-padding">
+                        <h3 id="challengesTitle"></h3>
+                        <div id="challengesList"></div>
+                    </div>
                 </div>
 
                 <div class="tab" id="settings">
@@ -692,6 +772,60 @@
             </div>
         </div>
     </div>
+    <div id="universeIntroOverlay" class="universe-intro-overlay hidden">
+        <div class="universe-intro-panel">
+            <div class="universe-intro-header" id="universeIntroTitle"></div>
+            <div class="universe-intro-body" id="universeIntroBody"></div>
+            <ul class="universe-intro-list" id="universeIntroList"></ul>
+            <div class="universe-intro-actions">
+                <button class="w3-button button universe-intro-close" id="universeIntroClose"></button>
+            </div>
+        </div>
+    </div>
+    <div id="achievementOverlay" class="achievement-overlay hidden">
+        <div class="achievement-toast">
+            <div class="achievement-toast-title" id="achievementOverlayTitle"></div>
+            <div class="achievement-toast-body" id="achievementOverlayBody"></div>
+        </div>
+    </div>
+    <div id="guideOverlay" class="guide-overlay hidden">
+        <div class="guide-panel">
+            <div class="guide-header">
+                <div id="guideTitle"></div>
+                <button id="guideClose" class="guide-close" aria-label="Close guide">×</button>
+            </div>
+            <div class="guide-tabs">
+                <button class="guide-tab" data-guide-tab="firstRun"></button>
+                <button class="guide-tab" data-guide-tab="patternsSeeds"></button>
+                <button class="guide-tab" data-guide-tab="entropyEvil"></button>
+                <button class="guide-tab" data-guide-tab="stuck"></button>
+            </div>
+            <div class="guide-content">
+                <div class="guide-section" data-guide-content="firstRun">
+                    <div class="guide-body" id="guideFirstRunBody"></div>
+                    <ul id="guideFirstRunList"></ul>
+                </div>
+                <div class="guide-section hidden" data-guide-content="patternsSeeds">
+                    <div class="guide-body" id="guidePatternsBody"></div>
+                    <ul id="guidePatternsList"></ul>
+                </div>
+                <div class="guide-section hidden" data-guide-content="entropyEvil">
+                    <div class="guide-body" id="guideEntropyBody"></div>
+                    <ul id="guideEntropyList"></ul>
+                </div>
+                <div class="guide-section hidden" data-guide-content="stuck">
+                    <div class="guide-body" id="guideStuckBody"></div>
+                    <ul id="guideStuckList"></ul>
+                </div>
+            </div>
+            <div class="guide-footer">
+                <button id="guideCloseFooter" class="w3-button button"></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="balanceDebugPanel" class="balance-debug hidden"></div>
+
     <div id="debug-panel" class="debug-panel hidden">
         <div id="debug-panel-header">
             <span id="debug-panel-title">Debug HUD</span>
@@ -704,6 +838,10 @@
 <script type="text/javascript" src="js/HackTimer.js"></script>
 <script type="text/javascript" src="js/classes.js"></script>
 <script type="text/javascript" src="js/i18n.js"></script>
+<script type="text/javascript" src="js/achievements.js"></script>
+<script type="text/javascript" src="js/achievementLogic.js"></script>
+<script type="text/javascript" src="js/challenges.js"></script>
+<script type="text/javascript" src="js/synergy.js"></script>
 <script type="text/javascript" src="js/main.js"></script>
 
 </html>
