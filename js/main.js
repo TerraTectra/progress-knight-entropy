@@ -1,3 +1,15 @@
+/**
+ * Eternal Ascendant main loop and state wiring.
+ *
+ * Core systems:
+ * - Entropy / Seeds and Patterns: lifecycle, short lives, and pattern lattice (see entropy sections in this file).
+ * - Evil / Dark Magic and synergies: cross-resource boosts handled in synergy helpers.
+ * - Achievements / Challenges: see js/achievements.js and js/challenges.js plus their logic companions.
+ * - Guide, overlays, and UI wiring: driven from this file with minimal DOM helpers.
+ *
+ * Balance tuning entry point: BalanceConfig in this file controls key multipliers and thresholds.
+ */
+
 var gameData = {
     universeIndex: 1,
     universeTokens: 0,
@@ -114,9 +126,74 @@ var gameData = {
         u2_patternLattice: false,
     },
     language: LANG.RU,
+    saveVersion: typeof EA_SAVE_VERSION !== "undefined" ? EA_SAVE_VERSION : 1,
 }
 
 var tempData = {}
+
+// Snapshot of the default state for migration/safe-load purposes
+var defaultGameDataTemplate = JSON.parse(JSON.stringify(gameData))
+
+// Lightweight DOM cache + diff helpers to avoid repeated lookups/updates each tick
+var domCache = {}
+function getCachedElement(id) {
+    if (!id) return null
+    if (!domCache[id]) {
+        domCache[id] = document.getElementById(id)
+    }
+    return domCache[id]
+}
+function setTextIfChanged(elementOrId, value) {
+    var el = typeof elementOrId === "string" ? getCachedElement(elementOrId) : elementOrId
+    if (!el) return
+    var next = value === undefined || value === null ? "" : String(value)
+    if (el.textContent !== next) {
+        el.textContent = next
+    }
+}
+function setDisplayIfChanged(elementOrId, display) {
+    var el = typeof elementOrId === "string" ? getCachedElement(elementOrId) : elementOrId
+    if (!el || !el.style) return
+    if (el.style.display !== display) {
+        el.style.display = display
+    }
+}
+function toggleHidden(elementOrId, hidden) {
+    var el = typeof elementOrId === "string" ? getCachedElement(elementOrId) : elementOrId
+    if (!el || !el.classList) return
+    var shouldHide = !!hidden
+    if (el.classList.contains("hidden") !== shouldHide) {
+        el.classList.toggle("hidden", shouldHide)
+    }
+}
+function setWidthIfChanged(elementOrId, widthValue) {
+    var el = typeof elementOrId === "string" ? getCachedElement(elementOrId) : elementOrId
+    if (!el || !el.style) return
+    if (el.style.width !== widthValue) {
+        el.style.width = widthValue
+    }
+}
+function getNowMs() {
+    if (typeof performance !== "undefined" && typeof performance.now === "function") {
+        return performance.now()
+    }
+    return Date.now()
+}
+
+function formatVersionLabel() {
+    var version = (typeof EA_VERSION !== "undefined") ? EA_VERSION : "1.0.0"
+    var channel = (typeof EA_BUILD_CHANNEL !== "undefined" && EA_BUILD_CHANNEL) ? EA_BUILD_CHANNEL : "stable"
+    var saveVer = (typeof EA_SAVE_VERSION !== "undefined") ? EA_SAVE_VERSION : 1
+    return "Eternal Ascendant v" + version + " (" + channel + ", save v" + saveVer + ")"
+}
+
+function updateVersionBadges() {
+    setTextIfChanged("versionLabel", formatVersionLabel())
+    var guideTag = getCachedElement("guideVersionTag")
+    if (guideTag) {
+        setTextIfChanged(guideTag, formatVersionLabel())
+    }
+}
 
 var skillWithLowestMaxXp = null
 var realityArchitectureEffect = null
@@ -129,6 +206,9 @@ var universeSwitchPenalty = 0
 var lastJobName = null
 var lastSkillName = null
 var achievementOverlayTimer = null
+var lastQuickTaskState = {job: null, skill: null}
+var lastLoadErrorMessage = null
+var lastEvilForDarkInsight = null
 
 var burnoutLevel = 0
 var lifeCompressionState = {activity: "idle"}
@@ -226,6 +306,9 @@ function updateDebugPanel() {
         var totalRebirths = (gameData.rebirthOneCount || 0) + (gameData.rebirthTwoCount || 0)
         lines.push("Rebirths: " + totalRebirths)
         lines.push("Coins: " + formatNumberShort(gameData.coins || 0))
+        if (ENABLE_TICK_PROFILING) {
+            lines.push("Last tick: " + lastTickDurationMs.toFixed(2) + "ms")
+        }
     }
 
     if (gameData && gameData.entropy) {
@@ -499,6 +582,9 @@ autoLearnElement.addEventListener("change", function() {
 })
 
 const updateSpeed = 20
+const ENABLE_TICK_PROFILING = false
+const TICK_PROFILING_WARN_MS = 50
+var lastTickDurationMs = 0
 
 const baseLifespan = 365 * 70
 
@@ -2679,10 +2765,18 @@ function createAllRows(categoryType, tableId) {
 
 function updateQuickTaskDisplay(taskType) {
     var currentTask = taskType == "job" ? gameData.currentJob : gameData.currentSkill
-    var quickTaskDisplayElement = document.getElementById("quickTaskDisplay")
+    if (!currentTask) return
+    var quickTaskDisplayElement = getCachedElement("quickTaskDisplay")
+    if (!quickTaskDisplayElement) return
     var progressBar = quickTaskDisplayElement.getElementsByClassName(taskType)[0]
-    progressBar.getElementsByClassName("name")[0].textContent = tName(currentTask.name) + " lvl " + currentTask.level
-    progressBar.getElementsByClassName("progressFill")[0].style.width = currentTask.xp / currentTask.getMaxXp() * 100 + "%"
+    if (!progressBar) return
+    var maxXp = currentTask.getMaxXp()
+    var cached = lastQuickTaskState[taskType] || {}
+    var nextState = {name: currentTask.name, level: currentTask.level, xp: currentTask.xp, maxXp: maxXp}
+    if (cached.name === nextState.name && cached.level === nextState.level && cached.xp === nextState.xp && cached.maxXp === nextState.maxXp) return
+    lastQuickTaskState[taskType] = nextState
+    setTextIfChanged(progressBar.getElementsByClassName("name")[0], tName(currentTask.name) + " lvl " + currentTask.level)
+    setWidthIfChanged(progressBar.getElementsByClassName("progressFill")[0], (maxXp > 0 ? currentTask.xp / maxXp * 100 : 0) + "%")
 }
 
 function updateRequiredRows(data, categoryType) {
@@ -4038,38 +4132,49 @@ function hideUniverseIntro() {
 
 function updateText() {
     //Sidebar
-    document.getElementById("ageDisplay").textContent = daysToYears(gameData.days)
-    document.getElementById("dayDisplay").textContent = getDay()
-    document.getElementById("lifespanDisplay").textContent = daysToYears(getLifespan())
+    setTextIfChanged("ageDisplay", daysToYears(gameData.days))
+    setTextIfChanged("dayDisplay", getDay())
+    setTextIfChanged("lifespanDisplay", daysToYears(getLifespan()))
     var pauseLabel = gameData.paused ? (tUi("sidebarPlay") || "Play") : (tUi("sidebarPause") || "Pause")
-    document.getElementById("pauseButton").textContent = pauseLabel
+    setTextIfChanged("pauseButton", pauseLabel)
 
-    formatCoins(gameData.coins, document.getElementById("coinDisplay"))
+    var coinDisplay = getCachedElement("coinDisplay")
+    if (coinDisplay) formatCoins(gameData.coins, coinDisplay)
     setSignDisplay()
-    formatCoins(getNet(), document.getElementById("netDisplay"))
-    formatCoins(getIncome(), document.getElementById("incomeDisplay"))
-    formatCoins(getExpense(), document.getElementById("expenseDisplay"))
+    var netCoins = getNet()
+    var incomeCoins = getIncome()
+    var expenseCoins = getExpense()
+    var netDisplay = getCachedElement("netDisplay")
+    var incomeDisplay = getCachedElement("incomeDisplay")
+    var expenseDisplay = getCachedElement("expenseDisplay")
+    if (netDisplay) formatCoins(netCoins, netDisplay)
+    if (incomeDisplay) formatCoins(incomeCoins, incomeDisplay)
+    if (expenseDisplay) formatCoins(expenseCoins, expenseDisplay)
 
-    document.getElementById("happinessDisplay").textContent = getHappiness().toFixed(1)
+    setTextIfChanged("happinessDisplay", getHappiness().toFixed(1))
 
-    document.getElementById("evilDisplay").textContent = gameData.evil.toFixed(1)
-    var evilGainEl = document.getElementById("evilGainDisplay")
+    setTextIfChanged("evilDisplay", gameData.evil.toFixed(1))
+    var evilGainEl = getCachedElement("evilGainDisplay")
     if (evilGainEl) {
-        evilGainEl.textContent = getEvilGain().toFixed(1)
+        setTextIfChanged(evilGainEl, getEvilGain().toFixed(1))
     }
 
-    document.getElementById("timeWarpingDisplay").textContent = "x" + gameData.taskData["Time warping"].getEffect().toFixed(2)
-    var warpBtn = document.getElementById("timeWarpingButton")
+    var timeWarpingDisplay = getCachedElement("timeWarpingDisplay")
+    if (timeWarpingDisplay && gameData.taskData["Time warping"]) {
+        setTextIfChanged(timeWarpingDisplay, "x" + gameData.taskData["Time warping"].getEffect().toFixed(2))
+    }
+    var warpBtn = getCachedElement("timeWarpingButton")
     if (warpBtn) {
         warpBtn.textContent = gameData.timeWarpingEnabled ? (tUi("sidebarTimeWarpingButtonDisable") || "Disable warp") : (tUi("sidebarTimeWarpingButtonEnable") || "Enable warp")
     }
 
-    if (document.getElementById("entropySeedDisplay")) {
-        document.getElementById("entropySeedDisplay").textContent = format(gameData.entropy.seeds)
-        document.getElementById("entropyInsightDisplay").textContent = format(gameData.entropy.insight)
-        document.getElementById("entropyMaxInsightDisplay").textContent = format(gameData.entropy.maxInsightEver)
-        document.getElementById("entropyEPDisplay").textContent = format(gameData.entropy.EP)
-        var overseerButton = document.getElementById("cycleOverseerButton")
+    var seedDisplay = getCachedElement("entropySeedDisplay")
+    if (seedDisplay) {
+        setTextIfChanged(seedDisplay, format(gameData.entropy.seeds))
+        setTextIfChanged("entropyInsightDisplay", format(gameData.entropy.insight))
+        setTextIfChanged("entropyMaxInsightDisplay", format(gameData.entropy.maxInsightEver))
+        setTextIfChanged("entropyEPDisplay", format(gameData.entropy.EP))
+        var overseerButton = getCachedElement("cycleOverseerButton")
         if (overseerButton) {
             overseerButton.disabled = gameData.entropy.overseer || gameData.entropy.EP < cycleOverseerCost
             if (gameData.entropy.overseer) {
@@ -4666,6 +4771,9 @@ function doCurrentTask(task) {
 function tickTasks() {
     var focusJob = gameData.currentJob
     var focusSkill = gameData.currentSkill
+    var compressionFocused = getLifeCompressionFactors(true)
+    var compressionPassive = getLifeCompressionFactors(false)
+    var entropyUnlockedFully = isEntropyFullyUnlocked()
     var overseerFocus = isCycleOverseerActive() ? getFocusedTask() : null
     if (overseerFocus instanceof Job) {
         focusJob = overseerFocus
@@ -4681,14 +4789,14 @@ function tickTasks() {
         var isSkill = task instanceof Skill
         var isFocus = (isJob && focusJob && task.name == focusJob.name) || (isSkill && focusSkill && task.name == focusSkill.name)
         var xpMult = isFocus ? 1 : (isJob ? PASSIVE_JOB_XP_MULTIPLIER : PASSIVE_SKILL_XP_MULTIPLIER)
-        var compression = getLifeCompressionFactors(isFocus)
+        var compression = isFocus ? compressionFocused : compressionPassive
         var baseXp = task.getXpGain()
         if (isJob && !isFocus && highTierJobs.includes(task.name) && gameData.taskData["Reality Architecture"]) {
             baseXp /= gameData.taskData["Reality Architecture"].getEffect()
         }
         var xpGain = baseXp * xpMult * (compression.xp || 1)
         addXpFlat(task, applySpeed(xpGain))
-        if (task.name == "Read Almanach" && isEntropyFullyUnlocked()) {
+        if (task.name == "Read Almanach" && entropyUnlockedFully) {
             gameData.entropy.insight += applySpeed(getInsightGain(task) * xpMult)
         }
     }
@@ -5154,6 +5262,7 @@ function refreshSynergyDerived() {
         var cap = BalanceConfig.synergy.darkInsightCap || 0
         gameData.synergy.darkInsight = Math.min(cap, Math.max(0, gameData.evil || 0) * rate)
     }
+    lastEvilForDarkInsight = gameData.evil || 0
 }
 
 function ensureAchievementsState() {
@@ -5801,9 +5910,69 @@ function replaceSaveDict(dict, saveDict) {
     }
 }
 
+function sanitizeNumber(value, fallback) {
+    var num = Number(value)
+    if (!isFinite(num)) return fallback
+    if (typeof fallback === "number" && fallback >= 0 && num < 0) return Math.max(0, num)
+    return num
+}
+
+function mergeWithDefaults(defaults, incoming) {
+    if (incoming === undefined || incoming === null) {
+        return JSON.parse(JSON.stringify(defaults))
+    }
+    if (typeof defaults !== "object" || defaults === null) {
+        if (typeof defaults === "number") return sanitizeNumber(incoming, defaults)
+        if (typeof defaults === "boolean") return !!incoming
+        if (typeof defaults === "string") return String(incoming)
+        return incoming
+    }
+    var result = Array.isArray(defaults) ? [] : {}
+    var keys = new Set()
+    if (defaults && typeof defaults === "object") {
+        Object.keys(defaults).forEach(function(k) { keys.add(k) })
+    }
+    if (incoming && typeof incoming === "object") {
+        Object.keys(incoming).forEach(function(k) { keys.add(k) })
+    }
+    keys.forEach(function(key) {
+        var defaultVal = defaults ? defaults[key] : undefined
+        var incomingVal = incoming ? incoming[key] : undefined
+        if (defaultVal !== undefined) {
+            result[key] = mergeWithDefaults(defaultVal, incomingVal)
+        } else if (incoming && incoming.hasOwnProperty(key)) {
+            // Preserve forward-compatible fields while cloning to strip transient references
+            result[key] = mergeWithDefaults(incomingVal, incomingVal)
+        }
+    })
+    return result
+}
+
+function buildSerializableSave(source) {
+    var base = source || gameData
+    var safeSave = mergeWithDefaults(defaultGameDataTemplate, base)
+    return safeSave
+}
+
+function parseSaveString(raw) {
+    if (!raw) return null
+    var attempts = [
+        function() { return typeof window !== "undefined" && window.atob ? JSON.parse(window.atob(raw)) : null },
+        function() { return JSON.parse(raw) },
+    ]
+    for (var i = 0; i < attempts.length; i++) {
+        try {
+            var parsed = attempts[i]()
+            if (parsed && typeof parsed === "object") return parsed
+        } catch (e) {}
+    }
+    return null
+}
+
 function saveGameData() {
     gameData.observerData = observerData
-    localStorage.setItem("gameDataSave", JSON.stringify(gameData))
+    var safeSave = buildSerializableSave(gameData)
+    localStorage.setItem("gameDataSave", JSON.stringify(safeSave))
 }
 
 function getSavedGameData() {
@@ -5812,20 +5981,23 @@ function getSavedGameData() {
     try {
         return JSON.parse(raw)
     } catch (e) {
+        console.warn("Failed to parse saved game data, falling back to defaults.", e)
+        lastLoadErrorMessage = "Save corrupted or unreadable; defaults loaded."
         return null
     }
 }
 
 function loadGameData() {
-    var gameDataSave = JSON.parse(localStorage.getItem("gameDataSave"))
+    var gameDataSave = getSavedGameData()
 
     if (gameDataSave !== null) {
-        replaceSaveDict(gameData, gameDataSave)
-        replaceSaveDict(gameData.requirements, gameDataSave.requirements)
-        replaceSaveDict(gameData.taskData, gameDataSave.taskData)
-        replaceSaveDict(gameData.itemData, gameDataSave.itemData)
+        var safeSave = mergeWithDefaults(defaultGameDataTemplate, gameDataSave)
+        replaceSaveDict(gameData, safeSave)
+        replaceSaveDict(gameData.requirements || {}, safeSave.requirements || {})
+        replaceSaveDict(gameData.taskData || {}, safeSave.taskData || {})
+        replaceSaveDict(gameData.itemData || {}, safeSave.itemData || {})
 
-        gameData = gameDataSave
+        gameData = safeSave
         if (!gameData.settings) gameData.settings = {autoPickShop: false}
         if (gameData.settings.autoPickShop === undefined) gameData.settings.autoPickShop = false
         observerData = gameData.observerData || observerData || {initialized: false}
@@ -5868,10 +6040,10 @@ function updateUI() {
     enforceEntropySkillVisibility()
     updateQuickTaskDisplay("job")
     updateQuickTaskDisplay("skill")
-    var entropyJobSection = document.getElementById("entropyJobsSection")
-    if (entropyJobSection) entropyJobSection.style.display = isEntropyUnlocked() ? "block" : "none"
-    var entropySkillSection = document.getElementById("entropySkillsSection")
-    if (entropySkillSection) entropySkillSection.style.display = isEntropyUnlocked() ? "block" : "none"
+    var entropyJobSection = getCachedElement("entropyJobsSection")
+    if (entropyJobSection) setDisplayIfChanged(entropyJobSection, isEntropyUnlocked() ? "block" : "none")
+    var entropySkillSection = getCachedElement("entropySkillsSection")
+    if (entropySkillSection) setDisplayIfChanged(entropySkillSection, isEntropyUnlocked() ? "block" : "none")
     updateShopHintVisibility()
     updateStagnationHintUI()
     updateShopAutoPickState()
@@ -5888,19 +6060,19 @@ function updateUI() {
         var lifeRootTabs = document.getElementById("life-root-tabs")
         var lifeRootContent = document.getElementById("life-root-content")
         var observerRoot = document.getElementById("observer-root")
-        if (lifeRoot) lifeRoot.classList.add("hidden")
-        if (lifeRootTabs) lifeRootTabs.classList.add("hidden")
-        if (lifeRootContent) lifeRootContent.classList.add("hidden")
-        if (observerRoot) observerRoot.classList.remove("hidden")
+        toggleHidden(lifeRoot, true)
+        toggleHidden(lifeRootTabs, true)
+        toggleHidden(lifeRootContent, true)
+        toggleHidden(observerRoot, false)
     } else {
         var lifeRoot = document.getElementById("life-root")
         var lifeRootTabs = document.getElementById("life-root-tabs")
         var lifeRootContent = document.getElementById("life-root-content")
         var observerRoot = document.getElementById("observer-root")
-        if (lifeRoot) lifeRoot.classList.remove("hidden")
-        if (lifeRootTabs) lifeRootTabs.classList.remove("hidden")
-        if (lifeRootContent) lifeRootContent.classList.remove("hidden")
-        if (observerRoot) observerRoot.classList.add("hidden")
+        toggleHidden(lifeRoot, false)
+        toggleHidden(lifeRootTabs, false)
+        toggleHidden(lifeRootContent, false)
+        toggleHidden(observerRoot, true)
     }
     updateBalanceDebugPanel()
     updateDebugPanel()
@@ -5915,6 +6087,7 @@ function showSettingsMessage(text, type) {
 }
 
 function update() {
+    var tickStart = ENABLE_TICK_PROFILING ? getNowMs() : 0
     if (isObserverMode()) {
         initObserverDataIfNeeded()
         if (observerData.students.length === 0) {
@@ -5924,8 +6097,10 @@ function update() {
     } else {
         ensureActiveSelections()
         ensureSynergyState()
-        if (typeof updateDarkInsightFromEvil === "function") {
+        var evilAmount = gameData.evil || 0
+        if (typeof updateDarkInsightFromEvil === "function" && evilAmount !== lastEvilForDarkInsight) {
             updateDarkInsightFromEvil(gameData)
+            lastEvilForDarkInsight = evilAmount
         }
         updateAutoSwitchState()
         decaySwitchPenalty()
@@ -5949,6 +6124,12 @@ function update() {
     }
     updateUI()
     checkForcedRebirth()
+    if (ENABLE_TICK_PROFILING) {
+        lastTickDurationMs = getNowMs() - tickStart
+        if (lastTickDurationMs > TICK_PROFILING_WARN_MS && console && console.debug) {
+            console.debug("Tick took " + lastTickDurationMs.toFixed(2) + "ms")
+        }
+    }
 }
 
 function resetGameData() {
@@ -5970,6 +6151,7 @@ function resetGameData() {
         metaWeights: {patterns: 1, aging: 1, burnout: 1, compression: 1, meaning: 1, cycle: 1},
         metaTunesSpent: 0,
         language: LANG.RU,
+        saveVersion: typeof EA_SAVE_VERSION !== "undefined" ? EA_SAVE_VERSION : 1,
         observerData: {initialized: false},
         taskData: {},
         itemData: {},
@@ -6145,6 +6327,7 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
         achievements: {unlocked: {}, lastUnlockedId: null},
         challenges: {activeId: null, completed: {}, lastCompletedId: null},
         synergy: {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1},
+        saveVersion: typeof EA_SAVE_VERSION !== "undefined" ? EA_SAVE_VERSION : 1,
         seenUniverseIntro: preservedIntroFlags,
         pendingUniverseIntro: (!preservedIntroFlags[universeIndex]) ? universeIndex : null,
         lastLifeShort: false,
@@ -6281,32 +6464,48 @@ function confirmResetGameData() {
 }
 
 function importGameData() {
-    var importExportBox = document.getElementById("importExportBox")
-    var raw = (importExportBox.value || "").trim()
+    var importExportBox = getCachedElement("importExportBox")
+    var raw = (importExportBox && importExportBox.value ? importExportBox.value : "").trim()
     if (!raw) {
         showSettingsMessage(tUi("settings_msg_no_data"), "error")
         return
     }
-    try {
-        var decoded = window.atob(raw)
-        var parsed = JSON.parse(decoded)
-        if (!parsed || typeof parsed !== "object" || !parsed.taskData || !parsed.itemData) {
-            throw new Error("Invalid structure")
-        }
-        gameData = parsed
-        saveGameData()
-        showSettingsMessage(tUi("settings_msg_import_success"), "success")
-        setTimeout(function() { location.reload() }, 200)
-    } catch (e) {
-        console.error("Import failed:", e)
+    var parsed = parseSaveString(raw)
+    if (!parsed || typeof parsed !== "object") {
         showSettingsMessage(tUi("settings_msg_invalid_save"), "error")
+        return
     }
+
+    var merged = mergeWithDefaults(defaultGameDataTemplate, parsed)
+    replaceSaveDict(gameData, merged)
+    replaceSaveDict(gameData.requirements || {}, merged.requirements || {})
+    replaceSaveDict(gameData.taskData || {}, merged.taskData || {})
+    replaceSaveDict(gameData.itemData || {}, merged.itemData || {})
+    gameData = merged
+    observerData = gameData.observerData || observerData || {initialized: false}
+    ensureEntropyBackfills()
+    ensureRequirementsBackfill()
+    ensureAutoSwitchState()
+    ensureSkipSkillsState()
+    ensureUniverseState()
+    ensureFirstTimePromptState()
+    ensureShopState()
+    assignMethods()
+    ensureCoinRequirementKeys()
+    ensureAchievementsState()
+    ensureChallengesState()
+    saveGameData()
+    showSettingsMessage(tUi("settings_msg_import_success"), "success")
+    setTimeout(function() { location.reload() }, 200)
 }
 
 function exportGameData() {
-    var importExportBox = document.getElementById("importExportBox")
-    importExportBox.value = window.btoa(JSON.stringify(gameData))
-    if (typeof importExportBox.select === "function") {
+    var importExportBox = getCachedElement("importExportBox")
+    var safeSave = buildSerializableSave(gameData)
+    if (importExportBox) {
+        importExportBox.value = window.btoa(JSON.stringify(safeSave))
+    }
+    if (importExportBox && typeof importExportBox.select === "function") {
         importExportBox.select()
     }
     showSettingsMessage(tUi("settings_msg_export_success"), "info")
@@ -6570,6 +6769,10 @@ function startGame() {
     addMultipliers()
 
     refreshUI()
+    updateVersionBadges()
+    if (lastLoadErrorMessage) {
+        showSettingsMessage(lastLoadErrorMessage, "error")
+    }
     if (gameData.meta && gameData.meta.introSeen === false) {
         showIntroModal()
     }

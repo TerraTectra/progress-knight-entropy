@@ -268,3 +268,27 @@
 .dark .challenge-reward {
     color: #cbd5e1;
 }
+
+.dark body.low-fx .achievement-card,
+.dark body.low-fx .challenge-card,
+.dark body.low-fx .item-button,
+.dark body.low-fx .w3-bar-item,
+.dark body.low-fx .progress-bar {
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+.dark .achievement-card.locked,
+.dark .challenge-card.locked {
+    opacity: 0.75;
+}
+
+.dark .challenge-card.active,
+.dark .achievement-card.unlocked {
+    outline: 1px solid rgba(59, 130, 246, 0.3);
+    outline-offset: 2px;
+}
+
+.dark .challenge-card.completed {
+    opacity: 0.92;
+}

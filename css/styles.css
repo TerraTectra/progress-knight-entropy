@@ -917,3 +917,48 @@ jobTable button {
     color: #374151;
     font-size: 12px;
 }
+
+.version-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #111827;
+    color: #f3f4f6;
+    font-size: 12px;
+    letter-spacing: 0.2px;
+    opacity: 0.92;
+}
+
+.guide-version {
+    color: #9ca3af;
+    font-size: 12px;
+    padding: 6px 0;
+}
+
+/* Low-FX + card state normalization */
+body.low-fx .achievement-card,
+body.low-fx .challenge-card,
+body.low-fx .item-button,
+body.low-fx .w3-bar-item,
+body.low-fx .progress-bar {
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+.achievement-card.locked,
+.challenge-card.locked {
+    opacity: 0.7;
+}
+
+.challenge-card.active,
+.achievement-card.unlocked {
+    outline: 1px solid rgba(37, 99, 235, 0.12);
+    outline-offset: 2px;
+}
+
+.challenge-card.completed {
+    opacity: 0.9;
+}
