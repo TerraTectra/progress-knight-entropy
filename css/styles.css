@@ -25,6 +25,25 @@ body {
     font-size: var(--pk-font-size-base);
 }
 
+#life-root-tabs .tabButton {
+    color: var(--pk-text-main) !important;
+}
+
+#life-root-content,
+#jobs,
+#skills,
+#shop,
+#entropy {
+    color: var(--pk-text-main);
+}
+
+#jobs th, #jobs td,
+#skills th, #skills td,
+#shop th, #shop td,
+#entropy th, #entropy td {
+    color: inherit;
+}
+
 .w3-bar-item {
     width: 100px;
     min-height: 40px;
