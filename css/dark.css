@@ -228,6 +228,18 @@
     border-left-color: #b45309;
 }
 
+.dark .challenge-card.completed {
+    background: #0f172a;
+    border-color: #10b981;
+    border-left-color: #10b981;
+}
+
+.dark .challenge-card.active {
+    border-color: #2563eb;
+    border-left-color: #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+}
+
 .dark .challenge-status .status-pill {
     background: #f59e0b;
     color: #0f172a;
@@ -251,4 +263,8 @@
 
 .dark .achievement-toast-body {
     color: #e5e7eb;
+}
+
+.dark .challenge-reward {
+    color: #cbd5e1;
 }

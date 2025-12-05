@@ -11,6 +11,7 @@ var gameData = {
     metaWeights: {patterns: 1, aging: 1, burnout: 1, compression: 1, meaning: 1, cycle: 1},
     metaTunesSpent: 0,
     achievements: {unlocked: {}, lastUnlockedId: null},
+    challenges: {activeId: null, completed: {}, lastCompletedId: null},
     observerData: {initialized: false},
     taskData: {},
     itemData: {},
@@ -44,6 +45,7 @@ var gameData = {
     seenUniverseIntro: {},
     pendingUniverseIntro: null,
     lastLifeShort: false,
+    perfectShortLifeCount: 0,
 
     entropy: {
         unlocked: false,
@@ -728,11 +730,24 @@ function getUniverseModifiers() {
 function getGlobalXpMultiplier() {
     var m = getUniverseModifiers().xpGainMultiplier || 1
     m *= getEvilResonatorMultiplier()
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.slower_xp_gain) {
+            m *= Math.max(0, 1 - mods.slower_xp_gain)
+        }
+    }
     return m
 }
 
 function getGlobalMoneyMultiplier() {
-    return getUniverseModifiers().moneyGainMultiplier || 1
+    var m = getUniverseModifiers().moneyGainMultiplier || 1
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.slower_money_gain) {
+            m *= Math.max(0, 1 - mods.slower_money_gain)
+        }
+    }
+    return m
 }
 
 const ENTROPY_UPGRADE_DEFINITIONS = {
@@ -1601,6 +1616,12 @@ function getShortLifeThresholdAgeYears() {
     if (hasShortBrilliantLife()) {
         factor *= SHORT_LIFE_THRESHOLD_BONUS
     }
+    if (typeof getActiveChallengeModifiers === "function") {
+        var chMods = getActiveChallengeModifiers()
+        if (chMods.force_short_life_mode) {
+            factor *= 0.85
+        }
+    }
     return lifespanYears * SHORT_LIFE_THRESHOLD * factor
 }
 
@@ -2315,6 +2336,13 @@ function getEvilGain() {
     var evilControl = gameData.taskData["Evil control"]
     var bloodMeditation = gameData.taskData["Blood meditation"]
     var evil = evilControl.getEffect() * bloodMeditation.getEffect()
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.disable_evil) return 0
+        if (mods.boost_evil_gain) {
+            evil *= (1 + mods.boost_evil_gain)
+        }
+    }
     ensureSynergyState()
     var pressure = gameData.synergy && gameData.synergy.entropyPressure ? gameData.synergy.entropyPressure : 0
     var bonus = 1 + pressure * (BalanceConfig.synergy.entropyToEvilMultiplier || 0)
@@ -2524,6 +2552,10 @@ function getEffectiveItemCost(item) {
 function purchaseItemIfNeeded(item) {
     if (!item) return false
     ensureShopState()
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.disable_shop) return false
+    }
     if (isItemPurchased(item.name)) return true
     var cost = getEffectiveItemCost(item)
     if (gameData.coins < cost) return false
@@ -2837,6 +2869,7 @@ function updateItemRows() {
         var canAffordExpense = gameData.coins >= item.getExpense()
         var stateClass = "shop-btn-available"
         var disableButton = false
+        var mods = typeof getActiveChallengeModifiers === "function" ? getActiveChallengeModifiers() : {}
         if (!unlocked) {
             stateClass = "shop-btn-locked"
             disableButton = true
@@ -2846,11 +2879,17 @@ function updateItemRows() {
         } else if (purchased && !canAffordExpense) {
             stateClass = "shop-btn-unaffordable"
             disableButton = true
+        } else if (mods.disable_shop) {
+            disableButton = true
+            stateClass = "shop-btn-locked"
         }
         if (button) {
             button.disabled = disableButton
             button.classList.remove("shop-btn-locked", "shop-btn-unaffordable", "shop-btn-available")
             button.classList.add(stateClass)
+            if (mods.disable_shop) {
+                button.title = tUi("ch_shop_disabled") || ""
+            }
         }
         var active = row.getElementsByClassName("active")[0]
         var color = itemCategories["Properties"].includes(item.name) ? headerRowColors["Properties"] : headerRowColors["Misc"]
@@ -2995,14 +3034,16 @@ function updateShopAutoPickState() {
 
     var labelText = tUi("autoPickShopLabel") || "Auto-pick shop items"
     var tooltip = tUi("autoPickShopTooltip") || ""
+    var mods = typeof getActiveChallengeModifiers === "function" ? getActiveChallengeModifiers() : {}
 
     if (shopAutoPickLabelElement) {
         shopAutoPickLabelElement.textContent = labelText
         shopAutoPickLabelElement.title = tooltip
     }
     if (autoPickShopElement) {
-        autoPickShopElement.title = tooltip
-        autoPickShopElement.checked = !!(gameData.settings && gameData.settings.autoPickShop)
+        autoPickShopElement.title = mods.disable_shop ? (tUi("ch_shop_disabled") || "") : tooltip
+        autoPickShopElement.checked = !!(gameData.settings && gameData.settings.autoPickShop && !mods.disable_shop)
+        autoPickShopElement.disabled = !!mods.disable_shop
         if (!autoPickShopElement.dataset.bound) {
             autoPickShopElement.addEventListener("change", function() {
                 if (!gameData.settings) gameData.settings = {}
@@ -3027,6 +3068,10 @@ function updateShopRecommendation() {
     recommendedShopItem = null
 
     if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) return
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.disable_shop) return
+    }
     var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
 
     ensureShopState()
@@ -3354,6 +3399,16 @@ function refreshNarrativeTexts() {
     var eyeBtn = document.getElementById("rebirthOneButton")
     if (eyeBtn) {
         eyeBtn.title = tUi("entropy_short_life_hint") || ""
+    }
+    var rebirthTwoBtn = document.getElementById("rebirthTwoButton")
+    var mods = typeof getActiveChallengeModifiers === "function" ? getActiveChallengeModifiers() : {}
+    if (rebirthTwoBtn) {
+        var disabled = !!mods.disable_evil
+        rebirthTwoBtn.disabled = disabled
+        rebirthTwoBtn.title = disabled ? (tUi("ch_evil_disabled") || "") : ""
+    }
+    if (eyeBtn && mods.force_short_life_mode) {
+        eyeBtn.title = tUi("ch_force_short_life_hint") || eyeBtn.title
     }
     setElementText("deathTitle", "death_title")
     setElementText("deathSubtitle", "death_subtitle")
@@ -4112,26 +4167,67 @@ function renderAchievementsUI(force) {
 function renderChallengesUI(force) {
     var container = document.getElementById("challengesList")
     if (!container || !Array.isArray(CHALLENGES)) return
+    ensureChallengesState()
     var lang = typeof getCurrentLanguage === "function" ? getCurrentLanguage() : (gameData.language || LANG.RU)
-    var shouldRebuild = force || container.getAttribute("data-lang") !== lang
+    var activeId = gameData.challenges.activeId
+    var completed = gameData.challenges.completed || {}
+    var shouldRebuild = force || container.getAttribute("data-lang") !== lang || container.getAttribute("data-active") !== (activeId || "")
     if (!shouldRebuild) return
     var parts = []
     CHALLENGES.forEach(function(challenge) {
         var name = tUi(challenge.nameKey) || challenge.id
         var desc = tUi(challenge.descKey) || ""
-        var status = tUi("challenge_status_placeholder") || "Coming soon"
+        var rewardParts = []
+        if (challenge.reward) {
+            if (challenge.reward.seeds) rewardParts.push("+" + challenge.reward.seeds + " " + (tUi("ch_reward_seeds") || "Seeds"))
+            if (challenge.reward.evil) rewardParts.push("+" + challenge.reward.evil + " " + (tUi("ch_reward_evil") || "Evil"))
+        }
+        var rewardText = rewardParts.length ? (tUi("ch_reward_prefix") || "Reward") + ": " + rewardParts.join(", ") : ""
+        var isCompleted = !!completed[challenge.id]
+        var isActive = activeId === challenge.id
+        var statusKey = isCompleted ? "ch_status_completed" : isActive ? "ch_status_active" : "ch_status_available"
+        var statusText = tUi(statusKey) || statusKey
+        var statusClass = isCompleted ? "completed" : isActive ? "active" : "available"
+        var actionHtml = ""
+        if (!isCompleted) {
+            if (!isActive) {
+                var btnLabel = tUi("ch_button_start") || "Start"
+                actionHtml = "<button class='w3-button button challenge-start-btn' data-ch-id='" + challenge.id + "'>" + btnLabel + "</button>"
+            } else {
+                actionHtml = "<span class='status-pill'>" + statusText + "</span>"
+            }
+        } else {
+            actionHtml = "<span class='status-pill'>" + statusText + "</span>"
+        }
         parts.push(
-            "<div class='challenge-card'>" +
+            "<div class='challenge-card " + statusClass + "' data-challenge-id='" + challenge.id + "'>" +
                 "<div class='challenge-text'>" +
                     "<div class='challenge-name'>" + name + "</div>" +
                     "<div class='challenge-desc'>" + desc + "</div>" +
+                    (rewardText ? "<div class='challenge-reward'>" + rewardText + "</div>" : "") +
                 "</div>" +
-                "<div class='challenge-status'><span class='status-pill'>" + status + "</span></div>" +
+                "<div class='challenge-status'>" + actionHtml + "</div>" +
             "</div>"
         )
     })
     container.innerHTML = parts.join("")
     container.setAttribute("data-lang", lang)
+    container.setAttribute("data-active", activeId || "")
+    var buttons = container.querySelectorAll(".challenge-start-btn")
+    buttons.forEach(function(btn) {
+        btn.onclick = function() {
+            var id = btn.getAttribute("data-ch-id")
+            if (!id) return
+            ensureChallengesState()
+            if (gameData.challenges.activeId && gameData.challenges.activeId !== id) {
+                var proceed = confirm(tUi("ch_confirm_switch") || "Starting this challenge will abandon your current one. Continue?")
+                if (!proceed) return
+            }
+            gameData.challenges.activeId = id
+            saveGameData()
+            renderChallengesUI(true)
+        }
+    })
 }
 
 function maybeShowAchievementOverlay() {
@@ -4154,6 +4250,29 @@ function maybeShowAchievementOverlay() {
         overlay.classList.add("hidden")
     }, 3500)
     gameData.achievements.lastUnlockedId = null
+    saveGameData()
+}
+
+function maybeShowChallengeOverlay() {
+    if (!gameData || !gameData.challenges || !gameData.challenges.lastCompletedId) return
+    var overlay = document.getElementById("challengeOverlay")
+    if (!overlay) return
+    var chId = gameData.challenges.lastCompletedId
+    var ch = Array.isArray(CHALLENGES) ? CHALLENGES.find(function(c) { return c.id === chId }) : null
+    var titleEl = document.getElementById("challengeOverlayTitle")
+    var bodyEl = document.getElementById("challengeOverlayBody")
+    if (titleEl) {
+        titleEl.textContent = tUi("ch_completed_title") || "Challenge completed!"
+    }
+    if (bodyEl) {
+        bodyEl.textContent = ch ? (tUi(ch.nameKey) || chId) : chId
+    }
+    overlay.classList.remove("hidden")
+    if (achievementOverlayTimer) clearTimeout(achievementOverlayTimer)
+    achievementOverlayTimer = setTimeout(function() {
+        overlay.classList.add("hidden")
+    }, 3500)
+    gameData.challenges.lastCompletedId = null
     saveGameData()
 }
 
@@ -5126,8 +5245,12 @@ function ensureEntropyBackfills() {
     ensureEntropyArtifactsState()
     ensureStagnationState()
     ensureAchievementsState()
+    ensureChallengesState()
     ensureSynergyState()
     refreshSynergyDerived()
+    if (gameData.perfectShortLifeCount === undefined || gameData.perfectShortLifeCount === null) {
+        gameData.perfectShortLifeCount = 0
+    }
 }
 
 function ensureStagnationState() {
@@ -5298,6 +5421,7 @@ function applyEntropyRebirthGain() {
     gameData.entropy.maxInsightEver = Math.max(gameData.entropy.maxInsightEver, gameData.entropy.insight)
     gameData.entropy.insight = 0
     if (typeof checkAchievements === "function") checkAchievements()
+    if (typeof checkChallenges === "function") checkChallenges()
 }
 
 function updateEntropyPatternsOnRebirth() {
@@ -5321,6 +5445,9 @@ function updateEntropyPatternsOnRebirth() {
     var shortThreshold = getShortLifeThresholdAgeYears()
     var shortLife = ageEnd <= shortThreshold
     gameData.lastLifeShort = !!shortLife
+    if (shortLife) {
+        gameData.perfectShortLifeCount = (gameData.perfectShortLifeCount || 0) + 1
+    }
     var longLife = ageEnd >= 60
 
     function clamp01(x) {
@@ -5500,6 +5627,13 @@ function rebirthOne() {
 }
 
 function rebirthTwo() {
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.disable_evil) {
+            alert(tUi("ch_evil_disabled") || "Evil is disabled for this challenge.")
+            return
+        }
+    }
     updateEntropyPatternsOnRebirth()
     gameData.rebirthTwoCount += 1
     gameData.evil += getEvilGain()
@@ -5708,8 +5842,12 @@ function loadGameData() {
     assignMethods()
     ensureCoinRequirementKeys()
     ensureAchievementsState()
+    ensureChallengesState()
     if (typeof checkAchievements === "function") {
         checkAchievements()
+    }
+    if (typeof checkChallenges === "function") {
+        checkChallenges()
     }
 }
 
@@ -5742,6 +5880,7 @@ function updateUI() {
     renderAchievementsUI()
     renderChallengesUI()
     maybeShowAchievementOverlay()
+    maybeShowChallengeOverlay()
     if (isObserverMode()) {
         initObserverDataIfNeeded()
         renderObserverScaffold()
@@ -5804,6 +5943,9 @@ function update() {
         if (typeof checkAchievements === "function") {
             checkAchievements()
         }
+        if (typeof checkChallenges === "function") {
+            checkChallenges()
+        }
     }
     updateUI()
     checkForcedRebirth()
@@ -5841,6 +5983,7 @@ function resetGameData() {
         shopHintDismissed: false,
         rebirthOneCount: 0,
         rebirthTwoCount: 0,
+        challenges: {activeId: null, completed: {}, lastCompletedId: null},
         patternLatticeStacks: 0,
         synergy: {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1},
         stagnantLivesInRow: 0,
@@ -5850,6 +5993,7 @@ function resetGameData() {
         seenUniverseIntro: {},
         pendingUniverseIntro: null,
         lastLifeShort: false,
+        perfectShortLifeCount: 0,
         currentJob: null,
         currentSkill: null,
         currentProperty: null,
@@ -5971,6 +6115,8 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
     var preservedPatternLatticeStacks = gameData.patternLatticeStacks || 0
     var preservedIntroFlags = gameData.seenUniverseIntro || {}
     var preservedAchievements = JSON.parse(JSON.stringify(gameData.achievements || {unlocked: {}, lastUnlockedId: null}))
+    var preservedChallenges = JSON.parse(JSON.stringify(gameData.challenges || {activeId: null, completed: {}, lastCompletedId: null}))
+    var preservedPerfectShortLifeCount = gameData.perfectShortLifeCount || 0
 
     gameData = {
         universeIndex: universeIndex,
@@ -5997,10 +6143,12 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
         rebirthTwoCount: 0,
         patternLatticeStacks: preservedPatternLatticeStacks,
         achievements: {unlocked: {}, lastUnlockedId: null},
+        challenges: {activeId: null, completed: {}, lastCompletedId: null},
         synergy: {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1},
         seenUniverseIntro: preservedIntroFlags,
         pendingUniverseIntro: (!preservedIntroFlags[universeIndex]) ? universeIndex : null,
         lastLifeShort: false,
+        perfectShortLifeCount: preservedPerfectShortLifeCount,
         currentJob: null,
         currentSkill: null,
         currentProperty: null,
@@ -6102,6 +6250,9 @@ function resetForNextUniverse(universeIndex, universeTokens, hasAnsweredPrompt) 
     }
     if (preservedAchievements) {
         gameData.achievements = preservedAchievements
+    }
+    if (preservedChallenges) {
+        gameData.challenges = preservedChallenges
     }
     refreshSynergyDerived()
     captureStagnationBaseline()

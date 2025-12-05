@@ -870,6 +870,18 @@ jobTable button {
     background: #fff7ed;
 }
 
+.challenge-card.completed {
+    border-color: #10b981;
+    border-left-color: #10b981;
+    background: #ecfdf3;
+}
+
+.challenge-card.active {
+    border-color: #2563eb;
+    border-left-color: #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+}
+
 .achievement-overlay {
     position: fixed;
     right: 20px;
@@ -898,4 +910,10 @@ jobTable button {
     color: #e5e7eb;
     font-size: 14px;
     line-height: 1.35;
+}
+
+.challenge-reward {
+    margin-top: 6px;
+    color: #374151;
+    font-size: 12px;
 }
