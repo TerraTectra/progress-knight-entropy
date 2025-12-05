@@ -1046,3 +1046,19 @@ body.low-fx .progress-bar {
 .challenge-card.completed {
     opacity: 0.9;
 }
+
+/* Final override: ensure main content text is readable on dark background */
+#jobs,
+#skills,
+#shop,
+#entropy {
+    background-color: var(--pk-panel);
+    color: var(--pk-text-main) !important;
+}
+
+#jobs *,
+#skills *,
+#shop *,
+#entropy * {
+    color: var(--pk-text-main) !important;
+}
