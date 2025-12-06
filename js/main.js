@@ -662,6 +662,13 @@ const ENTROPY_UPGRADE_BASE_COST_EP = {
 const DEBUG_BALANCE = false
 const DEBUG_DEV = false
 
+function isTaskUnlocked(taskOrName) {
+    var name = typeof taskOrName === "string" ? taskOrName : (taskOrName ? taskOrName.name : null)
+    if (!name || !gameData || !gameData.requirements) return true
+    var requirement = gameData.requirements[name]
+    return (!requirement) || requirement.isCompleted()
+}
+
 function computeJobIncomeForTickSafe(job, isActive) {
     if (typeof BALANCE_CORE !== "undefined" && BALANCE_CORE.computeJobIncomeForTick) {
         return BALANCE_CORE.computeJobIncomeForTick(job, isActive, BALANCE_CONSTANTS)
@@ -4734,8 +4741,7 @@ function tickTasks() {
 
     for (key in gameData.taskData) {
         var task = gameData.taskData[key]
-        var requirement = gameData.requirements[task.name]
-        if (requirement && !requirement.isCompleted()) continue
+        if (!isTaskUnlocked(task)) continue
         var isJob = task instanceof Job
         var isSkill = task instanceof Skill
         var isFocus = (isJob && focusJob && task.name == focusJob.name) || (isSkill && focusSkill && task.name == focusSkill.name)
@@ -4789,9 +4795,7 @@ function getIncome() {
     for (key in gameData.taskData) {
         var task = gameData.taskData[key]
         if (!(task instanceof Job)) continue
-        var requirement = gameData.requirements[task.name]
-        var unlocked = (!requirement) || requirement.isCompleted()
-        if (!unlocked) continue
+        if (!isTaskUnlocked(task)) continue
         var isActive = task.name === focusJobName
         var incomeForTask = computeJobIncomeForTickSafe(task, isActive)
         income += incomeForTask
@@ -6078,7 +6082,7 @@ function update() {
     checkForcedRebirth()
     if (ENABLE_TICK_PROFILING) {
         lastTickDurationMs = getNowMs() - tickStart
-        if (lastTickDurationMs > TICK_PROFILING_WARN_MS && console && console.debug) {
+        if (DEBUG_DEV && lastTickDurationMs > TICK_PROFILING_WARN_MS && console && console.debug) {
             console.debug("Tick took " + lastTickDurationMs.toFixed(2) + "ms")
         }
     }
