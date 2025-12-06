@@ -6792,6 +6792,94 @@ if (typeof window !== "undefined" && DEBUG_DEV) {
         console.log("Study Entropy unlocked:", studyReq ? studyReq.isCompleted() : "no req")
     }
 }
+
+// Lightweight in-browser diagnostics; read-only.
+function runGameSelfCheck() {
+    var problems = []
+    try {
+        // Balance core presence
+        if (typeof window === "undefined" || !window.BALANCE_CORE) {
+            problems.push("BALANCE_CORE is not available on window.")
+        } else {
+            if (!window.BALANCE_CORE.BALANCE_CONSTANTS) {
+                problems.push("BALANCE_CONSTANTS missing in BALANCE_CORE.")
+            }
+            if (typeof window.BALANCE_CORE.computeJobIncomeForTick !== "function") {
+                problems.push("computeJobIncomeForTick missing in BALANCE_CORE.")
+            }
+            if (typeof window.BALANCE_CORE.computeTaskXpForTick !== "function") {
+                problems.push("computeTaskXpForTick missing in BALANCE_CORE.")
+            }
+        }
+
+        // gameData sanity
+        if (typeof gameData === "undefined") {
+            problems.push("gameData is undefined.")
+        } else {
+            if (gameData.taskData) {
+                for (var key in gameData.taskData) {
+                    var task = gameData.taskData[key]
+                    if (task && typeof task.getIncome === "function") {
+                        var income = Number(task.getIncome() || 0)
+                        if (!Number.isFinite(income)) {
+                            problems.push("Task '" + key + "' has non-finite income.")
+                        }
+                    }
+                    if (task && typeof task.getXpGain === "function") {
+                        var xp = Number(task.getXpGain() || 0)
+                        if (!Number.isFinite(xp)) {
+                            problems.push("Task '" + key + "' has non-finite xp gain.")
+                        }
+                    }
+                }
+            } else {
+                problems.push("gameData.taskData is missing.")
+            }
+
+            if (gameData.requirements) {
+                for (var reqKey in gameData.requirements) {
+                    var reqObj = gameData.requirements[reqKey]
+                    if (!reqObj || !reqObj.requirements) continue
+                    for (var i = 0; i < reqObj.requirements.length; i++) {
+                        var cond = reqObj.requirements[i]
+                        if (cond && cond.task && !gameData.taskData[cond.task]) {
+                            problems.push("Requirement '" + reqKey + "' references missing task '" + cond.task + "'.")
+                        }
+                    }
+                }
+            }
+        }
+
+        // i18n sanity
+        if (typeof translations === "undefined") {
+            problems.push("translations object is undefined.")
+        } else if (!translations.ui) {
+            problems.push("translations.ui is missing.")
+        } else {
+            var sampleKey = Object.keys(translations.ui)[0]
+            var entry = translations.ui[sampleKey]
+            if (!entry || (!entry.en && !entry.ru)) {
+                problems.push("translations.ui entries missing expected language fields.")
+            }
+        }
+    } catch (e) {
+        problems.push("Exception during runGameSelfCheck: " + (e && e.message ? e.message : String(e)))
+    }
+
+    if (problems.length === 0) {
+        console.log("runGameSelfCheck: All basic checks passed.")
+    } else {
+        console.warn("runGameSelfCheck: Problems detected:")
+        for (var j = 0; j < problems.length; j++) {
+            console.warn(" - " + problems[j])
+        }
+    }
+    return problems
+}
+
+if (typeof window !== "undefined") {
+    window.runGameSelfCheck = runGameSelfCheck
+}
 function attemptSelectTask(task) {
     if (!task) return false
     if (!isTaskExclusiveAvailable(task.name)) return false

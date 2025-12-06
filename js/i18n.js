@@ -607,3 +607,12 @@ function getTooltipText(key) {
     if (typeof tooltips !== "undefined" && tooltips[key]) return tooltips[key]
     return key
 }
+
+// Node/CommonJS export for tests
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+        LANG: LANG,
+        translations: translations,
+        tUi: tUi,
+    }
+}
