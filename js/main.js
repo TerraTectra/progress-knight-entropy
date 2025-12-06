@@ -166,6 +166,28 @@ function toggleHidden(elementOrId, hidden) {
         el.classList.toggle("hidden", shouldHide)
     }
 }
+
+function isRequirementMet(requirement, key) {
+    if (!requirement) return true
+    if (requirement.completed) return true
+
+    // Items that were already discovered stay visible even if the raw requirement is reset.
+    if (gameData && gameData.itemData && key && gameData.itemData[key] && gameData.itemData[key].discovered) {
+        requirement.completed = true
+        return true
+    }
+
+    if (typeof requirement.isCompleted === "function") {
+        return requirement.isCompleted()
+    }
+
+    return requirement.completed !== false
+}
+
+function isRequirementMetByKey(key) {
+    if (!gameData || !gameData.requirements) return true
+    return isRequirementMet(gameData.requirements[key], key)
+}
 function setWidthIfChanged(elementOrId, widthValue) {
     var el = typeof elementOrId === "string" ? getCachedElement(elementOrId) : elementOrId
     if (!el || !el.style) return
@@ -1226,6 +1248,13 @@ function isEntropyUnlocked() {
 
 function isEntropyFullyUnlocked() {
     return !!(gameData.entropy && gameData.entropy.entropyUnlocked === true)
+}
+
+function isEntropyTabUnlocked() {
+    if (typeof isEntropyUnlocked === "function") {
+        return !!isEntropyUnlocked()
+    }
+    return !!(gameData && gameData.entropy && gameData.entropy.entropyUnlocked)
 }
 
 function isEntropyOnlySkill(taskOrName) {
@@ -2987,8 +3016,7 @@ function updateItemRows() {
         var row = document.getElementById("row " + item.name)
         if (!row) continue
         var button = row.getElementsByClassName("button")[0]
-        var requirement = gameData.requirements[item.name]
-        var unlocked = !requirement || requirement.isCompleted()
+        var unlocked = isRequirementMetByKey(item.name)
         var purchased = isItemPurchased(item.name)
         var effectiveCost = purchased ? item.getExpense() : getEffectiveItemCost(item)
         var canAffordPurchase = gameData.coins >= (purchased ? item.getExpense() : effectiveCost)
@@ -3703,6 +3731,7 @@ function refreshUI() {
 // Проверка видимости строки: учёт hiddenTask и display:none
 function isRowVisible(row) {
     if (!row) return false
+    if (row.classList.contains("hidden")) return false
     if (row.classList.contains("hiddenTask")) return false
     if (row.style.display === "none") return false
     return true
@@ -4590,27 +4619,19 @@ function enforceEntropyTabVisibility() {
         return;
     }
 
-    // Entropy tab is visible only after Entropy is unlocked and at least one seed exists.
-    var unlocked = typeof isEntropyUnlocked === "function"
-        ? isEntropyUnlocked()
-        : !!(gameData && gameData.entropy && gameData.entropy.entropyUnlocked);
-    var hasSeeds = !!(gameData && gameData.entropy && gameData.entropy.seeds && gameData.entropy.seeds > 0);
+    var unlocked = isEntropyTabUnlocked();
 
-    // Also respect the "Entropy tab" Requirement, if present.
+    // Also respect the "Entropy tab" Requirement, if present, but once unlocked keep it completed.
     var tabReq = gameData && gameData.requirements && gameData.requirements["Entropy tab"];
-    var requirementAllowsTab = true;
-    if (tabReq && typeof tabReq.isCompleted === "function") {
-        requirementAllowsTab = tabReq.isCompleted();
+    var requirementAllowsTab = unlocked ? true : isRequirementMet(tabReq, "Entropy tab");
+    if (unlocked && tabReq && !tabReq.completed) {
+        tabReq.completed = true;
     }
 
-    var visible = unlocked && hasSeeds && requirementAllowsTab;
+    var visible = unlocked && requirementAllowsTab;
 
     entropyTabButton.classList.toggle("hidden", !visible);
     entropyTabSection.classList.toggle("hidden", !visible);
-
-    if (tabReq && typeof tabReq.completed !== "undefined") {
-        tabReq.completed = visible;
-    }
 
     // Safety: if the current active tab is Entropy while it becomes locked again,
     // bump the player back to the jobs tab so they don't stare at a locked panel.
@@ -4626,28 +4647,13 @@ function hideEntities() {
     for (key in gameData.requirements) {
         var requirement = gameData.requirements[key]
         if (!requirement || !requirement.elements) continue
-        if (key === "Entropy tab") {
-            var unlockedEntropy = typeof isEntropyUnlocked === "function" ? isEntropyUnlocked() : (gameData && gameData.entropy && gameData.entropy.entropyUnlocked);
-            var hasEntropySeeds = !!(gameData && gameData.entropy && gameData.entropy.seeds && gameData.entropy.seeds > 0);
-            if (!unlockedEntropy || !hasEntropySeeds) {
-                requirement.completed = false;
-                for (element of requirement.elements) {
-                    if (!element) continue
-                    element.classList.add("hidden")
-                }
-                continue
-            }
+        var completed = isRequirementMet(requirement, key)
+        if (key === "Entropy tab" && isEntropyTabUnlocked()) {
+            completed = true
+            requirement.completed = true
         }
-        var completed = requirement.isCompleted()
         if (key == "Automation" && isEntropyUnlocked()) {
             completed = true
-        }
-        if (!completed && gameData.itemData && gameData.itemData[key]) {
-            var item = gameData.itemData[key]
-            if (item && item.discovered) {
-                completed = true
-                requirement.completed = true
-            }
         }
         for (element of requirement.elements) {
             if (!element) continue
@@ -4901,18 +4907,7 @@ function isSkillUnlockedForAutoLearn(skill) {
         return false
     }
 
-    var requirement = null
-    if (gameData && gameData.requirements) {
-        requirement = gameData.requirements[skill.name]
-    }
-
-    if (requirement) {
-        if (typeof requirement.isCompleted === "function") {
-            if (!requirement.isCompleted()) return false
-        } else if (requirement.completed === false) {
-            return false
-        }
-    }
+    if (!isRequirementMetByKey(skill.name)) return false
 
     if (checkSkillSkipped(skill)) return false
     return true

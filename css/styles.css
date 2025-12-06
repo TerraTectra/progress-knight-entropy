@@ -76,9 +76,8 @@ td {
 .progress-text.name {
     flex: 1 1 auto;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .progress-status {
@@ -125,16 +124,17 @@ td {
 
 .job-name-cell {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .job-title {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .job-tag-passive {
