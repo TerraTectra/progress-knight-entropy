@@ -588,10 +588,16 @@ var lastTickDurationMs = 0
 
 const baseLifespan = 365 * 70
 
+const BALANCE_CONSTANTS = (typeof BALANCE_CORE !== "undefined" && BALANCE_CORE.BALANCE_CONSTANTS) ? BALANCE_CORE.BALANCE_CONSTANTS : {
+    ACTIVE_JOB_INCOME_MULTIPLIER: 1.0,
+    PASSIVE_JOB_INCOME_MULTIPLIER: 0.25,
+    ACTIVE_XP_MULTIPLIER: 1.0,
+    PASSIVE_XP_MULTIPLIER: 0.5,
+}
 const baseGameSpeed = 4
-const PASSIVE_JOB_INCOME_MULTIPLIER = 0.25
-const PASSIVE_JOB_XP_MULTIPLIER = 0.5
-const PASSIVE_SKILL_XP_MULTIPLIER = 0.5
+const PASSIVE_JOB_INCOME_MULTIPLIER = BALANCE_CONSTANTS.PASSIVE_JOB_INCOME_MULTIPLIER
+const PASSIVE_JOB_XP_MULTIPLIER = BALANCE_CONSTANTS.PASSIVE_XP_MULTIPLIER
+const PASSIVE_SKILL_XP_MULTIPLIER = BALANCE_CONSTANTS.PASSIVE_XP_MULTIPLIER
 const BASE_AUTO_SWITCH_THRESHOLD = 0.2
 const ENTROPY_EARLY_LIFE_MAX_AGE = 25
 const ENTROPY_EARLY_XP_MULT = 1.5
@@ -655,6 +661,24 @@ const ENTROPY_UPGRADE_BASE_COST_EP = {
 
 const DEBUG_BALANCE = false
 const DEBUG_DEV = false
+
+function computeJobIncomeForTickSafe(job, isActive) {
+    if (typeof BALANCE_CORE !== "undefined" && BALANCE_CORE.computeJobIncomeForTick) {
+        return BALANCE_CORE.computeJobIncomeForTick(job, isActive, BALANCE_CONSTANTS)
+    }
+    var baseIncome = job && typeof job.getIncome === "function" ? job.getIncome() || 0 : 0
+    var mult = isActive ? BALANCE_CONSTANTS.ACTIVE_JOB_INCOME_MULTIPLIER : BALANCE_CONSTANTS.PASSIVE_JOB_INCOME_MULTIPLIER
+    return baseIncome * mult
+}
+
+function computeTaskXpForTickSafe(task, isActive) {
+    if (typeof BALANCE_CORE !== "undefined" && BALANCE_CORE.computeTaskXpForTick) {
+        return BALANCE_CORE.computeTaskXpForTick(task, isActive, BALANCE_CONSTANTS)
+    }
+    var baseXp = task && typeof task.getXpGain === "function" ? task.getXpGain() || 0 : 0
+    var mult = isActive ? BALANCE_CONSTANTS.ACTIVE_XP_MULTIPLIER : BALANCE_CONSTANTS.PASSIVE_XP_MULTIPLIER
+    return baseXp * mult
+}
 
 const BalanceConfig = {
     universe: {
@@ -4715,13 +4739,14 @@ function tickTasks() {
         var isJob = task instanceof Job
         var isSkill = task instanceof Skill
         var isFocus = (isJob && focusJob && task.name == focusJob.name) || (isSkill && focusSkill && task.name == focusSkill.name)
-        var xpMult = isFocus ? 1 : (isJob ? PASSIVE_JOB_XP_MULTIPLIER : PASSIVE_SKILL_XP_MULTIPLIER)
+        var xpMult = isFocus ? BALANCE_CONSTANTS.ACTIVE_XP_MULTIPLIER : (isJob ? PASSIVE_JOB_XP_MULTIPLIER : PASSIVE_SKILL_XP_MULTIPLIER)
         var compression = isFocus ? compressionFocused : compressionPassive
         var baseXp = task.getXpGain()
         if (isJob && !isFocus && highTierJobs.includes(task.name) && gameData.taskData["Reality Architecture"]) {
             baseXp /= gameData.taskData["Reality Architecture"].getEffect()
         }
-        var xpGain = baseXp * xpMult * (compression.xp || 1)
+        var xpBaseWithMult = computeTaskXpForTickSafe({ getXpGain: function() { return baseXp } }, isFocus)
+        var xpGain = xpBaseWithMult * (compression.xp || 1)
         addXpFlat(task, applySpeed(xpGain))
         if (task.name == "Read Almanach" && entropyUnlockedFully) {
             gameData.entropy.insight += applySpeed(getInsightGain(task) * xpMult)
@@ -4767,9 +4792,9 @@ function getIncome() {
         var requirement = gameData.requirements[task.name]
         var unlocked = (!requirement) || requirement.isCompleted()
         if (!unlocked) continue
-        var mult = task.name === focusJobName ? 1 : PASSIVE_JOB_INCOME_MULTIPLIER
-        var baseIncome = task.getIncome() || 0
-        income += baseIncome * mult
+        var isActive = task.name === focusJobName
+        var incomeForTask = computeJobIncomeForTickSafe(task, isActive)
+        income += incomeForTask
     }
     return income * compression.money * jitter
 }
