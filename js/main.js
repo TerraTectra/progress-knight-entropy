@@ -654,6 +654,7 @@ const ENTROPY_UPGRADE_BASE_COST_EP = {
 }
 
 const DEBUG_BALANCE = false
+const DEBUG_DEV = false
 
 const BalanceConfig = {
     universe: {
@@ -2497,7 +2498,7 @@ function moveToNextUniverse() {
     if (!gameData.entropy || !gameData.entropy.unifiedArchitecture) return
     if (!gameData.universeTokens || gameData.universeTokens < 1) return
     if ((gameData.universeIndex || 1) >= 2) return
-    var confirmMove = confirm("You have stabilized this universe. Spend your token to travel to the next one?")
+    var confirmMove = confirm(tUi("confirm_universe_travel") || "You have stabilized this universe. Spend your token to travel to the next one?")
     if (!confirmMove) return
     gameData.universeTokens -= 1
     var nextIndex = (gameData.universeIndex || 1) + 1
@@ -4553,10 +4554,6 @@ function hideIntroModal() {
 function enforceEntropyTabVisibility() {
     var entropyTabButton = document.getElementById("entropyTabButton");
     var entropyTabSection = document.getElementById("entropy");
-    var entropyRequirementSection = document.getElementById("entropy-requirement-section");
-    var entropyBlock = document.getElementById("entropy-block");
-    var tabRow = document.getElementById("tabRow");
-    var tabContainer = tabRow && tabRow.parentElement ? tabRow.parentElement : null;
 
     if (!entropyTabButton || !entropyTabSection) {
         return;
@@ -4577,63 +4574,19 @@ function enforceEntropyTabVisibility() {
 
     var visible = unlocked && hasSeeds && requirementAllowsTab;
 
-    if (visible) {
-        // Flag on body: can be used for styling, but no longer forces visibility.
-        if (document && document.body && document.body.classList) {
-            document.body.classList.add("entropy-visible");
-        }
+    entropyTabButton.classList.toggle("hidden", !visible);
+    entropyTabSection.classList.toggle("hidden", !visible);
 
-        // Show Entropy tab button and content by removing the .hidden gate.
-        entropyTabButton.classList.remove("hidden");
-        entropyTabSection.classList.remove("hidden");
+    if (tabReq && typeof tabReq.completed !== "undefined") {
+        tabReq.completed = visible;
+    }
 
-        if (tabContainer && tabContainer.classList) {
-            tabContainer.classList.remove("entropy-hidden");
-        }
-
-        if (entropyBlock && entropyBlock.classList) {
-            entropyBlock.classList.remove("hidden");
-        }
-
-        if (entropyRequirementSection) {
-            entropyRequirementSection.classList.remove("hidden");
-        }
-
-        if (tabReq && typeof tabReq.completed !== "undefined") {
-            tabReq.completed = true;
-        }
-    } else {
-        if (document && document.body && document.body.classList) {
-            document.body.classList.remove("entropy-visible");
-        }
-
-        // Hide Entropy tab button and content by applying the .hidden gate.
-        entropyTabButton.classList.add("hidden");
-        entropyTabSection.classList.add("hidden");
-
-        if (tabContainer && tabContainer.classList) {
-            tabContainer.classList.add("entropy-hidden");
-        }
-
-        if (entropyBlock && entropyBlock.classList) {
-            entropyBlock.classList.add("hidden");
-        }
-
-        if (entropyRequirementSection) {
-            entropyRequirementSection.classList.add("hidden");
-        }
-
-        if (tabReq && typeof tabReq.completed !== "undefined") {
-            tabReq.completed = false;
-        }
-
-        // Safety: if the current active tab is Entropy while it becomes locked again,
-        // bump the player back to the jobs tab so they don't stare at a locked panel.
-        if (typeof currentTab !== "undefined" && currentTab === "entropy" && typeof setTab === "function") {
-            var jobsTabButton = document.getElementById("jobsTabButton");
-            if (jobsTabButton) {
-                setTab(jobsTabButton, "jobs");
-            }
+    // Safety: if the current active tab is Entropy while it becomes locked again,
+    // bump the player back to the jobs tab so they don't stare at a locked panel.
+    if (!visible && typeof currentTab !== "undefined" && currentTab === "entropy" && typeof setTab === "function") {
+        var jobsTabButton = document.getElementById("jobsTabButton");
+        if (jobsTabButton) {
+            setTab(jobsTabButton, "jobs");
         }
     }
 }
@@ -4740,32 +4693,6 @@ function addXpFlat(task, amount) {
         task.xp -= task.getMaxXp()
         task.level += 1
     }
-}
-
-function applyPassiveXp(task, focusTask) {
-    if (task == focusTask) return
-    var requirement = gameData.requirements[task.name]
-    if (requirement && !requirement.isCompleted()) return
-    var baseXp = task.getXpGain()
-    if (task instanceof Job && highTierJobs.includes(task.name) && gameData.taskData["Reality Architecture"]) {
-        baseXp /= gameData.taskData["Reality Architecture"].getEffect()
-    }
-    var compression = getLifeCompressionFactors(false)
-    var passiveGain = baseXp * 0.2 * getFocusMultiplier(focusTask) * getPassiveAgeFactor() * getEntropySynergy() * compression.xp
-    passiveGain *= getPassiveArtifactPenalty()
-    addXpFlat(task, applySpeed(passiveGain))
-    if (task.name == "Read Almanach" && isEntropyFullyUnlocked()) {
-        var insightGain = getInsightGain(task) * 0.2 * getFocusMultiplier(focusTask) * getPassiveAgeFactor() * getEntropySynergy()
-        gameData.entropy.insight += applySpeed(insightGain)
-    }
-}
-
-function doCurrentTask(task) {
-    task.increaseXp()
-    if (task instanceof Job) {
-        increaseCoins()
-    }
-    addInsight(task, true)
 }
 
 function tickTasks() {
@@ -6802,7 +6729,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // Debug helper to inspect auto-learn choice in console
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && DEBUG_DEV) {
     window.__debugAutoLearnOnce = function() {
         var allSkills = []
         for (key in gameData.taskData) {
@@ -6817,15 +6744,19 @@ if (typeof window !== "undefined") {
             if (unlocked && !skipped) {
                 xpDict[s.name] = s.level
             }
-            console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", unlocked, "skipped", skipped)
+            if (DEBUG_DEV) {
+                console.log(s.name, "lvl", s.level, "xp", s.xp || 0, "unlocked", unlocked, "skipped", skipped)
+            }
         })
         var targetName = Object.keys(xpDict).length ? getKeyOfLowestValueFromDict(xpDict) : null
         var target = targetName ? gameData.taskData[targetName] : null
-        console.log("Chosen target:", target ? target.name : "(none) -> fallback Concentration")
+        if (DEBUG_DEV) {
+            console.log("Chosen target:", target ? target.name : "(none) -> fallback Concentration")
+        }
     }
 }
 
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && DEBUG_DEV) {
     window.__debugEntropy = function() {
         console.log("Entropy state:", gameData.entropy)
         var read = gameData.taskData["Read Almanach"]

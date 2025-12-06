@@ -121,8 +121,8 @@
 }
 
 .dark .guide-tab.active {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: var(--pk-accent);
+    border-color: var(--pk-accent);
     color: #fff;
 }
 
@@ -235,9 +235,9 @@
 }
 
 .dark .challenge-card.active {
-    border-color: #2563eb;
-    border-left-color: #2563eb;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+    border-color: var(--pk-accent);
+    border-left-color: var(--pk-accent);
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.25);
 }
 
 .dark .challenge-status .status-pill {
@@ -251,7 +251,7 @@
 }
 
 .dark .achievement-card.unlocked .achievement-status .status-pill {
-    background: #2563eb;
+    background: var(--pk-accent);
     color: #f8fafc;
 }
 

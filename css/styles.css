@@ -138,7 +138,7 @@ td {
 }
 
 .job-tag-passive {
-    background-color: #2d5cff;
+    background-color: var(--pk-accent);
     color: #fff;
 }
 
@@ -520,14 +520,16 @@ button:focus {
 .ua-reqs {
     margin-top: 6px;
     padding: 6px 8px;
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background: var(--pk-panel);
+    border: 1px solid var(--pk-border);
+    border-radius: 6px;
     font-size: 12px;
+    color: var(--pk-text-main);
 }
 .ua-reqs .ua-req-title {
     font-weight: 600;
     margin-bottom: 4px;
+    color: var(--pk-text-main);
 }
 .ua-reqs ul {
     list-style: none;
@@ -536,12 +538,13 @@ button:focus {
 }
 .ua-reqs li {
     margin: 2px 0;
+    color: var(--pk-text-muted);
 }
 .ua-req-met {
-    color: #2e7d32;
+    color: #6ad17a;
 }
 .ua-req-missing {
-    color: #b71c1c;
+    color: #f87171;
 }
 
 .scroll {
@@ -700,12 +703,12 @@ settingsTabs .tabButton {
     border-color: var(--pk-accent-strong) !important;
 }
 
-#entropyTabButton {
-    display: none !important;
-}
-
-body.entropy-visible #entropyTabButton {
-    display: inline-block !important;
+/* Neutralize default W3CSS blue-gray tab highlight to match warm accent palette */
+.w3-blue-gray,
+.w3-hover-blue-gray:hover {
+    background: var(--pk-accent) !important;
+    color: #fff !important;
+    border-color: var(--pk-accent-strong) !important;
 }
 
 .settings-message {
@@ -886,9 +889,9 @@ jobTable button {
 }
 
 .achievement-card.unlocked {
-    border-color: #2563eb;
-    border-left-color: #2563eb;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+    border-color: var(--pk-accent);
+    border-left-color: var(--pk-accent);
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.2);
 }
 
 .achievement-card.locked {
@@ -918,7 +921,7 @@ jobTable button {
     min-width: 96px;
     text-align: right;
     font-weight: 700;
-    color: #2563eb;
+    color: var(--pk-accent);
 }
 
 .achievement-card.locked .achievement-status {
@@ -935,7 +938,7 @@ jobTable button {
 }
 
 .achievement-card.unlocked .achievement-status .status-pill {
-    background: #2563eb;
+    background: var(--pk-accent);
     color: #ffffff;
 }
 
@@ -961,9 +964,9 @@ jobTable button {
 }
 
 .challenge-card.active {
-    border-color: #2563eb;
-    border-left-color: #2563eb;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+    border-color: var(--pk-accent);
+    border-left-color: var(--pk-accent);
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.2);
 }
 
 .achievement-overlay {
