@@ -632,8 +632,8 @@ const MIN_STAGNANT_LIVES = 3
 const STAGNATION_HINT_COOLDOWN_LIVES = 35
 const UNIVERSE_INDICATOR_ID = "universeIndicator"
 const ENTROPY_ARTIFACT_COST_EP = {
-    sigilMomentum: 10,
-    chainConductor: 10,
+    sigilMomentum: 8,
+    chainConductor: 9,
     loopAnchor: 12,
     patternResonator: 20,
     u2_echoSeeds: 50,
@@ -919,12 +919,12 @@ const ENTROPY_UPGRADE_DEFINITIONS = {
 const permanentUnlocks = ["Scheduling", "Shop", "Automation", "Quick task display"]
 
 const jobBaseData = {
-    "Beggar": {name: "Beggar", maxXp: 50, income: 5},
-    "Farmer": {name: "Farmer", maxXp: 100, income: 9},
-    "Fisherman": {name: "Fisherman", maxXp: 200, income: 15},
-    "Miner": {name: "Miner", maxXp: 400, income: 40},
-    "Blacksmith": {name: "Blacksmith", maxXp: 800, income: 80},
-    "Merchant": {name: "Merchant", maxXp: 1600, income: 150},
+    "Beggar": {name: "Beggar", maxXp: 45, income: 6},
+    "Farmer": {name: "Farmer", maxXp: 90, income: 12},
+    "Fisherman": {name: "Fisherman", maxXp: 180, income: 20},
+    "Miner": {name: "Miner", maxXp: 350, income: 50},
+    "Blacksmith": {name: "Blacksmith", maxXp: 700, income: 90},
+    "Merchant": {name: "Merchant", maxXp: 1400, income: 170},
 
     "Squire": {name: "Squire", maxXp: 100, income: 5},
     "Footman": {name: "Footman", maxXp: 1000, income: 50},
@@ -998,13 +998,13 @@ const entropySkillBaseData = {
 
 const itemBaseData = {
     "Homeless": {name: "Homeless", expense: 0, effect: 1},
-    "Tent": {name: "Tent", expense: 15, effect: 1.4},
-    "Wooden hut": {name: "Wooden hut", expense: 100, effect: 2},
-    "Cottage": {name: "Cottage", expense: 750, effect: 3.5},
-    "House": {name: "House", expense: 3000, effect: 6},
-    "Large house": {name: "Large house", expense: 25000, effect: 12},
-    "Small palace": {name: "Small palace", expense: 300000, effect: 25},
-    "Grand palace": {name: "Grand palace", expense: 5000000, effect: 60},
+    "Tent": {name: "Tent", expense: 12, effect: 1.45},
+    "Wooden hut": {name: "Wooden hut", expense: 85, effect: 2.1},
+    "Cottage": {name: "Cottage", expense: 600, effect: 3.6},
+    "House": {name: "House", expense: 2600, effect: 6.4},
+    "Large house": {name: "Large house", expense: 22000, effect: 12.5},
+    "Small palace": {name: "Small palace", expense: 270000, effect: 25.5},
+    "Grand palace": {name: "Grand palace", expense: 4500000, effect: 60},
 
     "Book": {name: "Book", expense: 10, effect: 1.5, description: "Skill xp"},
     "Dumbbells": {name: "Dumbbells", expense: 50, effect: 1.5, description: "Strength xp"},
@@ -4764,7 +4764,7 @@ function maybeUnlockAlmanac() {
     if (!gameData.entropy) return
     if (gameData.entropy.hasAlmanac) return
     var ageYears = Math.floor(gameData.days / 365)
-    if (ageYears < 55) return
+    if (ageYears < 52) return
     gameData.entropy.hasAlmanac = true
     showAlmanacDiscoveryDialog()
 }
@@ -5581,7 +5581,7 @@ function handleFirstTimePrompt() {
 
 function applyEntropyRebirthGain() {
     ensureSynergyState()
-    var gain = Math.floor(Math.pow(gameData.entropy.insight, 0.6))
+    var gain = Math.floor(Math.pow(gameData.entropy.insight, 0.62))
     var mult = getUniverseModifiers().entropyGainMultiplier || 1
     var lattice = getPatternLatticeMultiplier()
     var patternBonus = (gameData.synergy && gameData.synergy.patternStabilityBonus) ? gameData.synergy.patternStabilityBonus : 1
@@ -6596,17 +6596,22 @@ function initBaseGame() {
 
     gameData.requirements = {
         //Other
-        "The Arcane Association": new TaskRequirement(getElementsByClass("The Arcane Association"), [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
+        "The Arcane Association": new TaskRequirement(getElementsByClass("The Arcane Association"), [{task: "Concentration", requirement: 180}, {task: "Meditation", requirement: 180}]),
         "Dark magic": new EvilRequirement(getElementsByClass("Dark magic"), [{requirement: 1}]),
-        "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 50}]),
+<<<<<<< HEAD
+        "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 40}]),
         "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25, allowShortLife: true}]),
+=======
+        "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 40}]),
+        "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25}]),
+>>>>>>> 53faf32 (Adjust early/mid-game pacing and entropy entry balance)
         "Rebirth note 1": new AgeRequirement([document.getElementById("rebirthNote1")], [{requirement: 45}]),
         "Rebirth note 2": new AgeRequirement([document.getElementById("rebirthNote2")], [{requirement: 65}]),
         "Rebirth note 3": new AgeRequirement([document.getElementById("rebirthNote3")], [{requirement: 200}]),
         "Evil info": new EvilRequirement([document.getElementById("evilInfo")], [{requirement: 1}]),
         "Read Almanach": new EntropyRequirement([], [{seeds: 1}]),
-        "Time warping info": new TaskRequirement([document.getElementById("timeWarping")], [{task: "Mage", requirement: 10}]),
-        "Automation": new AgeRequirement([document.getElementById("automation")], [{requirement: 20}]),
+        "Time warping info": new TaskRequirement([document.getElementById("timeWarping")], [{task: "Mage", requirement: 8}]),
+        "Automation": new AgeRequirement([document.getElementById("automation")], [{requirement: 24}]),
         "Quick task display": new AgeRequirement([document.getElementById("quickTaskDisplay")], [{requirement: 20}]),
         "Body Maintenance": new AgeRequirement([getTaskElement("Body Maintenance")], [{requirement: 50}]),
         "Life Decision": new AgeRequirement([getTaskElement("Life Decision")], [{requirement: 35}]),
@@ -6614,56 +6619,56 @@ function initBaseGame() {
 
         //Common work
         "Beggar": new TaskRequirement([getTaskElement("Beggar")], []),
-        "Farmer": new TaskRequirement([getTaskElement("Farmer")], [{task: "Beggar", requirement: 10}]),
-        "Fisherman": new TaskRequirement([getTaskElement("Fisherman")], [{task: "Farmer", requirement: 10}]),
-        "Miner": new TaskRequirement([getTaskElement("Miner")], [{task: "Strength", requirement: 10}, {task: "Fisherman", requirement: 10}]),
-        "Blacksmith": new TaskRequirement([getTaskElement("Blacksmith")], [{task: "Strength", requirement: 30}, {task: "Miner", requirement: 10}]),
-        "Merchant": new TaskRequirement([getTaskElement("Merchant")], [{task: "Bargaining", requirement: 50}, {task: "Blacksmith", requirement: 10}]),
+        "Farmer": new TaskRequirement([getTaskElement("Farmer")], [{task: "Beggar", requirement: 8}]),
+        "Fisherman": new TaskRequirement([getTaskElement("Fisherman")], [{task: "Farmer", requirement: 8}]),
+        "Miner": new TaskRequirement([getTaskElement("Miner")], [{task: "Strength", requirement: 8}, {task: "Fisherman", requirement: 9}]),
+        "Blacksmith": new TaskRequirement([getTaskElement("Blacksmith")], [{task: "Strength", requirement: 25}, {task: "Miner", requirement: 9}]),
+        "Merchant": new TaskRequirement([getTaskElement("Merchant")], [{task: "Bargaining", requirement: 40}, {task: "Blacksmith", requirement: 9}]),
 
         //Military 
         "Squire": new TaskRequirement([getTaskElement("Squire")], [{task: "Strength", requirement: 5}]),
-        "Footman": new TaskRequirement([getTaskElement("Footman")], [{task: "Strength", requirement: 20}, {task: "Squire", requirement: 10}]),
-        "Veteran footman": new TaskRequirement([getTaskElement("Veteran footman")], [{task: "Battle tactics", requirement: 40}, {task: "Footman", requirement: 10}]),
-        "Knight": new TaskRequirement([getTaskElement("Knight")], [{task: "Strength", requirement: 100}, {task: "Veteran footman", requirement: 10}]),
-        "Veteran knight": new TaskRequirement([getTaskElement("Veteran knight")], [{task: "Battle tactics", requirement: 150}, {task: "Knight", requirement: 10}]),
-        "Elite knight": new TaskRequirement([getTaskElement("Elite knight")], [{task: "Strength", requirement: 300}, {task: "Veteran knight", requirement: 10}]),
-        "Holy knight": new TaskRequirement([getTaskElement("Holy knight")], [{task: "Mana control", requirement: 500}, {task: "Elite knight", requirement: 10}]),
-        "Legendary knight": new TaskRequirement([getTaskElement("Legendary knight")], [{task: "Mana control", requirement: 1000}, {task: "Battle tactics", requirement: 1000}, {task: "Holy knight", requirement: 10}]),
+        "Footman": new TaskRequirement([getTaskElement("Footman")], [{task: "Strength", requirement: 18}, {task: "Squire", requirement: 10}]),
+        "Veteran footman": new TaskRequirement([getTaskElement("Veteran footman")], [{task: "Battle tactics", requirement: 35}, {task: "Footman", requirement: 10}]),
+        "Knight": new TaskRequirement([getTaskElement("Knight")], [{task: "Strength", requirement: 90}, {task: "Veteran footman", requirement: 10}]),
+        "Veteran knight": new TaskRequirement([getTaskElement("Veteran knight")], [{task: "Battle tactics", requirement: 130}, {task: "Knight", requirement: 10}]),
+        "Elite knight": new TaskRequirement([getTaskElement("Elite knight")], [{task: "Strength", requirement: 260}, {task: "Veteran knight", requirement: 10}]),
+        "Holy knight": new TaskRequirement([getTaskElement("Holy knight")], [{task: "Mana control", requirement: 450}, {task: "Elite knight", requirement: 10}]),
+        "Legendary knight": new TaskRequirement([getTaskElement("Legendary knight")], [{task: "Mana control", requirement: 900}, {task: "Battle tactics", requirement: 850}, {task: "Holy knight", requirement: 10}]),
 
         //The Arcane Association
-        "Student": new TaskRequirement([getTaskElement("Student")], [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
-        "Apprentice mage": new TaskRequirement([getTaskElement("Apprentice mage")], [{task: "Mana control", requirement: 400}, {task: "Student", requirement: 10}]),
-        "Mage": new TaskRequirement([getTaskElement("Mage")], [{task: "Mana control", requirement: 700}, {task: "Apprentice mage", requirement: 10}]),
-        "Wizard": new TaskRequirement([getTaskElement("Wizard")], [{task: "Mana control", requirement: 1000}, {task: "Mage", requirement: 10}]),
-        "Master wizard": new TaskRequirement([getTaskElement("Master wizard")], [{task: "Mana control", requirement: 1500}, {task: "Wizard", requirement: 10}]),
-        "Chairman": new TaskRequirement([getTaskElement("Chairman")], [{task: "Mana control", requirement: 2000}, {task: "Master wizard", requirement: 10}]),
-        "Archmage Consultant": new TaskRequirement([getTaskElement("Archmage Consultant")], [{task: "Chairman", requirement: 25}, {task: "Time warping", requirement: 75}, {universe: 2}]),
-        "Elder Advisor": new TaskRequirement([getTaskElement("Elder Advisor")], [{task: "Archmage Consultant", requirement: 10}, {age: 60}, {universe: 4}]),
+        "Student": new TaskRequirement([getTaskElement("Student")], [{task: "Concentration", requirement: 180}, {task: "Meditation", requirement: 180}]),
+        "Apprentice mage": new TaskRequirement([getTaskElement("Apprentice mage")], [{task: "Mana control", requirement: 360}, {task: "Student", requirement: 10}]),
+        "Mage": new TaskRequirement([getTaskElement("Mage")], [{task: "Mana control", requirement: 600}, {task: "Apprentice mage", requirement: 10}]),
+        "Wizard": new TaskRequirement([getTaskElement("Wizard")], [{task: "Mana control", requirement: 900}, {task: "Mage", requirement: 10}]),
+        "Master wizard": new TaskRequirement([getTaskElement("Master wizard")], [{task: "Mana control", requirement: 1300}, {task: "Wizard", requirement: 10}]),
+        "Chairman": new TaskRequirement([getTaskElement("Chairman")], [{task: "Mana control", requirement: 1750}, {task: "Master wizard", requirement: 10}]),
+        "Archmage Consultant": new TaskRequirement([getTaskElement("Archmage Consultant")], [{task: "Chairman", requirement: 22}, {task: "Time warping", requirement: 65}, {universe: 2}]),
+        "Elder Advisor": new TaskRequirement([getTaskElement("Elder Advisor")], [{task: "Archmage Consultant", requirement: 10}, {age: 58}, {universe: 4}]),
 
         //Fundamentals
         "Concentration": new TaskRequirement([getTaskElement("Concentration")], []),
         "Productivity": new TaskRequirement([getTaskElement("Productivity")], [{task: "Concentration", requirement: 5}]),
-        "Bargaining": new TaskRequirement([getTaskElement("Bargaining")], [{task: "Concentration", requirement: 20}]),
-        "Meditation": new TaskRequirement([getTaskElement("Meditation")], [{task: "Concentration", requirement: 30}, {task: "Productivity", requirement: 20}]),
+        "Bargaining": new TaskRequirement([getTaskElement("Bargaining")], [{task: "Concentration", requirement: 15}]),
+        "Meditation": new TaskRequirement([getTaskElement("Meditation")], [{task: "Concentration", requirement: 25}, {task: "Productivity", requirement: 15}]),
 
         //Combat
         "Strength": new TaskRequirement([getTaskElement("Strength")], []),
-        "Battle tactics": new TaskRequirement([getTaskElement("Battle tactics")], [{task: "Concentration", requirement: 20}]),
-        "Muscle memory": new TaskRequirement([getTaskElement("Muscle memory")], [{task: "Concentration", requirement: 30}, {task: "Strength", requirement: 30}]),
+        "Battle tactics": new TaskRequirement([getTaskElement("Battle tactics")], [{task: "Concentration", requirement: 18}]),
+        "Muscle memory": new TaskRequirement([getTaskElement("Muscle memory")], [{task: "Concentration", requirement: 25}, {task: "Strength", requirement: 25}]),
 
         //Magic
-        "Mana control": new TaskRequirement([getTaskElement("Mana control")], [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
-        "Immortality": new TaskRequirement([getTaskElement("Immortality")], [{task: "Apprentice mage", requirement: 10}]),
-        "Time warping": new TaskRequirement([getTaskElement("Time warping")], [{task: "Mage", requirement: 10}]),
-        "Super immortality": new TaskRequirement([getTaskElement("Super immortality")], [{task: "Chairman", requirement: 1000}]),
+        "Mana control": new TaskRequirement([getTaskElement("Mana control")], [{task: "Concentration", requirement: 180}, {task: "Meditation", requirement: 180}]),
+        "Immortality": new TaskRequirement([getTaskElement("Immortality")], [{task: "Apprentice mage", requirement: 8}]),
+        "Time warping": new TaskRequirement([getTaskElement("Time warping")], [{task: "Mage", requirement: 8}]),
+        "Super immortality": new TaskRequirement([getTaskElement("Super immortality")], [{task: "Chairman", requirement: 850}]),
 
         //Dark magic
         "Dark influence": new EvilRequirement([getTaskElement("Dark influence")], [{requirement: 1}]),
         "Evil control": new EvilRequirement([getTaskElement("Evil control")], [{requirement: 1}]),
         "Intimidation": new EvilRequirement([getTaskElement("Intimidation")], [{requirement: 1}]),
-        "Demon training": new EvilRequirement([getTaskElement("Demon training")], [{requirement: 25}]),
-        "Blood meditation": new EvilRequirement([getTaskElement("Blood meditation")], [{requirement: 75}]),
-        "Demon's wealth": new EvilRequirement([getTaskElement("Demon's wealth")], [{requirement: 500}]),
+        "Demon training": new EvilRequirement([getTaskElement("Demon training")], [{requirement: 20}]),
+        "Blood meditation": new EvilRequirement([getTaskElement("Blood meditation")], [{requirement: 60}]),
+        "Demon's wealth": new EvilRequirement([getTaskElement("Demon's wealth")], [{requirement: 350}]),
 
         //Properties
         "Homeless": new CoinRequirement([getItemElement("Homeless")], [{requirement: 0}]),

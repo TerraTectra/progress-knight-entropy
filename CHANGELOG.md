@@ -1,6 +1,15 @@
 # Changelog
 
-<<<<<<< HEAD
+## Stage 3 - 2025-12-11
+- Unified requirement helper usage across unlock/visibility checks for tasks, jobs, shop items, automation, and entropy tab handling.
+- Standardized requirement messaging through shared display helpers with i18n coverage (universe, age, meaning, entropy seeds, evil, coins) and hooked shop locks into the same pipeline.
+- Added wrapping support for requirement cells to keep long localized labels readable in required rows and shop states.
+
+## Stage 4 - 2025-12-11
+- Smoothed early jobs/skills/housing: higher early incomes, slightly lower max XP and promotion thresholds, gentler property expenses/effects, and a cheaper shop unlock to reach the first upgrades faster.
+- Tuned arcane/military/dark ladders and automation: eased early concentration/mana/strength gates, nudged automation unlock later, and lowered dark magic entry costs to reduce idle grinds without skipping systems.
+- Entropy pacing tweaks: earlier Almanac discovery, a touch more EP from early insight, and slightly cheaper starter artifacts to make first seeds/upgrades attainable in a few solid runs.
+
 ## 1.0.1 - Entropy UX polish
 - Entropy tab now follows a single unlock gate and remains visible after binding the Almanac.
 - Entropy unlock visibility and shop items stay rendered after discovery; affordability only disables actions.
@@ -12,9 +21,3 @@
 - UX: Dark-first theme, guide overlay, plateau hint, shop and Dark Magic hints, low-FX option.
 - Stability: Hardened save/import (versioned, safe merge, import fallback), DOM diffing, tick micro-profiler.
 - Options: Language selection, hints toggle, low-FX mode.
-=======
-## Stage 3 - 2025-12-11
-- Unified requirement helper usage across unlock/visibility checks for tasks, jobs, shop items, automation, and entropy tab handling.
-- Standardized requirement messaging through shared display helpers with i18n coverage (universe, age, meaning, entropy seeds, evil, coins) and hooked shop locks into the same pipeline.
-- Added wrapping support for requirement cells to keep long localized labels readable in required rows and shop states.
->>>>>>> 3e1fa84 (Unify requirement pipeline and finalize unlock UI polish)
