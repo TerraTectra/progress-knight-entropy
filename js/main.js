@@ -4757,6 +4757,33 @@ function addInsight(task, isActive) {
     gameData.entropy.insight += applySpeed(gain * mult * lattice)
 }
 
+function applyActiveTaskXp(task, compression, entropyUnlockedFully) {
+    if (!task || !isTaskUnlocked(task)) return
+    var baseXp = task.getXpGain()
+    var xpBaseWithMult = computeTaskXpForTickSafe({ getXpGain: function() { return baseXp } }, true)
+    var xpGain = xpBaseWithMult * (compression && compression.xp ? compression.xp : 1)
+    addXpFlat(task, applySpeed(xpGain))
+    addInsight(task, true)
+}
+
+function applyPassiveXp(task, focusTask, compression, entropyUnlockedFully) {
+    if (!task || task === focusTask) return
+    if (!isTaskUnlocked(task)) return
+    var baseXp = task.getXpGain()
+    if (task instanceof Job && highTierJobs.includes(task.name) && gameData.taskData["Reality Architecture"]) {
+        baseXp /= gameData.taskData["Reality Architecture"].getEffect()
+    }
+    var focusMult = getFocusMultiplier(focusTask)
+    var passiveGain = baseXp * 0.2 * focusMult * getPassiveAgeFactor() * getEntropySynergy()
+    passiveGain *= getPassiveArtifactPenalty()
+    if (compression && compression.xp) passiveGain *= compression.xp
+    addXpFlat(task, applySpeed(passiveGain))
+    if (task.name == "Read Almanach" && entropyUnlockedFully) {
+        var insightGain = getInsightGain(task) * 0.2 * focusMult * getPassiveAgeFactor() * getEntropySynergy()
+        gameData.entropy.insight += applySpeed(insightGain)
+    }
+}
+
 function addXpFlat(task, amount) {
     var mult = 1
     if (typeof getGlobalXpMultiplier === "function") mult = getGlobalXpMultiplier()
@@ -4770,39 +4797,51 @@ function addXpFlat(task, amount) {
 }
 
 function tickTasks() {
-    var focusJob = gameData.currentJob
-    var focusSkill = gameData.currentSkill
     var compressionFocused = getLifeCompressionFactors(true)
     var compressionPassive = getLifeCompressionFactors(false)
     var entropyUnlockedFully = isEntropyFullyUnlocked()
-    var overseerFocus = isCycleOverseerActive() ? getFocusedTask() : null
-    if (overseerFocus instanceof Job) {
-        focusJob = overseerFocus
-    } else if (overseerFocus instanceof Skill) {
-        focusSkill = overseerFocus
-    }
+    var focusTask = isCycleOverseerActive() ? getFocusedTask() : null
 
-    for (key in gameData.taskData) {
-        var task = gameData.taskData[key]
-        if (!isTaskUnlocked(task)) continue
-        var isJob = task instanceof Job
-        var isSkill = task instanceof Skill
-        var isFocus = (isJob && focusJob && task.name == focusJob.name) || (isSkill && focusSkill && task.name == focusSkill.name)
-        var xpMult = isFocus ? BALANCE_CONSTANTS.ACTIVE_XP_MULTIPLIER : (isJob ? PASSIVE_JOB_XP_MULTIPLIER : PASSIVE_SKILL_XP_MULTIPLIER)
-        var compression = isFocus ? compressionFocused : compressionPassive
-        var baseXp = task.getXpGain()
-        if (isJob && !isFocus && highTierJobs.includes(task.name) && gameData.taskData["Reality Architecture"]) {
-            baseXp /= gameData.taskData["Reality Architecture"].getEffect()
+    if (focusTask) {
+        applyActiveTaskXp(focusTask, compressionFocused, entropyUnlockedFully)
+        for (key in gameData.taskData) {
+            applyPassiveXp(gameData.taskData[key], focusTask, compressionPassive, entropyUnlockedFully)
         }
-        var xpBaseWithMult = computeTaskXpForTickSafe({ getXpGain: function() { return baseXp } }, isFocus)
-        var xpGain = xpBaseWithMult * (compression.xp || 1)
-        addXpFlat(task, applySpeed(xpGain))
-        if (task.name == "Read Almanach" && entropyUnlockedFully) {
-            gameData.entropy.insight += applySpeed(getInsightGain(task) * xpMult)
+    } else {
+        if (gameData.currentJob) {
+            applyActiveTaskXp(gameData.currentJob, compressionFocused, entropyUnlockedFully)
+        }
+        if (gameData.currentSkill) {
+            applyActiveTaskXp(gameData.currentSkill, compressionFocused, entropyUnlockedFully)
         }
     }
 
     increaseCoins()
+}
+
+function debugProgressSnapshot() {
+    var focusTask = isCycleOverseerActive() ? getFocusedTask() : null
+    var activeJobs = []
+    var activeSkills = []
+    var passiveRecipients = 0
+    if (focusTask) {
+        if (focusTask instanceof Job) activeJobs.push(focusTask.name)
+        if (focusTask instanceof Skill) activeSkills.push(focusTask.name)
+        for (key in gameData.taskData) {
+            var task = gameData.taskData[key]
+            if (task === focusTask) continue
+            if (!isTaskUnlocked(task)) continue
+            passiveRecipients += 1
+        }
+    } else {
+        if (gameData.currentJob && isTaskUnlocked(gameData.currentJob)) activeJobs.push(gameData.currentJob.name)
+        if (gameData.currentSkill && isTaskUnlocked(gameData.currentSkill)) activeSkills.push(gameData.currentSkill.name)
+    }
+    return {
+        activeJobs: activeJobs,
+        activeSkills: activeSkills,
+        passiveRecipients: passiveRecipients,
+    }
 }
 
 function ensureActiveSelections() {
@@ -4824,24 +4863,19 @@ function getIncome() {
             jitter += (Math.random() * 0.08 - 0.04) * Math.min((strain - 5) / 5, 1)
         }
     }
-    var focusJobName = null
+    var focusJob = null
     if (isCycleOverseerActive()) {
         var focusTask = getFocusedTask()
         if (focusTask && focusTask instanceof Job) {
-            focusJobName = focusTask.name
+            focusJob = focusTask
         }
     }
-    if (!focusJobName && gameData.currentJob) {
-        focusJobName = gameData.currentJob.name
+    if (!focusJob && gameData.currentJob) {
+        focusJob = gameData.currentJob
     }
     var income = 0
-    for (key in gameData.taskData) {
-        var task = gameData.taskData[key]
-        if (!(task instanceof Job)) continue
-        if (!isTaskUnlocked(task)) continue
-        var isActive = task.name === focusJobName
-        var incomeForTask = computeJobIncomeForTickSafe(task, isActive)
-        income += incomeForTask
+    if (focusJob && isTaskUnlocked(focusJob)) {
+        income = computeJobIncomeForTickSafe(focusJob, true)
     }
     return income * compression.money * jitter
 }
