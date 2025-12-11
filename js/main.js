@@ -1216,8 +1216,7 @@ function getFocusMultiplier(activeTask) {
     for (key in gameData.taskData) {
         var task = gameData.taskData[key]
         if (task == activeTask) continue
-        var requirement = gameData.requirements[task.name]
-        if (requirement && !requirement.isCompleted()) continue
+        if (!isTaskUnlocked(task)) continue
         totalLevel += task.level
         count += 1
     }
@@ -2840,6 +2839,77 @@ function updateQuickTaskDisplay(taskType) {
     setWidthIfChanged(progressBar.getElementsByClassName("progressFill")[0], (maxXp > 0 ? currentTask.xp / maxXp * 100 : 0) + "%")
 }
 
+function formatRequirementText(template, args) {
+    var result = template || ""
+    if (!args) return result
+    for (var key in args) {
+        if (!args.hasOwnProperty(key)) continue
+        result = result.replace("{" + key + "}", args[key])
+    }
+    return result
+}
+
+function getRequirementDisplayParts(requirementObject) {
+    if (!requirementObject || !requirementObject.requirements || requirementObject.requirements.length === 0) return []
+    var parts = []
+    for (var i = 0; i < requirementObject.requirements.length; i++) {
+        var req = requirementObject.requirements[i]
+        if (!req) continue
+        if (req.universe && !universeGatedRequirementMet(req.universe)) {
+            var universeTemplate = tUi("requirement_universe") || "Universe {universe}+ required"
+            parts.push(formatRequirementText(universeTemplate, {universe: format(req.universe)}))
+            continue
+        }
+        if (req.age && daysToYears(gameData.days) < req.age) {
+            var ageTemplate = tUi("requirement_age") || "Age {current}/{required}"
+            parts.push(formatRequirementText(ageTemplate, {current: format(Math.floor(daysToYears(gameData.days))), required: format(req.age)}))
+            continue
+        }
+        if (req.meaning && (gameData.meaning || 0) < req.meaning) {
+            var meaningTemplate = tUi("requirement_meaning") || "Meaning {current}/{required}"
+            parts.push(formatRequirementText(meaningTemplate, {current: format(gameData.meaning || 0), required: format(req.meaning)}))
+            continue
+        }
+        if (requirementObject.type === "coins" && req.requirement !== undefined) {
+            var coinsTemplate = tUi("requirement_coins") || "Coins {current}/{required}"
+            parts.push(formatRequirementText(coinsTemplate, {current: format(gameData.coins || 0), required: format(req.requirement)}))
+            continue
+        }
+        if (requirementObject.type === "entropy" || req.seeds !== undefined) {
+            var seedsTemplate = tUi("requirement_entropy_seeds") || "Entropy seeds {current}/{required}"
+            var seeds = gameData && gameData.entropy && gameData.entropy.seeds ? gameData.entropy.seeds : 0
+            var neededSeeds = req.seeds || 1
+            parts.push(formatRequirementText(seedsTemplate, {current: format(seeds), required: format(neededSeeds)}))
+            continue
+        }
+        if (requirementObject.type === "evil" && req.requirement !== undefined) {
+            var evilTemplate = tUi("requirement_evil") || "Evil {current}/{required}"
+            parts.push(formatRequirementText(evilTemplate, {current: format(gameData.evil || 0), required: format(req.requirement)}))
+            continue
+        }
+        if (req.task) {
+            var task = gameData.taskData ? gameData.taskData[req.task] : null
+            if (!task || typeof task.level !== "number") {
+                var unavailableTemplate = tUi("requirement_task_unavailable") || "{task} unavailable"
+                parts.push(formatRequirementText(unavailableTemplate, {task: tName(req.task)}))
+                continue
+            }
+            var neededLevel = req.requirement || 0
+            if (task.level >= neededLevel) continue
+            var taskTemplate = tUi("requirement_task_level") || "{task} lvl {current}/{required}"
+            parts.push(formatRequirementText(taskTemplate, {task: tName(req.task), current: format(task.level), required: format(neededLevel)}))
+            continue
+        }
+    }
+    return parts
+}
+
+function getRequirementDisplayTextByKey(key) {
+    var requirement = getRequirementByKey(key)
+    var parts = getRequirementDisplayParts(requirement)
+    return parts.join(", ")
+}
+
 function updateRequiredRows(data, categoryType) {
     var requiredRows = document.getElementsByClassName("requiredRow")
     for (requiredRow of requiredRows) {
@@ -2856,9 +2926,9 @@ function updateRequiredRows(data, categoryType) {
             var entityRow = document.getElementById("row " + entityName)
             if (!entityRow) continue
             if (i >= category.length - 1) break
-            var requirements = gameData.requirements[entityName]
+            var requirements = getRequirementByKey(entityName)
             if (requirements && i == 0) {
-                if (!requirements.isCompleted()) {
+                if (!isRequirementMet(requirements, entityName)) {
                     nextEntity = data[entityName]
                     break
                 }
@@ -2867,9 +2937,9 @@ function updateRequiredRows(data, categoryType) {
             var nextIndex = i + 1
             if (nextIndex >= category.length) {break}
             var nextEntityName = category[nextIndex]
-            var nextEntityRequirements = gameData.requirements[nextEntityName]
+            var nextEntityRequirements = getRequirementByKey(nextEntityName)
 
-            if (nextEntityRequirements && !nextEntityRequirements.isCompleted()) {
+            if (nextEntityRequirements && !isRequirementMet(nextEntityRequirements, nextEntityName)) {
                 nextEntity = data[nextEntityName]
                 break
             }       
@@ -2884,7 +2954,7 @@ function updateRequiredRows(data, categoryType) {
             requiredRow.classList.add("hiddenTask")
         } else {
             requiredRow.classList.remove("hiddenTask")
-            var requirementObject = gameData.requirements[nextEntity.name]
+            var requirementObject = getRequirementByKey(nextEntity.name)
             var requirements = requirementObject ? requirementObject.requirements : null
 
             var coinElement = requiredRow.getElementsByClassName("coins")[0]
@@ -2903,29 +2973,26 @@ function updateRequiredRows(data, categoryType) {
                 continue
             }
 
-            var messages = []
             if (data == gameData.taskData) {
+                var requirementText = getRequirementDisplayParts(requirementObject).join(", ")
+                if (!requirementText && requirements[0]) {
+                    if (requirementObject instanceof EvilRequirement) {
+                        requirementText = format(requirements[0].requirement) + " evil"
+                    } else if (requirementObject instanceof EntropyRequirement) {
+                        var neededSeedsFallback = requirements[0].seeds || 1
+                        var currentSeedsFallback = gameData && gameData.entropy ? gameData.entropy.seeds || 0 : 0
+                        requirementText = "Entropy seeds " + format(currentSeedsFallback) + "/" + format(neededSeedsFallback)
+                    }
+                }
+                if (!requirementText) {
+                    requirementText = tUi("status_locked_requirements") || "Locked (requirements unmet)"
+                }
                 if (requirementObject instanceof EvilRequirement) {
                     evilElement.classList.remove("hiddenTask")
-                    evilElement.textContent = format(requirements[0].requirement) + " evil"
-                } else if (requirementObject instanceof EntropyRequirement) {
-                    levelElement.classList.remove("hiddenTask")
-                    var needSeeds = requirements[0] && requirements[0].seeds ? requirements[0].seeds : 1
-                    levelElement.textContent = "Find the Almanach (" + format(gameData.entropy.seeds) + "/" + format(needSeeds) + " seed)"
+                    evilElement.textContent = requirementText
                 } else {
                     levelElement.classList.remove("hiddenTask")
-                    for (requirement of requirements) {
-                        if (requirement.task) {
-                            var task = gameData.taskData[requirement.task]
-                            if (!task || typeof task.level !== "number") {
-                                continue
-                            }
-                            if (task.level >= requirement.requirement) continue
-                            var levelWord = tUi("columnLevel") || "Level"
-                            messages.push(tName(requirement.task) + " " + levelWord + " " + format(task.level) + "/" + format(requirement.requirement))
-                        }
-                    }
-                    levelElement.textContent = messages.join(", ")
+                    levelElement.textContent = requirementText
                 }
             } else if (data == gameData.itemData) {
                 coinElement.classList.remove("hiddenTask")
@@ -3016,7 +3083,8 @@ function updateItemRows() {
         var row = document.getElementById("row " + item.name)
         if (!row) continue
         var button = row.getElementsByClassName("button")[0]
-        var unlocked = isRequirementMetByKey(item.name)
+        var unlocked = isShopItemUnlocked(item)
+        var requirementText = getRequirementDisplayTextByKey(item.name)
         var purchased = isItemPurchased(item.name)
         var effectiveCost = purchased ? item.getExpense() : getEffectiveItemCost(item)
         var canAffordPurchase = gameData.coins >= (purchased ? item.getExpense() : effectiveCost)
@@ -3043,7 +3111,12 @@ function updateItemRows() {
             button.classList.add(stateClass)
             if (mods.disable_shop) {
                 button.title = tUi("ch_shop_disabled") || ""
+            } else if (!unlocked && requirementText) {
+                button.title = requirementText
+            } else {
+                button.title = ""
             }
+        }
         }
         var active = row.getElementsByClassName("active")[0]
         var color = itemCategories["Properties"].includes(item.name) ? headerRowColors["Properties"] : headerRowColors["Misc"]
@@ -3733,6 +3806,8 @@ function isRowVisible(row) {
     if (!row) return false
     if (row.classList.contains("hidden")) return false
     if (row.classList.contains("hiddenTask")) return false
+    if (row.classList.contains("hidden")) return false
+    if (row.hidden === true) return false
     if (row.style.display === "none") return false
     return true
 }
@@ -4545,10 +4620,7 @@ function setSignDisplay() {
 }
 
 function isAutomationUnlocked() {
-    var req = gameData && gameData.requirements ? gameData.requirements["Automation"] : null
-    if (!req) return true
-    if (typeof req.isCompleted === "function") return req.isCompleted()
-    return req.completed !== false
+    return isRequirementMetByKey("Automation")
 }
 
 function applyAutoSwitchDefaults(entropyUnlocked, automationUnlocked) {
@@ -4645,7 +4717,7 @@ function enforceEntropyTabVisibility() {
 
 function hideEntities() {
     for (key in gameData.requirements) {
-        var requirement = gameData.requirements[key]
+        var requirement = getRequirementByKey(key)
         if (!requirement || !requirement.elements) continue
         var completed = isRequirementMet(requirement, key)
         if (key === "Entropy tab" && isEntropyTabUnlocked()) {
@@ -4657,11 +4729,7 @@ function hideEntities() {
         }
         for (element of requirement.elements) {
             if (!element) continue
-            if (completed) {
-                element.classList.remove("hidden")
-            } else {
-                element.classList.add("hidden")
-            }
+            element.classList.toggle("hidden", !completed)
         }
     }
 }
@@ -4671,14 +4739,14 @@ function allStandardContentUnlocked() {
         var category = jobCategories[categoryName]
         for (entityName of category) {
             var requirement = gameData.requirements[entityName]
-            if (requirement && !requirement.isCompleted()) return false
+            if (requirement && !isRequirementMet(requirement, entityName)) return false
         }
     }
     for (categoryName in skillCategories) {
         var category = skillCategories[categoryName]
         for (entityName of category) {
             var requirement = gameData.requirements[entityName]
-            if (requirement && !requirement.isCompleted()) return false
+            if (requirement && !isRequirementMet(requirement, entityName)) return false
         }
     }
     return true
@@ -4883,9 +4951,7 @@ function autoPromote() {
         nextEntity = getNextEntity(gameData.taskData, entropyJobCategories, gameData.currentJob.name)
     }
     if (nextEntity == null) return
-    var requirement = gameData.requirements[nextEntity.name]
-    var unlocked = !requirement || (typeof requirement.isCompleted === "function" ? requirement.isCompleted() : requirement.completed !== false)
-    if (!unlocked) return
+    if (!isTaskUnlocked(nextEntity)) return
     if (!shouldAutoSwitch(gameData.currentJob, nextEntity)) return
     if (!attemptSelectTask(nextEntity)) return
     if (isCycleOverseerActive()) {
@@ -4907,7 +4973,7 @@ function isSkillUnlockedForAutoLearn(skill) {
         return false
     }
 
-    if (!isRequirementMetByKey(skill.name)) return false
+    if (!isSkillUnlocked(skill)) return false
 
     if (checkSkillSkipped(skill)) return false
     return true
@@ -5462,6 +5528,49 @@ function ensureCoinRequirementKeys() {
             req.key = key
         }
     }
+}
+
+function getRequirementByKey(key) {
+    if (!gameData || !gameData.requirements || !key) return null
+    return gameData.requirements[key] || null
+}
+
+function isRequirementMet(requirement, key) {
+    if (!requirement) return true
+    if (typeof requirement.isCompleted === "function") return requirement.isCompleted()
+    if (requirement.completed === false) return false
+    return requirement.completed !== false
+}
+
+function isRequirementMetByKey(key) {
+    return isRequirementMet(getRequirementByKey(key), key)
+}
+
+function isTaskUnlocked(taskOrName) {
+    if (!taskOrName) return false
+    var name = taskOrName.name || taskOrName
+    if (!name) return false
+    return isRequirementMetByKey(name)
+}
+
+function isJobUnlocked(jobOrName) {
+    return isTaskUnlocked(jobOrName)
+}
+
+function isSkillUnlocked(skillOrName) {
+    return isTaskUnlocked(skillOrName)
+}
+
+function isShopItemUnlocked(itemOrName) {
+    if (!itemOrName) return false
+    var key = itemOrName.name || itemOrName
+    if (!key) return false
+    return isRequirementMetByKey(key)
+}
+
+function isEntropyTabUnlocked() {
+    if (isRequirementMetByKey("Entropy tab")) return true
+    return !!(gameData && gameData.entropy && gameData.entropy.entropyUnlocked)
 }
 
 function handleFirstTimePrompt() {
@@ -6762,8 +6871,7 @@ if (typeof window !== "undefined" && DEBUG_DEV) {
         }
         var xpDict = {}
         allSkills.forEach(function(s) {
-            var req = gameData.requirements[s.name]
-            var unlocked = !req || (typeof req.isCompleted === "function" ? req.isCompleted() : req && req.completed === true)
+            var unlocked = isSkillUnlocked(s)
             var skipped = checkSkillSkipped(s)
             if (unlocked && !skipped) {
                 xpDict[s.name] = s.level
@@ -6784,11 +6892,11 @@ if (typeof window !== "undefined" && DEBUG_DEV) {
     window.__debugEntropy = function() {
         console.log("Entropy state:", gameData.entropy)
         var read = gameData.taskData["Read Almanach"]
-        var workReq = gameData.requirements["Work with Entropy"]
-        var studyReq = gameData.requirements["Study Entropy"]
+        var workReq = getRequirementByKey("Work with Entropy")
+        var studyReq = getRequirementByKey("Study Entropy")
         console.log("Read Almanach lvl:", read ? read.level : "n/a")
-        console.log("Work with Entropy unlocked:", workReq ? workReq.isCompleted() : "no req")
-        console.log("Study Entropy unlocked:", studyReq ? studyReq.isCompleted() : "no req")
+        console.log("Work with Entropy unlocked:", workReq ? isRequirementMet(workReq, "Work with Entropy") : "no req")
+        console.log("Study Entropy unlocked:", studyReq ? isRequirementMet(studyReq, "Study Entropy") : "no req")
     }
 }
 

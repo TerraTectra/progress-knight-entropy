@@ -637,6 +637,13 @@ button:focus {
     word-break: break-word;
 }
 
+.requiredRow .levels,
+.requiredRow .evil,
+.requiredRow .coins {
+    white-space: normal;
+    word-break: break-word;
+}
+
 .inline {
     display: inline-block;
 }
