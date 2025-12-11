@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Eternal Ascendant main loop and state wiring.
  *
  * Core systems:
@@ -392,44 +392,47 @@ function updateDebugPanel() {
 }
 
 function updateBalanceDebugPanel() {
-    var panel = document.getElementById("balanceDebugPanel")
-    if (!panel) return
+    var panel = document.getElementById("balanceDebugPanel");
+    if (!panel) return;
+
     if (!DEBUG_BALANCE) {
-        panel.classList.add("hidden")
-        return
+        panel.classList.add("hidden");
+        return;
     }
-    panel.classList.remove("hidden")
 
-    ensureSynergyState()
-    var mods = getUniverseModifiers()
-    var xpMult = getGlobalXpMultiplier()
-    var moneyMult = getGlobalMoneyMultiplier()
-    var entropyMult = (mods.entropyGainMultiplier || 1) * getPatternLatticeMultiplier()
-    var seedMult = (mods.seedGainMultiplier || 1) * (hasEntropyArtifact("u2_echoSeeds") ? BalanceConfig.artifacts.echoOfSeedsMultiplier : 1)
-    var costMult = mods.costScalingMultiplier || 1
-    var ftMult = hasEntropyArtifact("u2_fracturedTimeline") ? BalanceConfig.artifacts.fracturedTimelineCompressedXpMultiplier : 1
-    var echoMult = hasEntropyArtifact("u2_echoSeeds") ? BalanceConfig.artifacts.echoOfSeedsMultiplier : 1
-    var evilMult = hasEntropyArtifact("u2_evilResonator") && (gameData.evil || 0) > 0 ? BalanceConfig.artifacts.evilResonatorXpMultiplier : 1
-    var latticeStacks = gameData.patternLatticeStacks || 0
-    var latticeMult = getPatternLatticeMultiplier()
-    var synergy = gameData.synergy || {entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1}
-    var diPct = (synergy.darkInsight || 0) * 100
-    var psbPct = ((synergy.patternStabilityBonus || 1) - 1) * 100
-    var thresholdPct = SHORT_LIFE_THRESHOLD * (hasShortBrilliantLife() ? SHORT_LIFE_THRESHOLD_BONUS : 1)
-    var thresholdDisplay = (thresholdPct * 100).toFixed(1)
+    panel.classList.remove("hidden");
+    ensureSynergyState();
 
-    var lines = []
-    lines.push("Universe: " + (gameData.universeIndex || 1))
-    lines.push("Global: XP x" + xpMult.toFixed(3) + " | Money x" + moneyMult.toFixed(3))
-    lines.push("Entropy x" + entropyMult.toFixed(3) + " | Seeds x" + seedMult.toFixed(3) + " | Costs x" + costMult.toFixed(3))
-    lines.push("Artifacts: EchoSeeds x" + echoMult.toFixed(2) + ", FracturedTimeline x" + ftMult.toFixed(2) + ", EvilResonator x" + evilMult.toFixed(2))
-    lines.push("Pattern Lattice: stacks " + latticeStacks + " -> x" + latticeMult.toFixed(3))
-    lines.push("Synergy: pressure " + (synergy.entropyPressure || 0).toFixed(2) + " | DarkInsight " + diPct.toFixed(1) + "% | Pattern→Entropy +" + psbPct.toFixed(1) + "%")
-    lines.push("Short life < " + thresholdDisplay + "% lifespan; last life short: " + (gameData.lastLifeShort ? "yes" : "no"))
+    var mods = getUniverseModifiers();
+    var xpMult = getGlobalXpMultiplier();
+    var moneyMult = getGlobalMoneyMultiplier();
+    var entropyMult = (mods.entropyGainMultiplier || 1) * getPatternLatticeMultiplier();
+    var seedMult = (mods.seedGainMultiplier || 1) * (hasEntropyArtifact("u2_echoSeeds") ? BalanceConfig.artifacts.echoOfSeedsMultiplier : 1);
+    var costMult = mods.costScalingMultiplier || 1;
+    var ftMult = hasEntropyArtifact("u2_fracturedTimeline") ? BalanceConfig.artifacts.fracturedTimelineCompressedXpMultiplier : 1;
+    var echoMult = hasEntropyArtifact("u2_echoSeeds") ? BalanceConfig.artifacts.echoOfSeedsMultiplier : 1;
+    var evilMult = hasEntropyArtifact("u2_evilResonator") ? ((gameData.evil || 0) > 0 ? BalanceConfig.artifacts.evilResonatorXpMultiplier : 1) : 1;
+    var latticeStacks = gameData.patternLatticeStacks || 0;
+    var latticeMult = getPatternLatticeMultiplier();
+    var synergy = gameData.synergy || { entropyPressure: 0, darkInsight: 0, patternStabilityBonus: 1 };
+    var diPct = (synergy.darkInsight || 0) * 100;
+    var psbPct = ((synergy.patternStabilityBonus || 1) - 1) * 100;
+    var thresholdPct = SHORT_LIFE_THRESHOLD * (hasShortBrilliantLife() ? SHORT_LIFE_THRESHOLD_BONUS : 1);
+    var thresholdDisplay = (thresholdPct * 100).toFixed(1);
 
-    panel.innerHTML = "<div class='balance-debug-title'>Balance debug</div>" + lines.map(function(l) {
-        return "<div class='balance-debug-row'>" + l + "</div>"
-    }).join("")
+    var lines = [];
+    lines.push("Universe: " + (gameData.universeIndex || 1));
+    lines.push("Global: XP x" + xpMult.toFixed(3) + "  Money x" + moneyMult.toFixed(3));
+    lines.push("Entropy x" + entropyMult.toFixed(3) + "  Seeds x" + seedMult.toFixed(3) + "  Costs x" + costMult.toFixed(3));
+    lines.push("Artifacts: EchoSeeds x" + echoMult.toFixed(2) + ", FracturedTimeline x" + ftMult.toFixed(2) + ", EvilResonator x" + evilMult.toFixed(2));
+    lines.push("Pattern Lattice: stacks " + latticeStacks + " - x" + latticeMult.toFixed(3));
+    lines.push("Synergy: pressure " + (synergy.entropyPressure || 0).toFixed(2) + "  DarkInsight " + diPct.toFixed(1) + "%  PatternEntropy +" + psbPct.toFixed(1) + "%");
+    lines.push("Short life < " + thresholdDisplay + "% lifespan; last life short: " + (gameData.lastLifeShort ? "yes" : "no"));
+
+    var text = "Balance debug\n" + lines.join("\n");
+    if (panel.textContent !== text) {
+        panel.textContent = text;
+    }
 }
 
 function initDebugUI() {
@@ -1042,7 +1045,7 @@ const entropySkillCategories = {
     "Entropy Studies": ["Read Almanach", "Study Entropy", "Pattern Comprehension", "Time Manipulation", "Reality Architecture", "Self-Awareness of the Cycle"],
 } 
 
-// Чисто энтропийные ветки, скрываются до полной разблокировки энтропии
+// Р§РёСЃС‚Рѕ СЌРЅС‚СЂРѕРїРёР№РЅС‹Рµ РІРµС‚РєРё, СЃРєСЂС‹РІР°СЋС‚СЃСЏ РґРѕ РїРѕР»РЅРѕР№ СЂР°Р·Р±Р»РѕРєРёСЂРѕРІРєРё СЌРЅС‚СЂРѕРїРёРё
 const entropyOnlySkillCategories = ["Entropy Studies", "Deep Studies", "Longevity", "Orchestration", "Commitments", "Cycle"]
 
 const itemCategories = {
@@ -1124,7 +1127,7 @@ const tooltips = {
     "Body Maintenance": "Mindful care of body and mind. In fragile universes, it cushions aging and burnout.",
     "Life Orchestration": "Compose compressed moments into meaningful gains. Stronger when life is dense and focused.",
     "Life Decision": "Commit to the paths that matter. In the World of Choice, each major decision hits harder.",
-    "Career Obsession": "Laser focus on career outcomes—other paths fade. Mutually exclusive.",
+    "Career Obsession": "Laser focus on career outcomesвЂ”other paths fade. Mutually exclusive.",
     "Inner Mastery": "Prioritize inner growth over career ladders. Mutually exclusive.",
     "Wanderer": "Embrace movement and varied paths. Locks you out of rooted stability.",
     "Rooted Citizen": "Stay planted; depth in one place at the cost of mobility.",
@@ -3801,7 +3804,7 @@ function refreshUI() {
     if (debugButton) debugButton.textContent = tUi("sidebarDebug")
 }
 
-// Проверка видимости строки: учёт hiddenTask и display:none
+// РџСЂРѕРІРµСЂРєР° РІРёРґРёРјРѕСЃС‚Рё СЃС‚СЂРѕРєРё: СѓС‡С‘С‚ hiddenTask Рё display:none
 function isRowVisible(row) {
     if (!row) return false
     if (row.classList.contains("hidden")) return false
@@ -3812,7 +3815,7 @@ function isRowVisible(row) {
     return true
 }
 
-// Переключение видимости категории навыков (шапка, требование, строки)
+// РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РІРёРґРёРјРѕСЃС‚Рё РєР°С‚РµРіРѕСЂРёРё РЅР°РІС‹РєРѕРІ (С€Р°РїРєР°, С‚СЂРµР±РѕРІР°РЅРёРµ, СЃС‚СЂРѕРєРё)
 function setSkillCategoryVisibility(categoryName, visible) {
     var table = document.getElementById("skillTable")
     if (!table) return
@@ -3842,7 +3845,7 @@ function enforceEntropySkillVisibility() {
         if (!skillCategories.hasOwnProperty(categoryName)) continue
         var isEntropyOnly = entropyOnlySkillCategories.indexOf(categoryName) !== -1
 
-        // поздние энтропийные ветки — только при полной разблокировке
+        // РїРѕР·РґРЅРёРµ СЌРЅС‚СЂРѕРїРёР№РЅС‹Рµ РІРµС‚РєРё вЂ” С‚РѕР»СЊРєРѕ РїСЂРё РїРѕР»РЅРѕР№ СЂР°Р·Р±Р»РѕРєРёСЂРѕРІРєРµ
         if (isEntropyOnly && !entropyFullyUnlocked) {
             setSkillCategoryVisibility(categoryName, false)
             continue
@@ -4935,7 +4938,7 @@ function shouldAutoSwitch(currentTask, nextTask) {
     if (currentTask instanceof Skill && nextTask instanceof Skill) {
         var currentScoreSkill = currentTask.level + 1
         var candidateScoreSkill = nextTask.level + 1
-        // Для навыков переключаемся на более низкий уровень, чтобы выравнивать прокачку
+        // Р”Р»СЏ РЅР°РІС‹РєРѕРІ РїРµСЂРµРєР»СЋС‡Р°РµРјСЃСЏ РЅР° Р±РѕР»РµРµ РЅРёР·РєРёР№ СѓСЂРѕРІРµРЅСЊ, С‡С‚РѕР±С‹ РІС‹СЂР°РІРЅРёРІР°С‚СЊ РїСЂРѕРєР°С‡РєСѓ
         return candidateScoreSkill < currentScoreSkill * (1 - threshold / 2)
     }
     return true
@@ -7013,3 +7016,4 @@ function attemptSelectTask(task) {
     }
     return true
 }
+
