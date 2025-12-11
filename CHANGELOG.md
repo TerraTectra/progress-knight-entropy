@@ -10,6 +10,11 @@
 - Tuned arcane/military/dark ladders and automation: eased early concentration/mana/strength gates, nudged automation unlock later, and lowered dark magic entry costs to reduce idle grinds without skipping systems.
 - Entropy pacing tweaks: earlier Almanac discovery, a touch more EP from early insight, and slightly cheaper starter artifacts to make first seeds/upgrades attainable in a few solid runs.
 
+## Stage 5 - 2025-12-11
+- Added `EA_SIM` browser simulation harness (dev-only) to run isolated scenarios from the console without touching player saves.
+- Included canned baselines for early economy, dark entry, entropy entry, and automation timing, plus helpers to build custom scenarios and tick/summary runners.
+- Documented usage in `docs/DEV_SIM.md` and wired the harness after core scripts for safe opt-in debugging.
+
 ## 1.0.1 - Entropy UX polish
 - Entropy tab now follows a single unlock gate and remains visible after binding the Almanac.
 - Entropy unlock visibility and shop items stay rendered after discovery; affordability only disables actions.
