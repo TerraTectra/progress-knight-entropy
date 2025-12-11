@@ -3120,7 +3120,6 @@ function updateItemRows() {
                 button.title = ""
             }
         }
-        }
         var active = row.getElementsByClassName("active")[0]
         var color = itemCategories["Properties"].includes(item.name) ? headerRowColors["Properties"] : headerRowColors["Misc"]
         active.style.backgroundColor = gameData.currentMisc.includes(item) || item == gameData.currentProperty ? color : "white"
@@ -6601,13 +6600,8 @@ function initBaseGame() {
         //Other
         "The Arcane Association": new TaskRequirement(getElementsByClass("The Arcane Association"), [{task: "Concentration", requirement: 180}, {task: "Meditation", requirement: 180}]),
         "Dark magic": new EvilRequirement(getElementsByClass("Dark magic"), [{requirement: 1}]),
-<<<<<<< HEAD
         "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 40}]),
         "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25, allowShortLife: true}]),
-=======
-        "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 40}]),
-        "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25}]),
->>>>>>> 53faf32 (Adjust early/mid-game pacing and entropy entry balance)
         "Rebirth note 1": new AgeRequirement([document.getElementById("rebirthNote1")], [{requirement: 45}]),
         "Rebirth note 2": new AgeRequirement([document.getElementById("rebirthNote2")], [{requirement: 65}]),
         "Rebirth note 3": new AgeRequirement([document.getElementById("rebirthNote3")], [{requirement: 200}]),
@@ -7016,4 +7010,3 @@ function attemptSelectTask(task) {
     }
     return true
 }
-
