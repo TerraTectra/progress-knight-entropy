@@ -3852,17 +3852,41 @@ function updateShopRecommendation() {
     }
 
     var row = document.getElementById("row " + targetKey)
+    var liveNetNow = getNetPerDayForState(gameData).net
+    var sim = targetData.simulation
+    var canRescue = liveNetNow < threshold
+    var canAutoBuy = shouldAutoBuy && targetData.affordable && sim && isFinite(sim.deltaNet) && sim.deltaNet >= 0 && (sim.netAfter >= threshold || canRescue)
+
+    if (!canAutoBuy && DEBUG_BALANCE && typeof console !== "undefined" && console.debug) {
+        console.debug("AUTO-SHOP DEBUG target not bought", {
+            target: targetKey,
+            category: targetData.category,
+            affordable: targetData.affordable,
+            deltaNet: sim ? sim.deltaNet : null,
+            netAfter: sim ? sim.netAfter : null,
+            netBefore: sim ? sim.netBefore : null,
+            liveNet: liveNetNow,
+            threshold: threshold,
+            canRescue: canRescue,
+            shouldAutoBuy: shouldAutoBuy,
+        })
+    }
+
+    if (!canAutoBuy) {
+        if (recommendedShopItem) {
+            var prevRow = document.getElementById("row " + recommendedShopItem)
+            if (prevRow) prevRow.classList.remove("shop-row-auto-picked")
+        }
+        recommendedShopItem = null
+        return
+    }
+
     if (!recommendedShopItem || recommendedShopItem !== targetKey) {
         recommendedShopItem = targetKey
         if (row) {
             row.classList.add("shop-row-auto-picked")
         }
     }
-
-    var liveNetNow = getNetPerDayForState(gameData).net
-    var sim = targetData.simulation
-    var canRescue = liveNetNow < threshold
-    var canAutoBuy = shouldAutoBuy && targetData.affordable && sim && isFinite(sim.deltaNet) && sim.deltaNet >= 0 && (sim.netAfter >= threshold || canRescue)
 
     if (canAutoBuy) {
         var button = row ? row.getElementsByClassName("button")[0] : null
