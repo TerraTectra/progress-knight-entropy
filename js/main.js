@@ -3859,7 +3859,12 @@ function updateShopRecommendation() {
         }
     }
 
-    if (shouldAutoBuy && targetData.affordable && targetData.simulation && targetData.simulation.netAfter >= threshold) {
+    var liveNetNow = getNetPerDayForState(gameData).net
+    var sim = targetData.simulation
+    var canRescue = liveNetNow < threshold
+    var canAutoBuy = shouldAutoBuy && targetData.affordable && sim && isFinite(sim.deltaNet) && sim.deltaNet >= 0 && (sim.netAfter >= threshold || canRescue)
+
+    if (canAutoBuy) {
         var button = row ? row.getElementsByClassName("button")[0] : null
         var canUseButton = button && !button.disabled && typeof button.click === "function"
         if (canUseButton) {

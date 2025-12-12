@@ -25,6 +25,7 @@
 - Hardened auto-shop simulations to be strictly side-effect-free: net/day evaluation now runs on detached clones, never mutating live shop state or rolling back purchases, even when net/day is negative.
 - Added a DEBUG guard to flag any accidental shop ownership changes during recommendation, ensuring only the normal buy path can alter player inventory.
 - Fixed auto-buy regression: auto-shop now selects the best net/day candidate again (with safe fallbacks when net is already negative) while keeping simulations side-effect-free.
+- Clarified auto-buy gating to align with selection/rescue logic: highlighted targets now auto-purchase when affordable and non-harmful, even in rescue scenarios.
 
 ## 1.0.1 - Entropy UX polish
 - Entropy tab now follows a single unlock gate and remains visible after binding the Almanac.
