@@ -3565,46 +3565,79 @@ function simulateItemPurchaseForNet(stateOverride, itemKey) {
 }
 
 function buildShopContext(stateOverride) {
-    var state = cloneStateForNetSimulation(stateOverride || gameData)
-    var incomePerDay = getIncomePerDayForState(state, { disableJitter: true })
-    var expensePerDay = getExpensePerDayForState(state)
-    var costFactor = getUniverseConfigForState(state).costFactor || 1
-    var candidates = []
+    var liveState = stateOverride || gameData
+    var simState = cloneStateForNetSimulation(liveState)
+    var incomePerDay = getIncomePerDayForState(simState, { disableJitter: true })
+    var expensePerDay = getExpensePerDayForState(simState)
+    var costFactor = getUniverseConfigForState(simState).costFactor || 1
+    var threshold = getShopNetThreshold()
 
-    for (var itemName in state.itemData) {
-        if (!state.itemData.hasOwnProperty(itemName)) continue
-        var item = state.itemData[itemName]
+    var allItems = []
+    var visibleItems = []
+    var unlockedItems = []
+    var notPurchasedItems = []
+    var affordableItems = []
+    var candidates = []
+    var netSafeCandidates = []
+
+    for (var itemName in liveState.itemData) {
+        if (!liveState.itemData.hasOwnProperty(itemName)) continue
+        var item = liveState.itemData[itemName]
         if (!item) continue
         var categoryName = getItemCategoryName(item.name)
         if (!categoryName || !itemCategories[categoryName]) continue
         if (categoryName !== "Properties" && categoryName !== "Misc") continue
         var unlocked = isShopItemUnlocked(item)
-        if (!unlocked) continue
-        var purchased = isItemPurchasedInState(state, item.name)
-        var effectiveCost = getEffectiveItemCostForState(state, item)
-        candidates.push({
+        var purchased = isItemPurchasedInState(simState, item.name)
+        var effectiveCost = getEffectiveItemCostForState(simState, item)
+        var affordable = (liveState.coins || 0) >= effectiveCost
+        var entry = {
             key: item.name,
             item: item,
             category: categoryName,
             unlocked: unlocked,
             requirementMet: isRequirementMetByKey(item.name),
             purchased: purchased,
-            active: isItemActiveInState(state, item),
+            active: isItemActiveInState(simState, item),
             visible: unlocked,
             effectiveCost: effectiveCost,
-            affordable: (state.coins || 0) >= effectiveCost,
+            affordable: affordable,
             expense: item.getExpense() * costFactor,
-        })
+        }
+        allItems.push(entry)
+        if (entry.visible) visibleItems.push(entry)
+        if (entry.unlocked) unlockedItems.push(entry)
+        if (!entry.purchased) notPurchasedItems.push(entry)
+        if (entry.affordable) affordableItems.push(entry)
+
+        if (entry.visible && entry.unlocked && !entry.purchased && entry.affordable) {
+            var sim = simulateItemPurchaseForNet(liveState, entry.key)
+            entry.simulation = sim
+            entry.netAfter = sim ? sim.netAfter : null
+            entry.deltaNet = sim ? sim.deltaNet : null
+            entry.netBefore = sim ? sim.netBefore : null
+            candidates.push(entry)
+            if (sim && sim.netAfter >= threshold) {
+                netSafeCandidates.push(entry)
+            }
+        }
     }
 
     return {
-        state: state,
+        state: simState,
         incomePerDay: incomePerDay,
         expensePerDay: expensePerDay,
         costFactor: costFactor,
-        coins: state.coins || 0,
+        coins: simState.coins || 0,
         netBefore: incomePerDay - expensePerDay,
+        threshold: threshold,
+        allItems: allItems,
+        visibleItems: visibleItems,
+        unlockedItems: unlockedItems,
+        notPurchasedItems: notPurchasedItems,
+        affordableItems: affordableItems,
         candidates: candidates,
+        netSafeCandidates: netSafeCandidates,
     }
 }
 
@@ -3624,6 +3657,7 @@ function findCandidateInContext(ctx, key) {
 function validateAutoShopTarget(targetKey, ctx, threshold) {
     if (!targetKey || !ctx) return null
     var thresholdNet = typeof threshold === "number" ? threshold : getShopNetThreshold()
+    var liveNet = getNetPerDayForState(gameData).net
     var candidateMeta = findCandidateInContext(ctx, targetKey)
     var item = candidateMeta ? candidateMeta.item : findShopItemByKey(targetKey)
     if (!item) return null
@@ -3636,8 +3670,9 @@ function validateAutoShopTarget(targetKey, ctx, threshold) {
 
     var simulation = simulateItemPurchaseForNet(ctx.state || gameData, targetKey)
     if (!simulation) return null
-    if (simulation.netAfter < thresholdNet) return null
     if (simulation.deltaNet < 0) return null
+    var netSafe = simulation.netAfter >= thresholdNet
+    if (!netSafe && liveNet >= thresholdNet) return null
 
     var effectiveCost = candidateMeta && typeof candidateMeta.effectiveCost === "number" ? candidateMeta.effectiveCost : getEffectiveItemCostForState(ctx.state || gameData, item)
     var affordable = (ctx.state ? ctx.state.coins : gameData.coins) >= effectiveCost
@@ -3653,50 +3688,89 @@ function validateAutoShopTarget(targetKey, ctx, threshold) {
 
 function selectBestShopCandidate(ctx, threshold) {
     var shopCtx = ctx || buildShopContext()
-    var thresholdNet = typeof threshold === "number" ? threshold : getShopNetThreshold()
+    var thresholdNet = typeof threshold === "number" ? threshold : (shopCtx && typeof shopCtx.threshold === "number" ? shopCtx.threshold : getShopNetThreshold())
+    var liveNet = getNetPerDayForState(gameData).net
     var EPSILON = 1e-9
     var best = null
 
-    shopCtx.candidates.forEach(function(candidate) {
-        if (!candidate || !candidate.visible || !candidate.unlocked || !candidate.requirementMet) return
-        if (candidate.purchased) return
-        var simulation = simulateItemPurchaseForNet(shopCtx.state || gameData, candidate.key)
-        if (!simulation) return
-        if (simulation.netAfter < thresholdNet) return
-        if (simulation.deltaNet < 0) return
-
+    function normalizeCandidate(candidate) {
+        if (!candidate) return null
+        var sim = candidate.simulation || simulateItemPurchaseForNet(gameData, candidate.key)
+        if (!sim) return null
         var effectiveCost = typeof candidate.effectiveCost === "number" ? candidate.effectiveCost : getEffectiveItemCostForState(shopCtx.state || gameData, candidate.item)
-        var affordable = (shopCtx.state ? shopCtx.state.coins : gameData.coins) >= effectiveCost
-        var payload = {
+        var affordable = candidate.affordable !== undefined ? candidate.affordable : ((shopCtx.state ? shopCtx.state.coins : gameData.coins) >= effectiveCost)
+        return {
             key: candidate.key,
             item: candidate.item,
             category: candidate.category,
             effectiveCost: effectiveCost,
             affordable: affordable,
-            simulation: simulation,
+            simulation: sim,
+            deltaNet: sim.deltaNet,
+            netAfter: sim.netAfter,
         }
+    }
 
-        if (!best) {
-            best = payload
-            return
-        }
-        var delta = simulation.deltaNet
-        var bestDelta = best.simulation ? best.simulation.deltaNet : -Infinity
-        if (delta > bestDelta + EPSILON) {
-            best = payload
-            return
-        }
-        if (Math.abs(delta - bestDelta) <= EPSILON) {
-            if (effectiveCost > best.effectiveCost + EPSILON) {
-                best = payload
+    function pickBest(list) {
+        var chosen = null
+        list.forEach(function(c) {
+            var sim = c.simulation
+            var delta = sim ? sim.deltaNet : c.deltaNet
+            if (!isFinite(delta)) return
+            if (!chosen) {
+                chosen = c
                 return
             }
-            if (Math.abs(effectiveCost - best.effectiveCost) <= EPSILON && payload.key < best.key) {
-                best = payload
+            var bestDelta = chosen.simulation ? chosen.simulation.deltaNet : chosen.deltaNet
+            if (delta > bestDelta + EPSILON) {
+                chosen = c
+                return
             }
+            if (Math.abs(delta - bestDelta) <= EPSILON) {
+                if (c.effectiveCost > chosen.effectiveCost + EPSILON) {
+                    chosen = c
+                    return
+                }
+                if (Math.abs(c.effectiveCost - chosen.effectiveCost) <= EPSILON && c.key < chosen.key) {
+                    chosen = c
+                }
+            }
+        })
+        return chosen
+    }
+
+    var netSafe = []
+    var netUnsafe = []
+    var baseList = shopCtx && Array.isArray(shopCtx.candidates) ? shopCtx.candidates : []
+    baseList.forEach(function(candidate) {
+        if (!candidate || !candidate.visible || !candidate.unlocked || !candidate.requirementMet) return
+        if (candidate.purchased) return
+        if (candidate.affordable === false) return
+        var normalized = normalizeCandidate(candidate)
+        if (!normalized) return
+        if (!isFinite(normalized.deltaNet)) {
+            netUnsafe.push(normalized)
+            return
+        }
+        if (normalized.netAfter >= thresholdNet) {
+            netSafe.push(normalized)
+        } else {
+            netUnsafe.push(normalized)
         }
     })
 
+    if (netSafe.length > 0) {
+        best = pickBest(netSafe)
+        if (best) return best
+    }
+
+    if (liveNet >= thresholdNet) {
+        return null
+    }
+
+    if (netUnsafe.length > 0) {
+        best = pickBest(netUnsafe)
+    }
     return best
 }
 
@@ -3747,6 +3821,19 @@ function updateShopRecommendation() {
     if (!targetData) {
         var candidate = selectBestShopCandidate(ctx, threshold)
         if (!candidate) {
+            if (DEBUG_BALANCE && typeof console !== "undefined" && console.debug) {
+                console.debug("AUTO-SHOP DEBUG no target", {
+                    net: getNetPerDayForState(gameData).net,
+                    minNet: threshold,
+                    itemsTotal: ctx.allItems ? ctx.allItems.length : 0,
+                    visible: ctx.visibleItems ? ctx.visibleItems.length : 0,
+                    unlocked: ctx.unlockedItems ? ctx.unlockedItems.length : 0,
+                    affordable: ctx.affordableItems ? ctx.affordableItems.length : 0,
+                    candidates: ctx.candidates ? ctx.candidates.length : 0,
+                    netSafeCandidates: ctx.netSafeCandidates ? ctx.netSafeCandidates.length : 0,
+                    autoShopTargetKey: gameData.autoShopTargetKey || null,
+                })
+            }
             clearRecommendation(true)
             return
         }
