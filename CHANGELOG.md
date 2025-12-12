@@ -19,6 +19,11 @@
 - Stabilized auto-shop: auto-buy now picks a single affordable candidate per tick without thrashing between cheapest items or spamming purchases, reducing lag.
 - Refined auto-shop with a sticky target so recommendations no longer bounce between the first row and cheapest item; target persists until bought or invalid.
 - Auto-shop now scores items by projected net/day and effect value, picking the best sustainable purchase (ignoring manual row selection) while keeping net income above the safe threshold.
+- Auto-shop scoring now prioritizes income-boosting items by largest income gain and supported cost (then safer utility), rather than defaulting to the cheapest viable item.
+
+## Stage 6 - 2025-12-12
+- Hardened auto-shop simulations to be strictly side-effect-free: net/day evaluation now runs on detached clones, never mutating live shop state or rolling back purchases, even when net/day is negative.
+- Added a DEBUG guard to flag any accidental shop ownership changes during recommendation, ensuring only the normal buy path can alter player inventory.
 
 ## 1.0.1 - Entropy UX polish
 - Entropy tab now follows a single unlock gate and remains visible after binding the Almanac.

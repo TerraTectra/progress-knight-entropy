@@ -3253,47 +3253,176 @@ function updateShopAutoPickState() {
     }
 }
 
-function withGameDataOverride(stateOverride, fn) {
-    if (typeof fn !== "function") return null
-    if (!stateOverride || stateOverride === gameData) {
-        return fn()
+function getShopNetThreshold() {
+    if (typeof BalanceConfig !== "undefined" && BalanceConfig.shop && typeof BalanceConfig.shop.minNet === "number") {
+        return BalanceConfig.shop.minNet
     }
-    var previous = gameData
-    gameData = stateOverride
-    try {
-        return fn()
-    } finally {
-        gameData = previous
+    return 0
+}
+
+function snapshotShopOwnership(state) {
+    var snap = { purchased: [], property: null, misc: [] }
+    if (!state) return snap
+    var purchased = []
+    if (state.purchasedItems) {
+        for (var key in state.purchasedItems) {
+            if (!state.purchasedItems.hasOwnProperty(key)) continue
+            if (state.purchasedItems[key]) purchased.push(key)
+        }
+    }
+    purchased.sort()
+    snap.purchased = purchased
+    snap.property = state.currentProperty && state.currentProperty.name ? state.currentProperty.name : null
+    if (Array.isArray(state.currentMisc)) {
+        snap.misc = state.currentMisc.map(function(m) { return m && m.name ? m.name : m }).filter(Boolean).sort()
+    }
+    return snap
+}
+
+function areShopOwnershipSnapshotsEqual(a, b) {
+    if (!a || !b) return false
+    if (a.property !== b.property) return false
+    if (a.misc.length !== b.misc.length) return false
+    for (var i = 0; i < a.misc.length; i++) {
+        if (a.misc[i] !== b.misc[i]) return false
+    }
+    if (a.purchased.length !== b.purchased.length) return false
+    for (var j = 0; j < a.purchased.length; j++) {
+        if (a.purchased[j] !== b.purchased[j]) return false
+    }
+    return true
+}
+
+function getUniverseConfigForState(state, targetIndex) {
+    var idx = targetIndex || (state ? state.universeIndex : null) || (gameData ? gameData.universeIndex : 1) || 1
+    return universeConfigs[idx] || universeConfigs[1]
+}
+
+function getUniverseModifiersForState(state) {
+    var idx = (state && state.universeIndex) || (gameData && gameData.universeIndex) || 1
+    var cfg = getUniverseConfigForState(state, idx)
+    var override = BalanceConfig.universe && BalanceConfig.universe[idx]
+    var xp = override && override.xp !== undefined ? override.xp : (cfg.xpFactor || 1)
+    var money = override && override.money !== undefined ? override.money : (cfg.moneyFactor || 1)
+    var entropy = override && override.entropy !== undefined ? override.entropy : (cfg.entropyFactor || 1)
+    var seeds = override && override.seeds !== undefined ? override.seeds : (cfg.seedFactor || 1)
+    var cost = override && override.cost !== undefined ? override.cost : (cfg.costFactor || 1)
+    return {
+        xpGainMultiplier: xp,
+        moneyGainMultiplier: money,
+        entropyGainMultiplier: entropy,
+        seedGainMultiplier: seeds,
+        costScalingMultiplier: cost,
     }
 }
 
-function getIncomePerDayForState(state) {
-    return withGameDataOverride(state, function() {
-        return getIncome({ disableJitter: true })
-    })
+function getGlobalMoneyMultiplierForState(state) {
+    var m = getUniverseModifiersForState(state).moneyGainMultiplier || 1
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.slower_money_gain) {
+            m *= Math.max(0, 1 - mods.slower_money_gain)
+        }
+    }
+    return m
+}
+
+function isCycleOverseerActiveForState(state) {
+    return !!(state && state.entropy && state.entropy.overseer)
+}
+
+function getFocusedTaskForState(state) {
+    if (!state || !state.entropy || !state.entropy.focusTask) return null
+    var name = state.entropy.focusTask
+    if (state.taskData && state.taskData[name]) {
+        return state.taskData[name]
+    }
+    return null
+}
+
+function getLifeCompressionFactorsForState(state, isActive) {
+    var idx = (state && state.universeIndex) || 1
+    if (idx < 5) return {age: 1, xp: 1, money: 1, pattern: 1}
+    var cfg = getUniverseConfigForState(state)
+    if (!cfg.lifeCompressionEnabled) return {age: 1, xp: 1, money: 1, pattern: 1}
+    var age = daysToYears(state && typeof state.days === "number" ? state.days : gameData.days)
+    var phase = getLifePhase(age)
+    var phaseBoost = phase == "early" ? 1.05 : phase == "mid" ? 1 : 0.95
+    var idleAge = 1.2
+    var idleGain = 0.7
+    var activeAge = 1
+    var activeGain = 1.12
+    var ageFactor = isActive ? activeAge : idleAge
+    var xpFactor = (isActive ? activeGain : idleGain) * phaseBoost
+    var moneyFactor = (isActive ? activeGain : idleGain) * phaseBoost
+    var patternFactor = (isActive ? activeGain : idleGain) * phaseBoost
+    var orchestrate = state && state.taskData ? state.taskData["Life Orchestration"] : null
+    if (orchestrate && isActive) {
+        var boost = 1 + 0.02 * Math.log(1 + orchestrate.level)
+        xpFactor *= boost
+        moneyFactor *= boost
+        patternFactor *= boost
+    }
+    var metaCompression = idx >= 9 ? (state && state.metaWeights ? state.metaWeights.compression || 1 : 1) : 1
+    return {age: ageFactor * metaCompression, xp: xpFactor * metaCompression, money: moneyFactor * metaCompression, pattern: patternFactor * metaCompression}
+}
+
+function getIncomePerDayForState(state, options) {
+    var compression = getLifeCompressionFactorsForState(state, true)
+    var jitter = 1
+    var skipJitter = options && options.disableJitter
+    var idx = (state && state.universeIndex) || 1
+    var strain = state && typeof state.cycleStrain === "number" ? state.cycleStrain : (gameData ? gameData.cycleStrain : 0)
+    if (!skipJitter && idx >= 8 && strain > 5) {
+        jitter += (Math.random() * 0.08 - 0.04) * Math.min((strain - 5) / 5, 1)
+    }
+    var focusJob = null
+    if (isCycleOverseerActiveForState(state)) {
+        var focusTask = getFocusedTaskForState(state)
+        if (focusTask && focusTask instanceof Job) focusJob = focusTask
+    }
+    if (!focusJob && state && state.currentJob) {
+        focusJob = state.currentJob
+    }
+    var income = 0
+    if (focusJob && isTaskUnlocked(focusJob)) {
+        income = computeJobIncomeForTickSafe(focusJob, true)
+        if (state && state !== gameData) {
+            var liveMult = getGlobalMoneyMultiplier()
+            var stateMult = getGlobalMoneyMultiplierForState(state)
+            if (liveMult && liveMult !== stateMult) {
+                income = income * (stateMult / liveMult)
+            }
+        }
+    }
+    return income * compression.money * jitter
 }
 
 function getExpensePerDayForState(state) {
-    return withGameDataOverride(state, function() {
-        return getExpense()
-    })
+    if (!state) return getExpense()
+    var expense = 0
+    if (state.currentProperty && typeof state.currentProperty.getExpense === "function") {
+        expense += state.currentProperty.getExpense()
+    }
+    if (Array.isArray(state.currentMisc)) {
+        state.currentMisc.forEach(function(m) {
+            if (m && typeof m.getExpense === "function") {
+                expense += m.getExpense()
+            }
+        })
+    }
+    var costFactor = getUniverseConfigForState(state).costFactor || 1
+    return expense * costFactor
 }
 
 function getNetPerDayForState(state) {
-    var income = getIncomePerDayForState(state)
+    var income = getIncomePerDayForState(state, { disableJitter: true })
     var expense = getExpensePerDayForState(state)
     return {
         income: income,
         expense: expense,
         net: income - expense,
     }
-}
-
-function getShopNetThreshold() {
-    if (typeof BalanceConfig !== "undefined" && BalanceConfig.shop && typeof BalanceConfig.shop.minNet === "number") {
-        return BalanceConfig.shop.minNet
-    }
-    return 0
 }
 
 function getCategoryPurchaseCountForState(state, categoryName) {
@@ -3326,17 +3455,56 @@ function isItemActiveInState(state, item) {
     return false
 }
 
-function cloneGameDataForShopSimulation(stateOverride) {
+function cloneStateForNetSimulation(stateOverride) {
     var source = stateOverride || gameData
-    var clone = Object.assign({}, source)
-    clone.purchasedItems = Object.assign({}, source && source.purchasedItems ? source.purchasedItems : {})
-    clone.categoryPurchaseCounts = Object.assign({}, source && source.categoryPurchaseCounts ? source.categoryPurchaseCounts : {})
-    clone.currentMisc = Array.isArray(source && source.currentMisc) ? source.currentMisc.slice() : []
-    clone.settings = Object.assign({}, source && source.settings ? source.settings : {})
-    clone.entropy = Object.assign({}, source && source.entropy ? source.entropy : {})
-    clone.synergy = Object.assign({}, source && source.synergy ? source.synergy : {})
-    clone.metaWeights = Object.assign({}, source && source.metaWeights ? source.metaWeights : {})
-    clone.meaningMilestones = Object.assign({}, source && source.meaningMilestones ? source.meaningMilestones : {})
+    var clone = {
+        universeIndex: source && source.universeIndex !== undefined ? source.universeIndex : 1,
+        coins: source && source.coins !== undefined ? source.coins : 0,
+        days: source && source.days !== undefined ? source.days : (gameData ? gameData.days : 0),
+        cycleStrain: source && source.cycleStrain !== undefined ? source.cycleStrain : 0,
+        entropy: Object.assign({}, source && source.entropy ? source.entropy : {}),
+        synergy: Object.assign({}, source && source.synergy ? source.synergy : {}),
+        metaWeights: Object.assign({}, source && source.metaWeights ? source.metaWeights : {}),
+        meaning: source && source.meaning !== undefined ? source.meaning : 0,
+        meaningMilestones: Object.assign({}, source && source.meaningMilestones ? source.meaningMilestones : {}),
+        timeWarpingEnabled: source && source.timeWarpingEnabled !== undefined ? source.timeWarpingEnabled : true,
+        paused: !!(source && source.paused),
+        currentJob: source ? source.currentJob : null,
+        currentSkill: source ? source.currentSkill : null,
+        currentProperty: source ? source.currentProperty : null,
+        currentMisc: Array.isArray(source && source.currentMisc) ? source.currentMisc.slice() : [],
+        itemData: source ? source.itemData : (gameData ? gameData.itemData : {}),
+        taskData: source ? source.taskData : (gameData ? gameData.taskData : {}),
+        purchasedItems: {},
+        categoryPurchaseCounts: {},
+        settings: Object.assign({}, source && source.settings ? source.settings : {}),
+        requirements: source && source.requirements ? source.requirements : (gameData ? gameData.requirements : {}),
+    }
+
+    var purchased = Object.assign({}, source && source.purchasedItems ? source.purchasedItems : {})
+    var activeNames = []
+    if (clone.currentProperty && clone.currentProperty.name) activeNames.push(clone.currentProperty.name)
+    if (Array.isArray(clone.currentMisc)) {
+        clone.currentMisc.forEach(function(m) {
+            if (m && m.name) activeNames.push(m.name)
+        })
+    }
+    activeNames.forEach(function(name) {
+        purchased[name] = true
+    })
+
+    var rebuiltCounts = {}
+    for (var itemName in purchased) {
+        if (!purchased.hasOwnProperty(itemName)) continue
+        if (!purchased[itemName]) continue
+        if (isFreeStarterItem(itemName)) continue
+        var categoryName = getItemCategoryName(itemName)
+        if (!categoryName) continue
+        rebuiltCounts[categoryName] = (rebuiltCounts[categoryName] || 0) + 1
+    }
+
+    clone.purchasedItems = purchased
+    clone.categoryPurchaseCounts = rebuiltCounts
     return clone
 }
 
@@ -3374,10 +3542,7 @@ function simulateItemPurchaseForNet(stateOverride, itemKey) {
     var item = findShopItemByKey(itemKey)
     if (!baseState || !item) return null
 
-    var simState = cloneGameDataForShopSimulation(baseState)
-    withGameDataOverride(simState, function() {
-        ensureShopState()
-    })
+    var simState = cloneStateForNetSimulation(baseState)
 
     var before = getNetPerDayForState(simState)
     var purchaseMeta = applySimulatedPurchase(simState, item)
@@ -3400,50 +3565,47 @@ function simulateItemPurchaseForNet(stateOverride, itemKey) {
 }
 
 function buildShopContext(stateOverride) {
-    var state = stateOverride || gameData
-    return withGameDataOverride(state, function() {
-        ensureShopState()
-        var incomePerDay = getIncome({ disableJitter: true })
-        var expensePerDay = getExpense()
-        var costFactor = (getUniverseConfig(state && state.universeIndex) || getUniverseConfig()).costFactor || 1
-        var candidates = []
+    var state = cloneStateForNetSimulation(stateOverride || gameData)
+    var incomePerDay = getIncomePerDayForState(state, { disableJitter: true })
+    var expensePerDay = getExpensePerDayForState(state)
+    var costFactor = getUniverseConfigForState(state).costFactor || 1
+    var candidates = []
 
-        for (var itemName in state.itemData) {
-            if (!state.itemData.hasOwnProperty(itemName)) continue
-            var item = state.itemData[itemName]
-            if (!item) continue
-            var categoryName = getItemCategoryName(item.name)
-            if (!categoryName || !itemCategories[categoryName]) continue
-            if (categoryName !== "Properties" && categoryName !== "Misc") continue
-            var unlocked = isShopItemUnlocked(item)
-            if (!unlocked) continue
-            var purchased = isItemPurchasedInState(state, item.name)
-            var effectiveCost = getEffectiveItemCostForState(state, item)
-            candidates.push({
-                key: item.name,
-                item: item,
-                category: categoryName,
-                unlocked: unlocked,
-                requirementMet: isRequirementMetByKey(item.name),
-                purchased: purchased,
-                active: isItemActiveInState(state, item),
-                visible: unlocked,
-                effectiveCost: effectiveCost,
-                affordable: (state.coins || 0) >= effectiveCost,
-                expense: item.getExpense() * costFactor,
-            })
-        }
+    for (var itemName in state.itemData) {
+        if (!state.itemData.hasOwnProperty(itemName)) continue
+        var item = state.itemData[itemName]
+        if (!item) continue
+        var categoryName = getItemCategoryName(item.name)
+        if (!categoryName || !itemCategories[categoryName]) continue
+        if (categoryName !== "Properties" && categoryName !== "Misc") continue
+        var unlocked = isShopItemUnlocked(item)
+        if (!unlocked) continue
+        var purchased = isItemPurchasedInState(state, item.name)
+        var effectiveCost = getEffectiveItemCostForState(state, item)
+        candidates.push({
+            key: item.name,
+            item: item,
+            category: categoryName,
+            unlocked: unlocked,
+            requirementMet: isRequirementMetByKey(item.name),
+            purchased: purchased,
+            active: isItemActiveInState(state, item),
+            visible: unlocked,
+            effectiveCost: effectiveCost,
+            affordable: (state.coins || 0) >= effectiveCost,
+            expense: item.getExpense() * costFactor,
+        })
+    }
 
-        return {
-            state: state,
-            incomePerDay: incomePerDay,
-            expensePerDay: expensePerDay,
-            costFactor: costFactor,
-            coins: state.coins || 0,
-            netBefore: incomePerDay - expensePerDay,
-            candidates: candidates,
-        }
-    })
+    return {
+        state: state,
+        incomePerDay: incomePerDay,
+        expensePerDay: expensePerDay,
+        costFactor: costFactor,
+        coins: state.coins || 0,
+        netBefore: incomePerDay - expensePerDay,
+        candidates: candidates,
+    }
 }
 
 function findShopItemByKey(key) {
@@ -3538,6 +3700,14 @@ function selectBestShopCandidate(ctx, threshold) {
     return best
 }
 
+function __dev_assertNoShopRollbackDuringSelection(beforeSnapshot) {
+    if (!DEBUG_BALANCE) return
+    var after = snapshotShopOwnership(gameData)
+    if (!areShopOwnershipSnapshotsEqual(beforeSnapshot, after) && typeof console !== "undefined" && console.error) {
+        console.error("Auto-shop selection mutated shop ownership! This must never happen.", beforeSnapshot, after)
+    }
+}
+
 function updateShopRecommendation() {
     if (!autoPickShopElement) autoPickShopElement = document.getElementById("autoPickShopCheckbox")
     var table = document.getElementById("itemTable")
@@ -3568,6 +3738,7 @@ function updateShopRecommendation() {
     }
     var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
 
+    var snapshotBefore = DEBUG_BALANCE ? snapshotShopOwnership(gameData) : null
     var ctx = buildShopContext()
     var threshold = getShopNetThreshold()
     var targetKey = gameData.autoShopTargetKey || null
@@ -3582,6 +3753,10 @@ function updateShopRecommendation() {
         targetData = candidate
         targetKey = candidate.key
         gameData.autoShopTargetKey = targetKey
+    }
+
+    if (DEBUG_BALANCE && snapshotBefore) {
+        __dev_assertNoShopRollbackDuringSelection(snapshotBefore)
     }
 
     if (recommendedShopItem && recommendedShopItem !== targetKey) {
