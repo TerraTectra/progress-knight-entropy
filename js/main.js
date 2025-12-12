@@ -54,6 +54,7 @@ var gameData = {
     autoSwitchJobs: false,
     autoSwitchSkills: false,
     settings: {autoPickShop: false},
+    autoShopTargetKey: null,
     seenUniverseIntro: {},
     pendingUniverseIntro: null,
     lastLifeShort: false,
@@ -3252,17 +3253,74 @@ function updateShopAutoPickState() {
     }
 }
 
-function selectBestShopCandidate() {
+function buildShopContext() {
     ensureShopState()
-
-    var incomePerDay = getIncome()
-    var baseExpenses = getExpense()
     var costFactor = getUniverseConfig().costFactor || 1
-    var currentPropertyExpense = (gameData.currentProperty ? gameData.currentProperty.getExpense() : 0) * costFactor
+    return {
+        incomePerDay: getIncome(),
+        baseExpenses: getExpense(),
+        costFactor: costFactor,
+        currentPropertyExpense: (gameData.currentProperty ? gameData.currentProperty.getExpense() : 0) * costFactor,
+        coins: gameData.coins || 0,
+    }
+}
+
+function findShopItemByKey(key) {
+    if (!key || !gameData || !gameData.itemData) return null
+    return gameData.itemData[key] || null
+}
+
+function evaluateShopItem(item, ctx, requireAffordable) {
+    if (!item || !ctx) return null
+
+    var categoryName = getItemCategoryName(item.name)
+    if (!categoryName || !itemCategories[categoryName]) return null
+
+    var requirement = gameData.requirements[item.name]
+    if (requirement) {
+        if (typeof requirement.isCompleted === "function") {
+            if (!requirement.isCompleted()) return null
+        } else if (requirement.completed === false) {
+            return null
+        }
+    }
+
+    var alreadyPurchased = isItemPurchased(item.name)
+    var isActive = isItemActive(item)
+    if (isActive) return null
+
+    var effectiveCost = alreadyPurchased ? 0 : getEffectiveItemCost(item)
+    var candidateExpense = item.getExpense() * ctx.costFactor
+    var candidateExpenses = ctx.baseExpenses
+
+    if (categoryName === "Properties") {
+        candidateExpenses = ctx.baseExpenses - ctx.currentPropertyExpense + candidateExpense
+    } else if (categoryName === "Misc") {
+        candidateExpenses = ctx.baseExpenses + candidateExpense
+    } else {
+        return null
+    }
+
+    var candidateNet = ctx.incomePerDay - candidateExpenses
+    if (candidateNet < 0) return null
+
+    var canCoverExpenseNow = ctx.coins >= candidateExpense
+    var canAfford = ctx.coins >= effectiveCost && canCoverExpenseNow
+    if (requireAffordable && !canAfford) return null
+
+    return {
+        item: item,
+        category: categoryName,
+        cost: effectiveCost,
+        net: candidateNet,
+        canAfford: canAfford,
+    }
+}
+
+function selectBestShopCandidate(ctx) {
+    var shopCtx = ctx || buildShopContext()
 
     var bestCandidate = null
-    var bestCandidateCategory = null
-    var bestCandidateCost = 0
     var bestNet = -Infinity
 
     for (var itemName in gameData.itemData) {
@@ -3270,57 +3328,17 @@ function selectBestShopCandidate() {
         var item = gameData.itemData[itemName]
         if (!item) continue
 
-        var categoryName = getItemCategoryName(itemName)
-        if (!categoryName || !itemCategories[categoryName]) continue
+        var data = evaluateShopItem(item, shopCtx, true)
+        if (!data) continue
 
-        var requirement = gameData.requirements[itemName]
-        if (requirement) {
-            if (typeof requirement.isCompleted === "function") {
-                if (!requirement.isCompleted()) continue
-            } else if (requirement.completed === false) {
-                continue
-            }
-        }
-
-        var alreadyPurchased = isItemPurchased(itemName)
-        var isActive = isItemActive(item)
-        if (isActive) continue
-
-        var effectiveCost = alreadyPurchased ? 0 : getEffectiveItemCost(item)
-        if (gameData.coins < effectiveCost) continue
-
-        var candidateExpense = item.getExpense() * costFactor
-        var canCoverExpenseNow = gameData.coins >= candidateExpense
-
-        var candidateExpenses = baseExpenses
-
-        if (categoryName === "Properties") {
-            candidateExpenses = baseExpenses - currentPropertyExpense + candidateExpense
-        } else if (categoryName === "Misc") {
-            candidateExpenses = baseExpenses + candidateExpense
-        } else {
-            continue
-        }
-
-        var candidateNet = incomePerDay - candidateExpenses
-        if (candidateNet < 0) continue
-        if (!alreadyPurchased && !canCoverExpenseNow) continue
-        if (alreadyPurchased && !canCoverExpenseNow) continue
-
-        if (candidateNet > bestNet) {
-            bestNet = candidateNet
-            bestCandidate = item
-            bestCandidateCategory = categoryName
-            bestCandidateCost = effectiveCost
+        if (data.net > bestNet) {
+            bestNet = data.net
+            bestCandidate = data
         }
     }
 
     if (!bestCandidate) return null
-    return {
-        item: bestCandidate,
-        category: bestCandidateCategory,
-        cost: bestCandidateCost,
-    }
+    return bestCandidate
 }
 
 function updateShopRecommendation() {
@@ -3338,47 +3356,63 @@ function updateShopRecommendation() {
 
     if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) {
         clearRecommendation()
+        gameData.autoShopTargetKey = null
         return
     }
     if (typeof getActiveChallengeModifiers === "function") {
         var mods = getActiveChallengeModifiers()
         if (mods.disable_shop) {
             clearRecommendation()
+            gameData.autoShopTargetKey = null
             return
         }
     }
     var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
 
-    var candidate = selectBestShopCandidate()
+    var ctx = buildShopContext()
+    var targetKey = gameData.autoShopTargetKey || null
+    var targetItem = findShopItemByKey(targetKey)
+    var targetData = evaluateShopItem(targetItem, ctx, false)
 
-    if (recommendedShopItem && (!candidate || candidate.item.name !== recommendedShopItem)) {
+    if (!targetData) {
+        var candidate = selectBestShopCandidate(ctx)
+        if (!candidate) {
+            clearRecommendation()
+            gameData.autoShopTargetKey = null
+            return
+        }
+        targetData = candidate
+        targetKey = candidate.item.name
+        gameData.autoShopTargetKey = targetKey
+    }
+
+    if (recommendedShopItem && recommendedShopItem !== targetData.item.name) {
         var previousRow = document.getElementById("row " + recommendedShopItem)
         if (previousRow) previousRow.classList.remove("shop-row-auto-picked")
     }
 
-    if (!candidate) {
-        recommendedShopItem = null
-        return
-    }
-
-    recommendedShopItem = candidate.item.name
-    var row = document.getElementById("row " + candidate.item.name)
+    recommendedShopItem = targetData.item.name
+    var row = document.getElementById("row " + targetData.item.name)
     if (row) {
         row.classList.add("shop-row-auto-picked")
     }
-    if (shouldAutoBuy && gameData.coins >= candidate.cost) {
+    if (shouldAutoBuy && targetData.canAfford) {
         var button = row ? row.getElementsByClassName("button")[0] : null
         var canUseButton = button && !button.disabled && typeof button.click === "function"
         if (canUseButton) {
             button.click()
-        } else if (!isItemActive(candidate.item)) {
-            if (candidate.category === "Properties") {
-                setProperty(candidate.item.name)
-            } else if (candidate.category === "Misc") {
-                setMisc(candidate.item.name)
+        } else if (!isItemActive(targetData.item)) {
+            if (targetData.category === "Properties") {
+                setProperty(targetData.item.name)
+            } else if (targetData.category === "Misc") {
+                setMisc(targetData.item.name)
             }
         }
         updateItemRows()
+        var postPurchase = evaluateShopItem(findShopItemByKey(targetData.item.name), buildShopContext(), false)
+        if (!postPurchase) {
+            gameData.autoShopTargetKey = null
+        }
     }
 }
 
@@ -4864,8 +4898,13 @@ function debugProgressSnapshot() {
     }
     var autoShopEnabled = !!(gameData && gameData.settings && gameData.settings.autoPickShop)
     var shopCandidate = null
+    var autoShopTargetKey = gameData ? gameData.autoShopTargetKey || null : null
+    var autoShopTargetValid = false
     if (autoShopEnabled) {
-        var candidate = selectBestShopCandidate()
+        var ctx = buildShopContext()
+        var target = evaluateShopItem(findShopItemByKey(autoShopTargetKey), ctx, false)
+        autoShopTargetValid = !!target
+        var candidate = selectBestShopCandidate(ctx)
         shopCandidate = candidate ? candidate.item.name : null
     }
     return {
@@ -4873,6 +4912,8 @@ function debugProgressSnapshot() {
         activeSkills: activeSkills,
         passiveRecipients: passiveRecipients,
         autoShopEnabled: autoShopEnabled,
+        autoShopTargetKey: autoShopTargetKey,
+        autoShopTargetValid: autoShopTargetValid,
         autoShopCandidate: shopCandidate,
     }
 }

@@ -17,6 +17,7 @@
 - Fixed Russian localization encoding: replaced mojibake strings with proper UTF-8 Russian text across the UI.
 - Fixed regression where all tasks trained simultaneously; restored intended active progression (with Overseer-specific passive training) and normal early-game pacing.
 - Stabilized auto-shop: auto-buy now picks a single affordable candidate per tick without thrashing between cheapest items or spamming purchases, reducing lag.
+- Refined auto-shop with a sticky target so recommendations no longer bounce between the first row and cheapest item; target persists until bought or invalid.
 
 ## 1.0.1 - Entropy UX polish
 - Entropy tab now follows a single unlock gate and remains visible after binding the Almanac.
