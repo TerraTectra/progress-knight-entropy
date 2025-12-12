@@ -3253,6 +3253,13 @@ function updateShopAutoPickState() {
     }
 }
 
+function getShopNetThreshold() {
+    if (typeof BalanceConfig !== "undefined" && BalanceConfig.shop && typeof BalanceConfig.shop.minNet === "number") {
+        return BalanceConfig.shop.minNet
+    }
+    return 0
+}
+
 function buildShopContext() {
     ensureShopState()
     var costFactor = getUniverseConfig().costFactor || 1
@@ -3302,11 +3309,23 @@ function evaluateShopItem(item, ctx, requireAffordable) {
     }
 
     var candidateNet = ctx.incomePerDay - candidateExpenses
-    if (candidateNet < 0) return null
+    if (candidateNet < getShopNetThreshold()) return null
 
     var canCoverExpenseNow = ctx.coins >= candidateExpense
     var canAfford = ctx.coins >= effectiveCost && canCoverExpenseNow
     if (requireAffordable && !canAfford) return null
+
+    var effectValue = 0
+    if (typeof item.getEffect === "function") {
+        try {
+            effectValue = item.getEffect() || 0
+        } catch (e) {
+            effectValue = 0
+        }
+    } else if (item.baseData && item.baseData.effect) {
+        effectValue = item.baseData.effect
+    }
+    var score = (effectValue + 1) * (candidateNet + 1) / (candidateExpense + 1)
 
     return {
         item: item,
@@ -3314,6 +3333,7 @@ function evaluateShopItem(item, ctx, requireAffordable) {
         cost: effectiveCost,
         net: candidateNet,
         canAfford: canAfford,
+        score: score,
     }
 }
 
@@ -3321,7 +3341,7 @@ function selectBestShopCandidate(ctx) {
     var shopCtx = ctx || buildShopContext()
 
     var bestCandidate = null
-    var bestNet = -Infinity
+    var bestScore = -Infinity
 
     for (var itemName in gameData.itemData) {
         if (!gameData.itemData.hasOwnProperty(itemName)) continue
@@ -3331,8 +3351,10 @@ function selectBestShopCandidate(ctx) {
         var data = evaluateShopItem(item, shopCtx, true)
         if (!data) continue
 
-        if (data.net > bestNet) {
-            bestNet = data.net
+        if (data.score > bestScore) {
+            bestScore = data.score
+            bestCandidate = data
+        } else if (data.score === bestScore && bestCandidate && data.cost < bestCandidate.cost) {
             bestCandidate = data
         }
     }
@@ -4900,10 +4922,13 @@ function debugProgressSnapshot() {
     var shopCandidate = null
     var autoShopTargetKey = gameData ? gameData.autoShopTargetKey || null : null
     var autoShopTargetValid = false
+    var autoShopTargetNet = null
+    var shopNetThreshold = getShopNetThreshold()
     if (autoShopEnabled) {
         var ctx = buildShopContext()
         var target = evaluateShopItem(findShopItemByKey(autoShopTargetKey), ctx, false)
         autoShopTargetValid = !!target
+        if (target) autoShopTargetNet = target.net
         var candidate = selectBestShopCandidate(ctx)
         shopCandidate = candidate ? candidate.item.name : null
     }
@@ -4914,6 +4939,8 @@ function debugProgressSnapshot() {
         autoShopEnabled: autoShopEnabled,
         autoShopTargetKey: autoShopTargetKey,
         autoShopTargetValid: autoShopTargetValid,
+        autoShopTargetNet: autoShopTargetNet,
+        autoShopNetThreshold: shopNetThreshold,
         autoShopCandidate: shopCandidate,
     }
 }

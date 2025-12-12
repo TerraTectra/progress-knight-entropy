@@ -15,6 +15,9 @@ const BalanceConfig = {
         // Universe II: slightly harsher XP/money, faster Entropy/Seeds, pricier upgrades
         2: { xp: 0.9, money: 0.9, entropy: 1.2, seeds: 1.3, cost: 1.2 },
     },
+    shop: {
+        minNet: 0, // keep purchases that maintain non-negative net/day by default
+    },
     shortLife: {
         thresholdPercent: 0.3, // 30% of current lifespan counts as a short life
         thresholdBonusWithShortBrilliant: 1.15, // Short Brilliant Life widens the short-life window

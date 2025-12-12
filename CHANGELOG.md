@@ -18,6 +18,7 @@
 - Fixed regression where all tasks trained simultaneously; restored intended active progression (with Overseer-specific passive training) and normal early-game pacing.
 - Stabilized auto-shop: auto-buy now picks a single affordable candidate per tick without thrashing between cheapest items or spamming purchases, reducing lag.
 - Refined auto-shop with a sticky target so recommendations no longer bounce between the first row and cheapest item; target persists until bought or invalid.
+- Auto-shop now scores items by projected net/day and effect value, picking the best sustainable purchase (ignoring manual row selection) while keeping net income above the safe threshold.
 
 ## 1.0.1 - Entropy UX polish
 - Entropy tab now follows a single unlock gate and remains visible after binding the Almanac.
