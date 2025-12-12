@@ -3252,24 +3252,7 @@ function updateShopAutoPickState() {
     }
 }
 
-function updateShopRecommendation() {
-    if (!autoPickShopElement) autoPickShopElement = document.getElementById("autoPickShopCheckbox")
-    var table = document.getElementById("itemTable")
-    if (!table) return
-
-    var rows = table.getElementsByTagName("tr")
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].classList.remove("shop-row-auto-picked")
-    }
-    recommendedShopItem = null
-
-    if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) return
-    if (typeof getActiveChallengeModifiers === "function") {
-        var mods = getActiveChallengeModifiers()
-        if (mods.disable_shop) return
-    }
-    var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
-
+function selectBestShopCandidate() {
     ensureShopState()
 
     var incomePerDay = getIncome()
@@ -3332,28 +3315,70 @@ function updateShopRecommendation() {
         }
     }
 
-    if (bestCandidate) {
-        recommendedShopItem = bestCandidate.name
-        var row = document.getElementById("row " + bestCandidate.name)
-        if (row) {
-            row.classList.add("shop-row-auto-picked")
+    if (!bestCandidate) return null
+    return {
+        item: bestCandidate,
+        category: bestCandidateCategory,
+        cost: bestCandidateCost,
+    }
+}
+
+function updateShopRecommendation() {
+    if (!autoPickShopElement) autoPickShopElement = document.getElementById("autoPickShopCheckbox")
+    var table = document.getElementById("itemTable")
+    if (!table) return
+
+    function clearRecommendation() {
+        if (recommendedShopItem) {
+            var prev = document.getElementById("row " + recommendedShopItem)
+            if (prev) prev.classList.remove("shop-row-auto-picked")
         }
-        if (shouldAutoBuy && gameData.coins >= bestCandidateCost) {
-            var button = row ? row.getElementsByClassName("button")[0] : null
-            var canUseButton = button && !button.disabled && typeof button.click === "function"
-            if (canUseButton) {
-                button.click()
-            } else if (!isItemActive(bestCandidate)) {
-                if (bestCandidateCategory === "Properties") {
-                    setProperty(bestCandidate.name)
-                } else if (bestCandidateCategory === "Misc") {
-                    setMisc(bestCandidate.name)
-                }
-            }
-            updateItemRows()
-            updateShopRecommendation()
+        recommendedShopItem = null
+    }
+
+    if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) {
+        clearRecommendation()
+        return
+    }
+    if (typeof getActiveChallengeModifiers === "function") {
+        var mods = getActiveChallengeModifiers()
+        if (mods.disable_shop) {
+            clearRecommendation()
             return
         }
+    }
+    var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
+
+    var candidate = selectBestShopCandidate()
+
+    if (recommendedShopItem && (!candidate || candidate.item.name !== recommendedShopItem)) {
+        var previousRow = document.getElementById("row " + recommendedShopItem)
+        if (previousRow) previousRow.classList.remove("shop-row-auto-picked")
+    }
+
+    if (!candidate) {
+        recommendedShopItem = null
+        return
+    }
+
+    recommendedShopItem = candidate.item.name
+    var row = document.getElementById("row " + candidate.item.name)
+    if (row) {
+        row.classList.add("shop-row-auto-picked")
+    }
+    if (shouldAutoBuy && gameData.coins >= candidate.cost) {
+        var button = row ? row.getElementsByClassName("button")[0] : null
+        var canUseButton = button && !button.disabled && typeof button.click === "function"
+        if (canUseButton) {
+            button.click()
+        } else if (!isItemActive(candidate.item)) {
+            if (candidate.category === "Properties") {
+                setProperty(candidate.item.name)
+            } else if (candidate.category === "Misc") {
+                setMisc(candidate.item.name)
+            }
+        }
+        updateItemRows()
     }
 }
 
@@ -4837,10 +4862,18 @@ function debugProgressSnapshot() {
         if (gameData.currentJob && isTaskUnlocked(gameData.currentJob)) activeJobs.push(gameData.currentJob.name)
         if (gameData.currentSkill && isTaskUnlocked(gameData.currentSkill)) activeSkills.push(gameData.currentSkill.name)
     }
+    var autoShopEnabled = !!(gameData && gameData.settings && gameData.settings.autoPickShop)
+    var shopCandidate = null
+    if (autoShopEnabled) {
+        var candidate = selectBestShopCandidate()
+        shopCandidate = candidate ? candidate.item.name : null
+    }
     return {
         activeJobs: activeJobs,
         activeSkills: activeSkills,
         passiveRecipients: passiveRecipients,
+        autoShopEnabled: autoShopEnabled,
+        autoShopCandidate: shopCandidate,
     }
 }
 
