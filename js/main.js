@@ -3253,6 +3253,42 @@ function updateShopAutoPickState() {
     }
 }
 
+function withGameDataOverride(stateOverride, fn) {
+    if (typeof fn !== "function") return null
+    if (!stateOverride || stateOverride === gameData) {
+        return fn()
+    }
+    var previous = gameData
+    gameData = stateOverride
+    try {
+        return fn()
+    } finally {
+        gameData = previous
+    }
+}
+
+function getIncomePerDayForState(state) {
+    return withGameDataOverride(state, function() {
+        return getIncome({ disableJitter: true })
+    })
+}
+
+function getExpensePerDayForState(state) {
+    return withGameDataOverride(state, function() {
+        return getExpense()
+    })
+}
+
+function getNetPerDayForState(state) {
+    var income = getIncomePerDayForState(state)
+    var expense = getExpensePerDayForState(state)
+    return {
+        income: income,
+        expense: expense,
+        net: income - expense,
+    }
+}
+
 function getShopNetThreshold() {
     if (typeof BalanceConfig !== "undefined" && BalanceConfig.shop && typeof BalanceConfig.shop.minNet === "number") {
         return BalanceConfig.shop.minNet
@@ -3260,16 +3296,154 @@ function getShopNetThreshold() {
     return 0
 }
 
-function buildShopContext() {
-    ensureShopState()
-    var costFactor = getUniverseConfig().costFactor || 1
-    return {
-        incomePerDay: getIncome(),
-        baseExpenses: getExpense(),
-        costFactor: costFactor,
-        currentPropertyExpense: (gameData.currentProperty ? gameData.currentProperty.getExpense() : 0) * costFactor,
-        coins: gameData.coins || 0,
+function getCategoryPurchaseCountForState(state, categoryName) {
+    if (!state || !categoryName) return 0
+    if (!state.categoryPurchaseCounts) return 0
+    return state.categoryPurchaseCounts[categoryName] || 0
+}
+
+function isItemPurchasedInState(state, itemName) {
+    if (!state || !state.purchasedItems) return false
+    return !!state.purchasedItems[itemName]
+}
+
+function getEffectiveItemCostForState(state, item) {
+    if (!item) return 0
+    var categoryName = getItemCategoryName(item.name)
+    var alreadyPurchased = getCategoryPurchaseCountForState(state, categoryName) > 0
+    return alreadyPurchased ? item.getExpense() : 0
+}
+
+function isItemActiveInState(state, item) {
+    if (!state || !item) return false
+    var categoryName = getItemCategoryName(item.name)
+    if (categoryName === "Properties") {
+        return state.currentProperty === item
     }
+    if (categoryName === "Misc") {
+        return Array.isArray(state.currentMisc) && state.currentMisc.indexOf(item) !== -1
+    }
+    return false
+}
+
+function cloneGameDataForShopSimulation(stateOverride) {
+    var source = stateOverride || gameData
+    var clone = Object.assign({}, source)
+    clone.purchasedItems = Object.assign({}, source && source.purchasedItems ? source.purchasedItems : {})
+    clone.categoryPurchaseCounts = Object.assign({}, source && source.categoryPurchaseCounts ? source.categoryPurchaseCounts : {})
+    clone.currentMisc = Array.isArray(source && source.currentMisc) ? source.currentMisc.slice() : []
+    clone.settings = Object.assign({}, source && source.settings ? source.settings : {})
+    clone.entropy = Object.assign({}, source && source.entropy ? source.entropy : {})
+    clone.synergy = Object.assign({}, source && source.synergy ? source.synergy : {})
+    clone.metaWeights = Object.assign({}, source && source.metaWeights ? source.metaWeights : {})
+    clone.meaningMilestones = Object.assign({}, source && source.meaningMilestones ? source.meaningMilestones : {})
+    return clone
+}
+
+function applySimulatedPurchase(state, item) {
+    if (!state || !item) return null
+    var categoryName = getItemCategoryName(item.name)
+    if (!categoryName || (categoryName !== "Properties" && categoryName !== "Misc")) return null
+    if (!state.purchasedItems) state.purchasedItems = {}
+    if (!state.categoryPurchaseCounts) state.categoryPurchaseCounts = {}
+    if (!Array.isArray(state.currentMisc)) state.currentMisc = []
+
+    var cost = getEffectiveItemCostForState(state, item)
+    if (cost > 0) {
+        state.coins = (state.coins || 0) - cost
+    }
+
+    state.purchasedItems[item.name] = true
+    if (!isFreeStarterItem(item.name)) {
+        state.categoryPurchaseCounts[categoryName] = getCategoryPurchaseCountForState(state, categoryName) + 1
+    }
+
+    if (categoryName === "Properties") {
+        state.currentProperty = item
+    } else if (categoryName === "Misc") {
+        if (state.currentMisc.indexOf(item) === -1) {
+            state.currentMisc.push(item)
+        }
+    }
+
+    return { category: categoryName, cost: cost }
+}
+
+function simulateItemPurchaseForNet(stateOverride, itemKey) {
+    var baseState = stateOverride || gameData
+    var item = findShopItemByKey(itemKey)
+    if (!baseState || !item) return null
+
+    var simState = cloneGameDataForShopSimulation(baseState)
+    withGameDataOverride(simState, function() {
+        ensureShopState()
+    })
+
+    var before = getNetPerDayForState(simState)
+    var purchaseMeta = applySimulatedPurchase(simState, item)
+    if (!purchaseMeta) return null
+    var after = getNetPerDayForState(simState)
+
+    return {
+        item: item,
+        key: item.name,
+        category: purchaseMeta.category,
+        cost: purchaseMeta.cost,
+        incomeBefore: before.income,
+        expenseBefore: before.expense,
+        netBefore: before.net,
+        incomeAfter: after.income,
+        expenseAfter: after.expense,
+        netAfter: after.net,
+        deltaNet: after.net - before.net,
+    }
+}
+
+function buildShopContext(stateOverride) {
+    var state = stateOverride || gameData
+    return withGameDataOverride(state, function() {
+        ensureShopState()
+        var incomePerDay = getIncome({ disableJitter: true })
+        var expensePerDay = getExpense()
+        var costFactor = (getUniverseConfig(state && state.universeIndex) || getUniverseConfig()).costFactor || 1
+        var candidates = []
+
+        for (var itemName in state.itemData) {
+            if (!state.itemData.hasOwnProperty(itemName)) continue
+            var item = state.itemData[itemName]
+            if (!item) continue
+            var categoryName = getItemCategoryName(item.name)
+            if (!categoryName || !itemCategories[categoryName]) continue
+            if (categoryName !== "Properties" && categoryName !== "Misc") continue
+            var unlocked = isShopItemUnlocked(item)
+            if (!unlocked) continue
+            var purchased = isItemPurchasedInState(state, item.name)
+            var effectiveCost = getEffectiveItemCostForState(state, item)
+            candidates.push({
+                key: item.name,
+                item: item,
+                category: categoryName,
+                unlocked: unlocked,
+                requirementMet: isRequirementMetByKey(item.name),
+                purchased: purchased,
+                active: isItemActiveInState(state, item),
+                visible: unlocked,
+                effectiveCost: effectiveCost,
+                affordable: (state.coins || 0) >= effectiveCost,
+                expense: item.getExpense() * costFactor,
+            })
+        }
+
+        return {
+            state: state,
+            incomePerDay: incomePerDay,
+            expensePerDay: expensePerDay,
+            costFactor: costFactor,
+            coins: state.coins || 0,
+            netBefore: incomePerDay - expensePerDay,
+            candidates: candidates,
+        }
+    })
 }
 
 function findShopItemByKey(key) {
@@ -3277,90 +3451,91 @@ function findShopItemByKey(key) {
     return gameData.itemData[key] || null
 }
 
-function evaluateShopItem(item, ctx, requireAffordable) {
-    if (!item || !ctx) return null
-
-    var categoryName = getItemCategoryName(item.name)
-    if (!categoryName || !itemCategories[categoryName]) return null
-
-    var requirement = gameData.requirements[item.name]
-    if (requirement) {
-        if (typeof requirement.isCompleted === "function") {
-            if (!requirement.isCompleted()) return null
-        } else if (requirement.completed === false) {
-            return null
-        }
+function findCandidateInContext(ctx, key) {
+    if (!ctx || !ctx.candidates || !key) return null
+    for (var i = 0; i < ctx.candidates.length; i++) {
+        if (ctx.candidates[i].key === key) return ctx.candidates[i]
     }
+    return null
+}
 
-    var alreadyPurchased = isItemPurchased(item.name)
-    var isActive = isItemActive(item)
-    if (isActive) return null
+function validateAutoShopTarget(targetKey, ctx, threshold) {
+    if (!targetKey || !ctx) return null
+    var thresholdNet = typeof threshold === "number" ? threshold : getShopNetThreshold()
+    var candidateMeta = findCandidateInContext(ctx, targetKey)
+    var item = candidateMeta ? candidateMeta.item : findShopItemByKey(targetKey)
+    if (!item) return null
+    var categoryName = candidateMeta ? candidateMeta.category : getItemCategoryName(item.name)
+    if (!categoryName || (categoryName !== "Properties" && categoryName !== "Misc")) return null
+    var unlocked = candidateMeta ? candidateMeta.unlocked : isShopItemUnlocked(item)
+    var requirementMet = candidateMeta ? candidateMeta.requirementMet : isRequirementMetByKey(targetKey)
+    var purchased = candidateMeta ? candidateMeta.purchased : isItemPurchasedInState(ctx.state || gameData, targetKey)
+    if (!unlocked || !requirementMet || purchased) return null
 
-    var effectiveCost = alreadyPurchased ? 0 : getEffectiveItemCost(item)
-    var candidateExpense = item.getExpense() * ctx.costFactor
-    var candidateExpenses = ctx.baseExpenses
+    var simulation = simulateItemPurchaseForNet(ctx.state || gameData, targetKey)
+    if (!simulation) return null
+    if (simulation.netAfter < thresholdNet) return null
+    if (simulation.deltaNet < 0) return null
 
-    if (categoryName === "Properties") {
-        candidateExpenses = ctx.baseExpenses - ctx.currentPropertyExpense + candidateExpense
-    } else if (categoryName === "Misc") {
-        candidateExpenses = ctx.baseExpenses + candidateExpense
-    } else {
-        return null
-    }
-
-    var candidateNet = ctx.incomePerDay - candidateExpenses
-    if (candidateNet < getShopNetThreshold()) return null
-
-    var canCoverExpenseNow = ctx.coins >= candidateExpense
-    var canAfford = ctx.coins >= effectiveCost && canCoverExpenseNow
-    if (requireAffordable && !canAfford) return null
-
-    var effectValue = 0
-    if (typeof item.getEffect === "function") {
-        try {
-            effectValue = item.getEffect() || 0
-        } catch (e) {
-            effectValue = 0
-        }
-    } else if (item.baseData && item.baseData.effect) {
-        effectValue = item.baseData.effect
-    }
-    var score = (effectValue + 1) * (candidateNet + 1) / (candidateExpense + 1)
-
+    var effectiveCost = candidateMeta && typeof candidateMeta.effectiveCost === "number" ? candidateMeta.effectiveCost : getEffectiveItemCostForState(ctx.state || gameData, item)
+    var affordable = (ctx.state ? ctx.state.coins : gameData.coins) >= effectiveCost
     return {
+        key: targetKey,
         item: item,
         category: categoryName,
-        cost: effectiveCost,
-        net: candidateNet,
-        canAfford: canAfford,
-        score: score,
+        effectiveCost: effectiveCost,
+        affordable: affordable,
+        simulation: simulation,
     }
 }
 
-function selectBestShopCandidate(ctx) {
+function selectBestShopCandidate(ctx, threshold) {
     var shopCtx = ctx || buildShopContext()
+    var thresholdNet = typeof threshold === "number" ? threshold : getShopNetThreshold()
+    var EPSILON = 1e-9
+    var best = null
 
-    var bestCandidate = null
-    var bestScore = -Infinity
+    shopCtx.candidates.forEach(function(candidate) {
+        if (!candidate || !candidate.visible || !candidate.unlocked || !candidate.requirementMet) return
+        if (candidate.purchased) return
+        var simulation = simulateItemPurchaseForNet(shopCtx.state || gameData, candidate.key)
+        if (!simulation) return
+        if (simulation.netAfter < thresholdNet) return
+        if (simulation.deltaNet < 0) return
 
-    for (var itemName in gameData.itemData) {
-        if (!gameData.itemData.hasOwnProperty(itemName)) continue
-        var item = gameData.itemData[itemName]
-        if (!item) continue
-
-        var data = evaluateShopItem(item, shopCtx, true)
-        if (!data) continue
-
-        if (data.score > bestScore) {
-            bestScore = data.score
-            bestCandidate = data
-        } else if (data.score === bestScore && bestCandidate && data.cost < bestCandidate.cost) {
-            bestCandidate = data
+        var effectiveCost = typeof candidate.effectiveCost === "number" ? candidate.effectiveCost : getEffectiveItemCostForState(shopCtx.state || gameData, candidate.item)
+        var affordable = (shopCtx.state ? shopCtx.state.coins : gameData.coins) >= effectiveCost
+        var payload = {
+            key: candidate.key,
+            item: candidate.item,
+            category: candidate.category,
+            effectiveCost: effectiveCost,
+            affordable: affordable,
+            simulation: simulation,
         }
-    }
 
-    if (!bestCandidate) return null
-    return bestCandidate
+        if (!best) {
+            best = payload
+            return
+        }
+        var delta = simulation.deltaNet
+        var bestDelta = best.simulation ? best.simulation.deltaNet : -Infinity
+        if (delta > bestDelta + EPSILON) {
+            best = payload
+            return
+        }
+        if (Math.abs(delta - bestDelta) <= EPSILON) {
+            if (effectiveCost > best.effectiveCost + EPSILON) {
+                best = payload
+                return
+            }
+            if (Math.abs(effectiveCost - best.effectiveCost) <= EPSILON && payload.key < best.key) {
+                best = payload
+            }
+        }
+    })
+
+    return best
 }
 
 function updateShopRecommendation() {
@@ -3368,57 +3543,61 @@ function updateShopRecommendation() {
     var table = document.getElementById("itemTable")
     if (!table) return
 
-    function clearRecommendation() {
+    function clearRecommendation(clearTarget) {
         if (recommendedShopItem) {
             var prev = document.getElementById("row " + recommendedShopItem)
             if (prev) prev.classList.remove("shop-row-auto-picked")
         }
         recommendedShopItem = null
+        if (clearTarget && gameData) {
+            gameData.autoShopTargetKey = null
+        }
     }
 
-    if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) {
-        clearRecommendation()
-        gameData.autoShopTargetKey = null
-        return
-    }
     if (typeof getActiveChallengeModifiers === "function") {
         var mods = getActiveChallengeModifiers()
         if (mods.disable_shop) {
             clearRecommendation()
-            gameData.autoShopTargetKey = null
             return
         }
+    }
+
+    if (!gameData || !gameData.settings || !gameData.settings.autoPickShop) {
+        clearRecommendation()
+        return
     }
     var shouldAutoBuy = gameData.settings.autoPickShop && (!autoPickShopElement || autoPickShopElement.checked)
 
     var ctx = buildShopContext()
+    var threshold = getShopNetThreshold()
     var targetKey = gameData.autoShopTargetKey || null
-    var targetItem = findShopItemByKey(targetKey)
-    var targetData = evaluateShopItem(targetItem, ctx, false)
+    var targetData = validateAutoShopTarget(targetKey, ctx, threshold)
 
     if (!targetData) {
-        var candidate = selectBestShopCandidate(ctx)
+        var candidate = selectBestShopCandidate(ctx, threshold)
         if (!candidate) {
-            clearRecommendation()
-            gameData.autoShopTargetKey = null
+            clearRecommendation(true)
             return
         }
         targetData = candidate
-        targetKey = candidate.item.name
+        targetKey = candidate.key
         gameData.autoShopTargetKey = targetKey
     }
 
-    if (recommendedShopItem && recommendedShopItem !== targetData.item.name) {
+    if (recommendedShopItem && recommendedShopItem !== targetKey) {
         var previousRow = document.getElementById("row " + recommendedShopItem)
         if (previousRow) previousRow.classList.remove("shop-row-auto-picked")
     }
 
-    recommendedShopItem = targetData.item.name
-    var row = document.getElementById("row " + targetData.item.name)
-    if (row) {
-        row.classList.add("shop-row-auto-picked")
+    var row = document.getElementById("row " + targetKey)
+    if (!recommendedShopItem || recommendedShopItem !== targetKey) {
+        recommendedShopItem = targetKey
+        if (row) {
+            row.classList.add("shop-row-auto-picked")
+        }
     }
-    if (shouldAutoBuy && targetData.canAfford) {
+
+    if (shouldAutoBuy && targetData.affordable && targetData.simulation && targetData.simulation.netAfter >= threshold) {
         var button = row ? row.getElementsByClassName("button")[0] : null
         var canUseButton = button && !button.disabled && typeof button.click === "function"
         if (canUseButton) {
@@ -3431,10 +3610,7 @@ function updateShopRecommendation() {
             }
         }
         updateItemRows()
-        var postPurchase = evaluateShopItem(findShopItemByKey(targetData.item.name), buildShopContext(), false)
-        if (!postPurchase) {
-            gameData.autoShopTargetKey = null
-        }
+        clearRecommendation(true)
     }
 }
 
@@ -4922,15 +5098,32 @@ function debugProgressSnapshot() {
     var shopCandidate = null
     var autoShopTargetKey = gameData ? gameData.autoShopTargetKey || null : null
     var autoShopTargetValid = false
-    var autoShopTargetNet = null
+    var autoShopTargetNetAfter = null
+    var autoShopTargetDeltaNet = null
+    var autoShopNetCurrent = null
     var shopNetThreshold = getShopNetThreshold()
     if (autoShopEnabled) {
         var ctx = buildShopContext()
-        var target = evaluateShopItem(findShopItemByKey(autoShopTargetKey), ctx, false)
+        autoShopNetCurrent = ctx ? ctx.netBefore : null
+        var target = validateAutoShopTarget(autoShopTargetKey, ctx, shopNetThreshold)
         autoShopTargetValid = !!target
-        if (target) autoShopTargetNet = target.net
-        var candidate = selectBestShopCandidate(ctx)
-        shopCandidate = candidate ? candidate.item.name : null
+        if (target && target.simulation) {
+            autoShopTargetNetAfter = target.simulation.netAfter
+            autoShopTargetDeltaNet = target.simulation.deltaNet
+        }
+        var candidate = selectBestShopCandidate(ctx, shopNetThreshold)
+        shopCandidate = candidate ? candidate.key : null
+        if (DEBUG_BALANCE && typeof console !== "undefined" && console.debug) {
+            console.debug("[auto-shop]", {
+                netBefore: autoShopNetCurrent,
+                threshold: shopNetThreshold,
+                targetKey: autoShopTargetKey,
+                targetValid: autoShopTargetValid,
+                targetNetAfter: autoShopTargetNetAfter,
+                targetDeltaNet: autoShopTargetDeltaNet,
+                candidate: shopCandidate,
+            })
+        }
     }
     return {
         activeJobs: activeJobs,
@@ -4939,8 +5132,10 @@ function debugProgressSnapshot() {
         autoShopEnabled: autoShopEnabled,
         autoShopTargetKey: autoShopTargetKey,
         autoShopTargetValid: autoShopTargetValid,
-        autoShopTargetNet: autoShopTargetNet,
+        autoShopNetCurrent: autoShopNetCurrent,
         autoShopNetThreshold: shopNetThreshold,
+        autoShopTargetNetAfter: autoShopTargetNetAfter,
+        autoShopTargetDeltaNet: autoShopTargetDeltaNet,
         autoShopCandidate: shopCandidate,
     }
 }
@@ -4955,10 +5150,11 @@ function ensureActiveSelections() {
     }
 }
 
-function getIncome() {
+function getIncome(options) {
     var compression = getLifeCompressionFactors(true)
     var jitter = 1
-    if ((gameData.universeIndex || 1) >= 8) {
+    var skipJitter = options && options.disableJitter
+    if (!skipJitter && (gameData.universeIndex || 1) >= 8) {
         var strain = gameData.cycleStrain || 0
         if (strain > 5) {
             jitter += (Math.random() * 0.08 - 0.04) * Math.min((strain - 5) / 5, 1)
