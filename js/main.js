@@ -3670,8 +3670,9 @@ function validateAutoShopTarget(targetKey, ctx, threshold) {
 
     var simulation = simulateItemPurchaseForNet(ctx.state || gameData, targetKey)
     if (!simulation) return null
-    if (simulation.deltaNet < 0) return null
+    if (!isFinite(simulation.netAfter) || !isFinite(simulation.deltaNet)) return null
     var netSafe = simulation.netAfter >= thresholdNet
+    if (!netSafe && simulation.deltaNet <= 0) return null
     if (!netSafe && liveNet >= thresholdNet) return null
 
     var effectiveCost = candidateMeta && typeof candidateMeta.effectiveCost === "number" ? candidateMeta.effectiveCost : getEffectiveItemCostForState(ctx.state || gameData, item)
@@ -3748,13 +3749,11 @@ function selectBestShopCandidate(ctx, threshold) {
         if (candidate.affordable === false) return
         var normalized = normalizeCandidate(candidate)
         if (!normalized) return
-        if (!isFinite(normalized.deltaNet)) {
-            netUnsafe.push(normalized)
-            return
-        }
+        if (!isFinite(normalized.netAfter) || !isFinite(normalized.deltaNet)) return
         if (normalized.netAfter >= thresholdNet) {
             netSafe.push(normalized)
         } else {
+            if (normalized.deltaNet <= 0) return
             netUnsafe.push(normalized)
         }
     })
@@ -3855,7 +3854,7 @@ function updateShopRecommendation() {
     var liveNetNow = getNetPerDayForState(gameData).net
     var sim = targetData.simulation
     var canRescue = liveNetNow < threshold
-    var canAutoBuy = shouldAutoBuy && targetData.affordable && sim && isFinite(sim.deltaNet) && sim.deltaNet >= 0 && (sim.netAfter >= threshold || canRescue)
+    var canAutoBuy = shouldAutoBuy && targetData.affordable && sim && isFinite(sim.netAfter) && isFinite(sim.deltaNet) && (sim.netAfter >= threshold || (canRescue && sim.deltaNet > 0))
 
     if (!canAutoBuy && DEBUG_BALANCE && typeof console !== "undefined" && console.debug) {
         console.debug("AUTO-SHOP DEBUG target not bought", {
