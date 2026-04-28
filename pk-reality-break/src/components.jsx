@@ -50,24 +50,31 @@ function shopBonusText(item, language = "ru") {
   }
   const percent = Math.round((effect - 1) * 100);
   if (percent <= 0) return language === "ru" ? "Без бонуса" : "No bonus";
-  return `x${effect.toFixed(2)} ${effectName} · +${percent}%`;
+  return `${effectName} x${effect.toFixed(2)}${percent > 0 ? ` · +${percent}%` : ""}`;
 }
 
 export function ShopRow({ item, active, onClick, right, req, language }) {
   return (
     <button className={`shop-row ${active ? "active" : ""}`} onClick={() => onClick(item.name)}>
       <div className="shop-main">
-        <div className="shop-title-line">
-          <b>{tr(item.name, language)}</b>
-          {active && <span className="active-pill">{language === "ru" ? "Активно" : "Active"}</span>}
+        <div className="shop-topline">
+          <div className="shop-identity">
+            <div className="shop-title-line">
+              <b>{tr(item.name, language)}</b>
+              {active && <span className="active-pill">{language === "ru" ? "Активно" : "Active"}</span>}
+            </div>
+            <div className="shop-desc">{tr(item.desc || "Happiness", language)}</div>
+          </div>
+          <div className="shop-price">
+            <span>{language === "ru" ? "Расход" : "Cost"}</span>
+            <b>{right}</b>
+          </div>
         </div>
-        <div className="shop-bonus">{shopBonusText(item, language)}</div>
-        <div className="shop-desc">{language === "ru" ? "Эффект" : "Effect"}: {tr(item.desc || "Happiness", language)}</div>
+        <div className="shop-bonus-line">
+          <span>{language === "ru" ? "Бонус" : "Bonus"}</span>
+          <b>{shopBonusText(item, language)}</b>
+        </div>
         {req && <div className="requirement">{req}</div>}
-      </div>
-      <div className="shop-price">
-        <span>{language === "ru" ? "Цена" : "Cost"}</span>
-        <b>{right}</b>
       </div>
     </button>
   );
