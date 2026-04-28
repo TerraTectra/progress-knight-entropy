@@ -17,7 +17,9 @@ header{display:flex;justify-content:space-between;align-items:end;border:1px sol
 h1{margin:0;color:#f4c66c}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 nav button,.admin-buttons button,.perk,button{border:1px solid #6a4a2c;background:#2a1d14;color:#f2e4c8;padding:8px 12px}
-nav button.active,.admin-buttons button.active,button:hover{background:#d79a3d;color:#15100b}
+nav button.active,.admin-buttons button.active{background:#d79a3d;color:#15100b}
+nav button:hover,.admin-buttons button:hover{border-color:#d79a3d;background:#3a2616;color:#ffd98b}
+nav button.active:hover,.admin-buttons button.active:hover{background:#d79a3d;color:#15100b}
 
 .app main{display:grid;grid-template-columns:310px 1fr;gap:12px}
 .content{min-width:0}
@@ -26,8 +28,9 @@ nav button.active,.admin-buttons button.active,button:hover{background:#d79a3d;c
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 
-.task-row,.shop-row{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:10px;text-align:left;margin-bottom:8px;background:#1a1410;border:1px solid #4d3926;color:#f2e4c8}
-.task-row.active,.shop-row.active{border-color:#f0b95d;background:#382615}
+.task-row{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:10px;text-align:left;margin-bottom:8px;background:#1a1410;border:1px solid #4d3926;color:#f2e4c8}
+.task-row:hover{border-color:#9b6a2c;background:#21160f;color:#f2e4c8}
+.task-row.active{border-color:#f0b95d;background:#382615}
 .task-title{font-weight:800;color:#ffd98b}
 .muted{font-size:12px;color:#a99a87}
 .memory{font-size:11px;color:#efbd68;margin-top:2px}
@@ -39,22 +42,34 @@ nav button.active,.admin-buttons button.active,button:hover{background:#d79a3d;c
 .positive{color:#8ee08a}
 .negative{color:#ff7d7d}
 .check-row{display:flex;justify-content:space-between;border:1px solid #4d3926;background:#17110d;padding:8px;margin-bottom:6px}
-.branch-hint{grid-column:1/-1;border:1px solid #c18435;background:#3b250d;padding:12px;color:#ffdca2}
+.check-row:hover{border-color:#9b6a2c;background:#21160f;color:#f2e4c8}
+.branch-hint,.unlock-hint{grid-column:1/-1;border:1px solid #9b6a2c;background:#24170d;padding:10px 12px;color:#ffdca2;margin-top:8px}
+.unlock-hint-title{color:#ffd98b;font-weight:800}
+.unlock-hint-req{color:#d8c6a5;margin-top:2px}
 .log{font-size:12px;color:#b8aa98;border-bottom:1px solid #3a2a1d;padding:4px 0}
 .perk{display:flex;flex-direction:column;gap:4px;width:100%;margin-bottom:8px}
+.perk:hover,.upgrade:hover,.universe-card button:hover,.final-perk:hover{border-color:#d79a3d;background:#3a2616;color:#ffd98b}
 .contact{display:flex;justify-content:space-between;border:1px solid #4d3926;padding:8px;margin:6px 0}
 .support{border:1px solid #1d8a96;background:#11343b;color:#bdf5ff;padding:10px;margin-top:10px}
 .admin-buttons{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 
+.shop-row{width:100%;display:block;text-align:left;margin-bottom:8px;background:#1a1410;border:1px solid #4d3926;color:#f2e4c8;padding:10px 12px}
+.shop-row:hover{border-color:#9b6a2c;background:#21160f;color:#f2e4c8}
+.shop-row.active{border-color:#f0b95d;background:#382615}
 .shop-main{min-width:0}
-.shop-title-line{display:flex;align-items:center;gap:8px;justify-content:space-between}
-.shop-title-line b{color:#ffe0a0}
-.active-pill{border:1px solid #efbd68;background:#4b2c10;color:#ffd98b;border-radius:999px;padding:2px 7px;font-size:11px}
+.shop-topline{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.shop-identity{min-width:0}
+.shop-title-line{display:flex;align-items:center;gap:8px;justify-content:flex-start;flex-wrap:wrap}
+.shop-title-line b{color:#ffe0a0;font-size:16px}
+.active-pill{border:1px solid #efbd68;background:#4b2c10;color:#ffd98b;border-radius:999px;padding:2px 7px;font-size:11px;line-height:1.1}
+.shop-desc{margin-top:4px;color:#bba88d;font-size:12px;line-height:1.35}
+.shop-price{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;gap:3px;color:#bba88d;font-size:12px;min-width:118px}
+.shop-price b{font-size:13px;color:#8ee08a;white-space:nowrap}
+.shop-bonus-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;border-top:1px solid #3a2a1d;padding-top:8px;font-size:14px;line-height:1.25}
+.shop-bonus-line span{color:#a99a87}
+.shop-bonus-line b{color:#8ee08a;text-align:right}
 .shop-bonus{margin-top:6px;color:#8ee08a;font-weight:900;font-size:14px;border:1px solid rgba(74,140,74,.45);background:rgba(20,60,22,.22);padding:6px 8px}
-.shop-desc{margin-top:5px;color:#bba88d;font-size:12px;line-height:1.35}
-.shop-price{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;color:#bba88d;font-size:12px}
-.shop-price b{font-size:13px;color:#f4c66c}
-.requirement{margin-top:4px;color:#ffbd7a;font-size:11px}
+.requirement{margin-top:6px;color:#ffbd7a;font-size:12px}
 
 .achievements-view .section:first-child{padding:14px}
 .achievements-hero{display:block;margin:0}
@@ -64,6 +79,7 @@ nav button.active,.admin-buttons button.active,button:hover{background:#d79a3d;c
 .achievement-total-row b{color:#ffd98b;font-size:18px}
 .achievement-controls{display:flex;justify-content:flex-start;margin:8px 0 12px}
 .achievement-check{display:flex;align-items:center;gap:8px;border:1px solid #4f3521;background:#17110d;padding:8px 10px;color:#f2e4c8}
+.achievement-check:hover{border-color:#9b6a2c;background:#21160f;color:#f2e4c8}
 .achievement-stage-tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .achievement-stage-tab{min-height:84px;text-align:left;border:1px solid #5e432a;background:#17110d;color:#f2e4c8;padding:10px;display:flex;flex-direction:column;gap:7px}
 .achievement-stage-tab:hover{border-color:#d79a3d;background:#24180f;color:#f2e4c8}
@@ -100,4 +116,8 @@ nav button.active,.admin-buttons button.active,button:hover{background:#d79a3d;c
   .app main{grid-template-columns:1fr}
   .grid2,.grid3{grid-template-columns:1fr}
   .achievement-stage-tabs{grid-template-columns:repeat(auto-fill,minmax(135px,1fr))}
+  .shop-topline{flex-direction:column}
+  .shop-price{align-items:flex-start}
+  .shop-bonus-line{align-items:flex-start;flex-direction:column;gap:4px}
+  .shop-bonus-line b{text-align:left}
 }
