@@ -12,7 +12,7 @@ export function Section({ title, children, tone = "" }) {
 }
 
 export function ProgressBar({ value }) {
-  return <div className="bar"><div className="bar-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} /></div>;
+  return <div className="bar"><div className="bar-fill" style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} /></div>;
 }
 
 export function MoneyAmount({ amount, language = "ru", perDay = false, signed = false }) {
@@ -26,29 +26,49 @@ export function StatBox({ label, value, children }) {
 }
 
 export function TaskRow({ item, state, active, onClick, right, difficulty, memoryState, language }) {
-  const need = maxXp(item.maxXp, state.level, difficulty);
+  const safeState = state || { level: 0, xp: 0, maxLevel: 0 };
+  const need = maxXp(item.maxXp, safeState.level, difficulty);
   return (
     <button className={`task-row ${active ? "active" : ""}`} onClick={() => onClick(item.name)}>
       <div className="task-main">
         <div className="task-title">{tr(item.name, language)}</div>
-        <div className="muted">{language === "ru" ? "Уровень" : "Level"} {state.level} · {language === "ru" ? "До уровня" : "XP left"} {fmt(Math.max(0, need - state.xp))}</div>
+        <div className="muted">{language === "ru" ? "Уровень" : "Level"} {safeState.level} · {language === "ru" ? "До уровня" : "XP left"} {fmt(Math.max(0, need - safeState.xp))}</div>
         <div className="memory">{taskMemoryText(memoryState, item.name, language)}</div>
       </div>
       <div className="task-right">{right}</div>
-      <ProgressBar value={pct(state.xp, need)} />
+      <ProgressBar value={pct(safeState.xp, need)} />
     </button>
   );
+}
+
+function shopBonusText(item, language = "ru") {
+  const effectName = tr(item.desc || "Happiness", language);
+  const effect = Number(item.effect || 1);
+  if (effect < 1) {
+    const percent = Math.round((1 - effect) * 100);
+    return language === "ru" ? `-${percent}% к расходам` : `-${percent}% expenses`;
+  }
+  const percent = Math.round((effect - 1) * 100);
+  if (percent <= 0) return language === "ru" ? "Без бонуса" : "No bonus";
+  return `x${effect.toFixed(2)} ${effectName} · +${percent}%`;
 }
 
 export function ShopRow({ item, active, onClick, right, req, language }) {
   return (
     <button className={`shop-row ${active ? "active" : ""}`} onClick={() => onClick(item.name)}>
-      <div>
-        <b>{tr(item.name, language)}</b>
-        <div className="muted">{tr(item.desc || "Happiness", language)}</div>
+      <div className="shop-main">
+        <div className="shop-title-line">
+          <b>{tr(item.name, language)}</b>
+          {active && <span className="active-pill">{language === "ru" ? "Активно" : "Active"}</span>}
+        </div>
+        <div className="shop-bonus">{shopBonusText(item, language)}</div>
+        <div className="shop-desc">{language === "ru" ? "Эффект" : "Effect"}: {tr(item.desc || "Happiness", language)}</div>
         {req && <div className="requirement">{req}</div>}
       </div>
-      <div>{right}</div>
+      <div className="shop-price">
+        <span>{language === "ru" ? "Цена" : "Cost"}</span>
+        <b>{right}</b>
+      </div>
     </button>
   );
 }
