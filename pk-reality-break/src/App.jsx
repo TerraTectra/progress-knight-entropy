@@ -3,7 +3,7 @@ import { ADMIN_SPEED_MULTIPLIERS, AMULET_EVIL_AGE, AMULET_EYE_AGE, BASE_LIFESPAN
 import { allJobs, allSkills, EVIL_PERKS, jobCategories, miscItems, properties, skillCategories } from "./data.js";
 import { CONTACTS, LANGUAGES, tr } from "./i18n.js";
 import { BranchHint, CheckboxRow, MoneyAmount, ProgressBar, Section, ShopRow, StatBox, TaskRow } from "./components.jsx";
-import { ACHIEVEMENT_STAGES, MILESTONES, achievementBonuses, achievementDesc, achievementGroupLabel, achievementName, achievementProgress, achievementReward, achievementUnlocked, visibleAchievementStages } from "./achievements.js";
+import { MILESTONES, achievementBonuses, achievementDesc, achievementGroupLabel, achievementName, achievementProgress, achievementReward, achievementUnlocked, visibleAchievementStages } from "./achievements.js";
 import { META_UPGRADES, UNIVERSES, initialMetaUpgrades, metaEffects, metaUpgradeCost, universeInfo, universeMods, universePointGain } from "./multiverse.js";
 import { OBSERVER_UPGRADES, makeSimulacrum, observerEffects, observerPointGain, observerUpgradeCost, personalityById, talentById } from "./observer.js";
 import { clearSave, defaultSave, loadSave, saveGame } from "./save.js";
@@ -13,60 +13,99 @@ const jobBranchOf = (name) => Object.entries(jobCategories).find(([, list]) => l
 const isTen = (level) => level > 0 && level % 10 === 0;
 const nextTen = (level) => Math.max(10, Math.ceil((level + 1) / 10) * 10);
 const itemMul = (owned, name) => owned.includes(name) ? (miscItems.find((item) => item.name === name)?.effect || 1) : 1;
+const stageIcon = (id) => ({ start: "✦", work: "⚒", combat: "⚔", magic: "✧", economy: "◆", amulet: "◉", evil: "☽", multiverse: "◇", observer: "◎" })[id] || "•";
 
 function nextBranch(categories, ctx) {
-  for (const [cat, items] of Object.entries(categories)) if (!items.some((item) => reqUnlocked(item.req, ctx))) return { cat, item: items[0] };
+  for (const [cat, items] of Object.entries(categories)) {
+    if (!items.some((item) => reqUnlocked(item.req, ctx))) return { cat, item: items[0] };
+  }
   return null;
 }
 
-function stageIcon(stageId) {
-  return ({ start: "✦", work: "⚒", combat: "⚔", magic: "✧", economy: "◆", amulet: "◉", evil: "☽", multiverse: "◇", observer: "◎" })[stageId] || "•";
-}
+function AchievementsView({ state, language, doneIds, selectedStage, setSelectedStage, onlyOpen, setOnlyOpen, setCollapsed }) {
+  const stages = visibleAchievementStages(state);
+  const stageIds = stages.map((stage) => stage.id);
+  const currentStage = stageIds.includes(selectedStage) ? selectedStage : stages[0]?.id || "start";
+  const activeStage = stages.find((stage) => stage.id === currentStage) || stages[0];
+  const doneSet = new Set(doneIds);
+  const totalDone = doneIds.length;
+  const total = MILESTONES.length;
+  const stageAchievements = MILESTONES.filter((item) => item.group === currentStage);
+  const stageDone = stageAchievements.filter((item) => doneSet.has(item.id)).length;
+  const shown = onlyOpen ? stageAchievements.filter((item) => !doneSet.has(item.id)) : stageAchievements;
 
-function AchievementPack({ stage, list, state, doneIds, language, collapsed, onToggle, onlyOpen }) {
-  const all = list.filter((item) => item.group === stage.id);
-  const shown = onlyOpen ? all.filter((item) => !doneIds.includes(item.id)) : all;
-  const doneCount = all.filter((item) => doneIds.includes(item.id)).length;
-  const complete = all.length > 0 && doneCount === all.length;
+  return (
+    <div className="achievements-view">
+      <Section title="Достижения">
+        <div className="achievements-hero">
+          <div>
+            <div className="eyebrow">Progress Knight: Reality Break</div>
+            <h3>Достижения без каши</h3>
+            <p>Выбирай этап сверху. Ниже показываются только достижения выбранного этапа, их цель, прогресс и награда.</p>
+          </div>
+          <div className="achievement-total-card">
+            <div className="achievement-total-row"><span>Общий прогресс</span><b>{totalDone}/{total}</b></div>
+            <ProgressBar value={pct(totalDone, total)} />
+          </div>
+        </div>
+        <div className="achievement-controls">
+          <label className="achievement-check"><input type="checkbox" checked={onlyOpen} onChange={(event) => setOnlyOpen(event.target.checked)} />Показывать только невыполненные</label>
+        </div>
+        <div className="achievement-stage-tabs">
+          {stages.map((stage) => {
+            const all = MILESTONES.filter((item) => item.group === stage.id);
+            const done = all.filter((item) => doneSet.has(item.id)).length;
+            const active = stage.id === currentStage;
+            return (
+              <button key={stage.id} className={`achievement-stage-tab ${active ? "active" : ""}`} onClick={() => setSelectedStage(stage.id)}>
+                <div className="achievement-stage-top"><span>{stageIcon(stage.id)}</span><b>{done}/{all.length}</b></div>
+                <div className="achievement-stage-label">{achievementGroupLabel(stage.id, language)}</div>
+                <ProgressBar value={pct(done, Math.max(1, all.length))} />
+              </button>
+            );
+          })}
+        </div>
+      </Section>
 
-  return <Section title={`${stageIcon(stage.id)} ${achievementGroupLabel(stage.id, language)}`} tone={`achievement-section ${complete ? "complete" : ""}`}>
-    <div className="pack-head">
-      <div className="pack-summary">
-        <b>{doneCount}/{all.length}</b>
-        <span>{language === "ru" ? "выполнено" : "completed"}</span>
-        <ProgressBar value={pct(doneCount, Math.max(1, all.length))} />
-      </div>
-      <button onClick={onToggle}>{collapsed ? (language === "ru" ? "Развернуть" : "Expand") : (language === "ru" ? "Свернуть" : "Collapse")}</button>
+      {activeStage && <Section title={`${stageIcon(activeStage.id)} ${achievementGroupLabel(activeStage.id, language)}`} tone="achievement-stage-panel">
+        <div className="achievement-current-stage">
+          <div>
+            <span>Текущий этап</span>
+            <b>{achievementGroupLabel(activeStage.id, language)}</b>
+          </div>
+          <div className="achievement-current-score"><b>{stageDone}/{stageAchievements.length}</b><span>выполнено</span></div>
+        </div>
+        <ProgressBar value={pct(stageDone, Math.max(1, stageAchievements.length))} />
+        <div className="achievement-grid concept-grid">
+          {shown.length === 0 && <div className="empty-achievements">Все достижения этого этапа уже выполнены.</div>}
+          {shown.map((item) => {
+            const progress = achievementProgress(item, state);
+            const done = doneSet.has(item.id);
+            const percent = done ? 100 : pct(progress.current, progress.target);
+            return (
+              <article key={item.id} className={`achievement-card concept-card ${done ? "done" : "locked"}`}>
+                <div className="achievement-card-head">
+                  <span className="achievement-status">{done ? "✓" : `${Math.floor(percent)}%`}</span>
+                  <div className="achievement-title-wrap">
+                    <h3>{achievementName(item, language)}</h3>
+                    <p>{achievementDesc(item, language)}</p>
+                  </div>
+                </div>
+                <div className="achievement-progress-line"><span>Прогресс</span><b>{done ? "Готово" : `${fmt(progress.current)} / ${fmt(progress.target)}`}</b></div>
+                <ProgressBar value={percent} />
+                <div className="achievement-reward"><span>Награда</span><b>{achievementReward(item, language)}</b></div>
+              </article>
+            );
+          })}
+        </div>
+      </Section>}
     </div>
-    {!collapsed && <div className="achievement-grid">
-      {shown.length === 0 && <div className="empty-achievements">{language === "ru" ? "Все достижения этого этапа уже выполнены." : "Every achievement in this stage is complete."}</div>}
-      {shown.map((item) => {
-        const progress = achievementProgress(item, state);
-        const done = doneIds.includes(item.id);
-        const percent = pct(progress.current, progress.target);
-        return <article key={item.id} className={`achievement-card ${done ? "done" : "locked"}`}>
-          <div className="achievement-card-head">
-            <span className="achievement-status">{done ? "✓" : Math.floor(percent) + "%"}</span>
-            <div>
-              <h3>{achievementName(item, language)}</h3>
-              <div className="achievement-stage">{achievementGroupLabel(item.group, language)}</div>
-            </div>
-          </div>
-          <p>{achievementDesc(item, language)}</p>
-          <div className="achievement-progress-line">
-            <span>{language === "ru" ? "Прогресс" : "Progress"}</span>
-            <b>{done ? (language === "ru" ? "Готово" : "Done") : `${fmt(progress.current)} / ${fmt(progress.target)}`}</b>
-          </div>
-          <ProgressBar value={done ? 100 : percent} />
-          <div className="achievement-reward"><span>{language === "ru" ? "Награда" : "Reward"}</span><b>{achievementReward(item, language)}</b></div>
-        </article>;
-      })}
-    </div>}
-  </Section>;
+  );
 }
 
 export default function App() {
   const [s, setS] = useState(() => loadSave());
+  const [achievementStage, setAchievementStage] = useState("start");
   const patch = (value) => setS((old) => ({ ...old, ...(typeof value === "function" ? value(old) : value) }));
 
   const ctx = { days: s.days, coins: s.coins, evil: s.evil, ownedPerks: s.ownedPerks, universe: s.universe, jobState: s.jobState, skillState: s.skillState };
@@ -190,7 +229,7 @@ export default function App() {
     {s.tab === "Skills" && <div className="grid2">{Object.entries(skillCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx))]).filter(([, list]) => list.length).map(([cat, list]) => <Section key={cat} title={tr(cat, s.language)}>{list.map((item) => <TaskRow key={item.name} item={item} state={s.skillState[item.name]} active={s.skillName === item.name} onClick={(name) => patch({ skillName: name })} right={`x${skillEffectMultiplier(item.name, s.skillState).toFixed(2)} ${tr(item.desc, s.language)}`} difficulty={uInfo.difficulty} memoryState={s.skillState} language={s.language} />)}</Section>)}<BranchHint branch={nextBranch(skillCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
     {s.tab === "Shop" && <div className="grid2"><Section title="Жильё">{properties.filter((item) => s.unlockedProperties.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.property === item.name} onClick={(name) => patch({ property: name })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}</Section><Section title="Предметы">{miscItems.filter((item) => s.unlockedMisc.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.misc.includes(item.name)} onClick={(name) => patch({ misc: s.misc.includes(name) ? s.misc.filter((x) => x !== name) : [...s.misc, name] })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}</Section></div>}
     {s.tab === "Amulet" && <Section title="Амулет"><p>Амулет сохраняет пределы прошлых жизней.</p>{age >= AMULET_EYE_AGE && <button onClick={() => { patch({ rebirths: s.rebirths + 1 }); resetLife(true); }}>Прикоснуться к глазу</button>}{age >= AMULET_EVIL_AGE && <button onClick={() => { patch({ evil: s.evil + Math.max(1, Math.floor(Math.sqrt(s.coins + 1) / 30 * effects.evilGain)), rebirths: s.rebirths + 1 }); resetLife(false); }}>Принять зло</button>}</Section>}
-    {s.tab === "Achievements" && <div><Section title="Достижения"><CheckboxRow label="Показывать только невыполненные" checked={s.showOnlyIncompleteAchievements} onChange={(v) => patch({ showOnlyIncompleteAchievements: v })} /><div className="achievement-total"><b>{s.achievedMilestones.length}/{MILESTONES.length}</b><span>общий прогресс</span><ProgressBar value={pct(s.achievedMilestones.length, MILESTONES.length)} /></div></Section>{visibleAchievementStages(achState).map((stage) => <AchievementPack key={stage.id} stage={stage} list={MILESTONES} state={achState} doneIds={s.achievedMilestones} language={s.language} collapsed={!!s.collapsedAchievementStages[stage.id]} onlyOpen={s.showOnlyIncompleteAchievements} onToggle={() => patch({ collapsedAchievementStages: { ...s.collapsedAchievementStages, [stage.id]: !s.collapsedAchievementStages[stage.id] } })} />)}</div>}
+    {s.tab === "Achievements" && <AchievementsView state={achState} language={s.language} doneIds={s.achievedMilestones} selectedStage={achievementStage} setSelectedStage={setAchievementStage} onlyOpen={s.showOnlyIncompleteAchievements} setOnlyOpen={(value) => patch({ showOnlyIncompleteAchievements: value })} setCollapsed={(value) => patch({ collapsedAchievementStages: value })} />}
     {s.tab === "Evil Perks" && <Section title="Перки зла">{EVIL_PERKS.map((perk) => <button key={perk.id} className="perk" disabled={s.ownedPerks.includes(perk.id) || s.evil < perk.cost || !reqUnlocked(perk.req, ctx)} onClick={() => buyPerk(perk)}><b>{tr(perk.name, s.language)}</b><span>{s.ownedPerks.includes(perk.id) ? "Куплено" : `${perk.cost} Evil`}</span><small>{perk.effect}</small></button>)}</Section>}
     {s.tab === "Multiverse" && <div className="grid2"><Section title="Мультивселенная"><StatBox label="MP" value={fmt(s.metaverse)} /><button onClick={collapseUniverse}>Схлопнуть (+{fmt(universePointGain(s, effects))} MP)</button>{observerReady && <button className="final-perk" onClick={() => patch({ metaverse: s.metaverse - OBSERVER_UNLOCK_COST, observerUnlocked: true, tab: "Observer", simulacra: s.simulacra.length ? s.simulacra : [makeSimulacrum(0, observerEffects(s.observerUpgrades), true)] })}>Нечитаемый перк</button>}</Section><Section title="Вселенные">{UNIVERSES.map((info) => <div className="universe-card" key={info.id}><b>{info.name}</b><small>{info.rule}</small>{info.id <= s.highestUniverse ? <button onClick={() => resetLife(false, info.id)}>Войти</button> : <button disabled={s.metaverse < info.unlockCost || info.id > s.highestUniverse + 1} onClick={() => unlockUniverse(info)}>Открыть · {fmt(info.unlockCost)} MP</button>}</div>)}</Section><Section title="Глобальные улучшения">{META_UPGRADES.map((up) => { const level = s.metaUpgrades[up.id] || 0; const cost = metaUpgradeCost(up, level); return <button className="upgrade" key={up.id} disabled={s.metaverse < cost} onClick={() => buyMeta(up)}><b>{up.labels[Math.min(s.universe - 1, up.labels.length - 1)]}</b><span>lvl {level} · {fmt(cost)} MP</span><small>{up.effect}</small></button>; })}</Section></div>}
     {s.tab === "Observer" && <div className="grid2"><Section title="Наблюдатель"><StatBox label="OP" value={fmt(s.observerPoints)} /><StatBox label="OP/sec" value={fmt(observerPointGain(s.simulacra, s.observerUpgrades, effects.observerGain))} /><button onClick={() => patch({ simulacra: [...s.simulacra, makeSimulacrum(s.simulacra.length, observerEffects(s.observerUpgrades), s.simulacra.length === 0)] })}>Купить симулякра</button></Section><Section title="Симулякры">{s.simulacra.map((sim) => <div className="sim-card" key={sim.id}><b>{sim.name}</b><span>{talentById(sim.talentId).rarity}: {talentById(sim.talentId).name}</span><small>{personalityById(sim.personalityId).name} · lvl {sim.level} · {sim.status}</small></div>)}</Section><Section title="Улучшения">{OBSERVER_UPGRADES.map((up) => { const level = s.observerUpgrades[up.id] || 0; const cost = observerUpgradeCost(up, level); return <button className="upgrade" key={up.id} disabled={s.observerPoints < cost} onClick={() => { if (s.observerPoints >= cost) patch({ observerPoints: s.observerPoints - cost, observerUpgrades: { ...s.observerUpgrades, [up.id]: level + 1 } }); }}><b>{up.name}</b><span>lvl {level} · {fmt(cost)} OP</span><small>{up.effect}</small></button>; })}</Section></div>}
