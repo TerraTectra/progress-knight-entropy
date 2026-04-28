@@ -1,179 +1,165 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BASE_SPEED, EARLY_STAGE_BOOST, DAYS_PER_YEAR, BASE_LIFESPAN, AMULET_EYE_AGE, AMULET_EVIL_AGE, ADMIN_SPEED_MULTIPLIERS, SAVE_KEY } from "./constants.js";
-import { jobCategories, skillCategories, properties, miscItems, allJobs, allSkills, EVIL_PERKS } from "./data.js";
-import { tr, LANGUAGES, CONTACTS } from "./i18n.js";
-import { Section, ProgressBar, MoneyAmount, StatBox, TaskRow, ShopRow, CheckboxRow, BranchHint } from "./components.jsx";
-import { freshJobState, freshSkillState, getLevel, gainTaskState, reqUnlocked, reqText, moneyText, fmt, pct, resetProgressKeepMax, skillEffectMultiplier, combineSkillBonuses, taskMemoryMultiplier } from "./progression.js";
+import { ADMIN_SPEED_MULTIPLIERS, AMULET_EVIL_AGE, AMULET_EYE_AGE, BASE_LIFESPAN, BASE_SPEED, DAYS_PER_YEAR, EARLY_STAGE_BOOST, OBSERVER_UNLOCK_COST } from "./constants.js";
+import { allJobs, allSkills, EVIL_PERKS, jobCategories, miscItems, properties, skillCategories } from "./data.js";
+import { CONTACTS, LANGUAGES, tr } from "./i18n.js";
+import { BranchHint, CheckboxRow, MoneyAmount, ProgressBar, Section, ShopRow, StatBox, TaskRow } from "./components.jsx";
+import { ACHIEVEMENT_STAGES, MILESTONES, achievementBonuses, achievementDesc, achievementGroupLabel, achievementName, achievementProgress, achievementReward, achievementUnlocked, visibleAchievementStages } from "./achievements.js";
+import { META_UPGRADES, UNIVERSES, initialMetaUpgrades, metaEffects, metaUpgradeCost, universeInfo, universeJobName, universeMods, universePointGain, universeSkillName } from "./multiverse.js";
+import { OBSERVER_UPGRADES, initialObserverUpgrades, makeSimulacrum, observerEffects, observerPointGain, observerUpgradeCost, personalityById, talentById } from "./observer.js";
+import { clearSave, defaultSave, loadSave, saveGame } from "./save.js";
+import { combineSkillBonuses, fmt, freshJobState, freshSkillState, gainTaskState, getLevel, maxXp, moneyText, pct, reqText, reqUnlocked, resetProgressKeepMax, skillEffectMultiplier, taskMemoryMultiplier } from "./progression.js";
 
-function nextLockedBranch(categories, ctx) {
-  for (const [cat, items] of Object.entries(categories)) {
-    if (!items.some((item) => reqUnlocked(item.req, ctx))) return { cat, item: items[0] };
-  }
+const jobBranchOf = (name) => Object.entries(jobCategories).find(([, list]) => list.some((item) => item.name === name))?.[0] || "Common work";
+const isTen = (level) => level > 0 && level % 10 === 0;
+const nextTen = (level) => Math.max(10, Math.ceil((level + 1) / 10) * 10);
+const itemMul = (owned, name) => owned.includes(name) ? (miscItems.find((item) => item.name === name)?.effect || 1) : 1;
+
+function nextBranch(categories, ctx) {
+  for (const [cat, items] of Object.entries(categories)) if (!items.some((item) => reqUnlocked(item.req, ctx))) return { cat, item: items[0] };
   return null;
 }
 
-function isTenCheckpoint(level) {
-  return level > 0 && level % 10 === 0;
-}
-
-function nextTenCheckpoint(level) {
-  return Math.max(10, Math.ceil((level + 1) / 10) * 10);
-}
-
-function jobBranchOf(jobName) {
-  return Object.entries(jobCategories).find(([, items]) => items.some((item) => item.name === jobName))?.[0] || "Common work";
+function AchievementPack({ stage, list, state, doneIds, language, collapsed, onToggle, onlyOpen }) {
+  const all = list.filter((item) => item.group === stage.id);
+  const shown = onlyOpen ? all.filter((item) => !doneIds.includes(item.id)) : all;
+  return <Section title={`${achievementGroupLabel(stage.id, language)} · ${all.filter((item) => doneIds.includes(item.id)).length}/${all.length}`}>
+    <div className="pack-head"><button onClick={onToggle}>{collapsed ? "Развернуть" : "Свернуть"}</button></div>
+    {!collapsed && <div className="achievement-grid">{shown.map((item) => { const p = achievementProgress(item, state); const done = doneIds.includes(item.id); return <div key={item.id} className={`achievement ${done ? "done" : ""}`}><b>{achievementName(item, language)}</b><span>{done ? "✓" : `${fmt(p.current)}/${fmt(p.target)}`}</span><p className="muted">{achievementDesc(item, language)}</p><ProgressBar value={pct(p.current, p.target)} /><small>{achievementReward(item, language)}</small></div>; })}</div>}
+  </Section>;
 }
 
 export default function App() {
-  const [language, setLanguage] = useState("ru");
-  const [tab, setTab] = useState("Jobs");
-  const [paused, setPaused] = useState(false);
-  const [days, setDays] = useState(14 * DAYS_PER_YEAR);
-  const [coins, setCoins] = useState(0);
-  const [evil, setEvil] = useState(0);
-  const [rebirths, setRebirths] = useState(0);
-  const [jobName, setJobName] = useState("Beggar");
-  const [skillName, setSkillName] = useState("Concentration");
-  const [jobState, setJobState] = useState(freshJobState);
-  const [skillState, setSkillState] = useState(freshSkillState);
-  const [property, setProperty] = useState("Homeless");
-  const [misc, setMisc] = useState([]);
-  const [unlockedProperties, setUnlockedProperties] = useState(["Homeless"]);
-  const [unlockedMisc, setUnlockedMisc] = useState([]);
-  const [ownedPerks, setOwnedPerks] = useState([]);
-  const [autoPromote, setAutoPromote] = useState(true);
-  const [autoLearn, setAutoLearn] = useState(true);
-  const [autoShop, setAutoShop] = useState(true);
-  const [warp, setWarp] = useState(true);
-  const [autoJobBranch, setAutoJobBranch] = useState("Common work");
-  const [adminSpeedMultiplier, setAdminSpeedMultiplier] = useState(1);
-  const [log, setLog] = useState(["Ты начинаешь жизнь нищим в 14 лет."]);
+  const [s, setS] = useState(() => loadSave());
+  const patch = (value) => setS((old) => ({ ...old, ...(typeof value === "function" ? value(old) : value) }));
+  const log = (text) => patch((old) => ({ log: [text, ...(old.log || [])].slice(0, 10) }));
 
-  const ctx = { days, coins, evil, ownedPerks, universe: 1, jobState, skillState };
-  const ageYears = Math.floor(days / DAYS_PER_YEAR);
-  const job = allJobs.find((j) => j.name === jobName) || allJobs[0];
-  const skill = allSkills.find((s) => s.name === skillName) || allSkills[0];
-  const prop = properties.find((p) => p.name === property) || properties[0];
-  const addLog = (text) => setLog((prev) => [text, ...prev].slice(0, 8));
+  const ctx = { days: s.days, coins: s.coins, evil: s.evil, ownedPerks: s.ownedPerks, universe: s.universe, jobState: s.jobState, skillState: s.skillState };
+  const age = Math.floor(s.days / DAYS_PER_YEAR);
+  const job = allJobs.find((item) => item.name === s.jobName) || allJobs[0];
+  const skill = allSkills.find((item) => item.name === s.skillName) || allSkills[0];
+  const prop = properties.find((item) => item.name === s.property) || properties[0];
+  const bonus = useMemo(() => achievementBonuses(s.achievedMilestones), [s.achievedMilestones]);
+  const meta = useMemo(() => metaEffects(s.metaUpgrades || initialMetaUpgrades), [s.metaUpgrades]);
+  const uMods = useMemo(() => universeMods(s.universe), [s.universe]);
+  const uInfo = universeInfo(s.universe);
 
   const effects = useMemo(() => {
-    const itemEffect = (name) => misc.includes(name) ? (miscItems.find((i) => i.name === name)?.effect || 1) : 1;
-    const darkLearning = combineSkillBonuses(skillEffectMultiplier("Dark influence", skillState), skillEffectMultiplier("Demon training", skillState));
-    const lifespanSkills = combineSkillBonuses(skillEffectMultiplier("Immortality", skillState), 1);
+    const dark = combineSkillBonuses(skillEffectMultiplier("Dark influence", s.skillState), skillEffectMultiplier("Demon training", s.skillState));
     return {
-      happiness: prop.effect * skillEffectMultiplier("Meditation", skillState) * itemEffect("Cheap meal") * itemEffect("Meditation mat") * itemEffect("Butler"),
-      jobXp: combineSkillBonuses(skillEffectMultiplier("Productivity", skillState), darkLearning) * itemEffect("Work gloves") * itemEffect("Personal squire") * (ownedPerks.includes("shadowDiscipline") ? 1.25 : 1),
-      skillXp: combineSkillBonuses(skillEffectMultiplier("Concentration", skillState), darkLearning) * itemEffect("Book") * itemEffect("Research notes") * itemEffect("Study desk") * itemEffect("Library") * (ownedPerks.includes("shadowDiscipline") ? 1.25 : 1),
-      income: (ownedPerks.includes("darkPatronage") ? 1.12 : 1) * skillEffectMultiplier("Demon's wealth", skillState) * itemEffect("Merchant seal"),
-      expense: skillEffectMultiplier("Bargaining", skillState) * skillEffectMultiplier("Intimidation", skillState) * itemEffect("Abacus"),
-      militaryPay: skillEffectMultiplier("Strength", skillState) * itemEffect("Knight's banner"),
-      commonPay: itemEffect("Ledger"),
-      militaryXp: skillEffectMultiplier("Battle tactics", skillState) * itemEffect("Training dummy") * itemEffect("Steel longsword"),
-      strengthXp: skillEffectMultiplier("Muscle memory", skillState) * itemEffect("Dumbbells"),
-      magicXp: skillEffectMultiplier("Mana control", skillState) * itemEffect("Sapphire charm") * itemEffect("Apprentice grimoire"),
-      lifespan: BASE_LIFESPAN * lifespanSkills,
-      timeWarp: skillEffectMultiplier("Time warping", skillState),
-      evilGain: skillEffectMultiplier("Evil control", skillState),
+      happiness: prop.effect * skillEffectMultiplier("Meditation", s.skillState) * itemMul(s.misc, "Cheap meal") * itemMul(s.misc, "Meditation mat") * itemMul(s.misc, "Butler"),
+      jobXp: bonus.allXp * meta.allXp * uMods.jobXp * combineSkillBonuses(skillEffectMultiplier("Productivity", s.skillState), dark) * itemMul(s.misc, "Work gloves") * itemMul(s.misc, "Personal squire") * (s.ownedPerks.includes("shadowDiscipline") ? 1.25 : 1),
+      skillXp: bonus.allXp * bonus.skillXp * meta.allXp * uMods.skillXp * combineSkillBonuses(skillEffectMultiplier("Concentration", s.skillState), dark) * itemMul(s.misc, "Book") * itemMul(s.misc, "Research notes") * (s.ownedPerks.includes("shadowDiscipline") ? 1.25 : 1),
+      income: bonus.income * meta.income * uMods.income * skillEffectMultiplier("Demon's wealth", s.skillState) * itemMul(s.misc, "Merchant seal") * itemMul(s.misc, "Debt ledger") * (s.ownedPerks.includes("darkPatronage") ? 1.12 : 1),
+      expense: meta.expense * uMods.expense * skillEffectMultiplier("Bargaining", s.skillState) * skillEffectMultiplier("Intimidation", s.skillState) * itemMul(s.misc, "Abacus") * (s.ownedPerks.includes("wickedBargain") ? 0.85 : 1),
+      militaryPay: skillEffectMultiplier("Strength", s.skillState) * itemMul(s.misc, "Knight's banner"),
+      commonPay: itemMul(s.misc, "Ledger"),
+      magicPay: skillEffectMultiplier("Mana control", s.skillState) * itemMul(s.misc, "Arcane focus"),
+      lifespan: BASE_LIFESPAN * combineSkillBonuses(skillEffectMultiplier("Immortality", s.skillState), skillEffectMultiplier("Super immortality", s.skillState)) * meta.lifespan * uMods.lifespan + (s.ownedPerks.includes("deathDefiance") ? 30 * DAYS_PER_YEAR : 0),
+      timeWarp: combineSkillBonuses(skillEffectMultiplier("Time warping", s.skillState), skillEffectMultiplier("Clockwork focus", s.skillState)) * meta.speed * uMods.speed,
+      evilGain: bonus.evilGain * meta.evilGain * uMods.evilGain * skillEffectMultiplier("Evil control", s.skillState) * (s.ownedPerks.includes("soulFurnace") ? 1.6 : 1),
+      metaGain: bonus.metaGain * meta.metaGain * uMods.metaGain * skillEffectMultiplier("Paradox handling", s.skillState),
+      observerGain: bonus.observerGain,
     };
-  }, [misc, prop, skillState, ownedPerks]);
+  }, [s.skillState, s.misc, s.ownedPerks, prop.effect, bonus, meta, uMods]);
 
-  function finalJobIncome(item) {
-    let value = item.income * (1 + Math.log10(getLevel(jobState, item.name) + 1));
-    if (["Squire", "Footman", "Veteran footman", "Knight", "Veteran knight"].includes(item.name)) value *= effects.militaryPay;
+  const incomeFor = (item) => {
+    let value = item.income * (1 + Math.log10(getLevel(s.jobState, item.name) + 1));
     if (["Beggar", "Farmer", "Fisherman", "Miner", "Blacksmith", "Merchant"].includes(item.name)) value *= effects.commonPay;
-    if (item.name === "Fisherman" && misc.includes("Fishing net")) value *= miscItems.find((i) => i.name === "Fishing net")?.effect || 1;
+    if (["Squire", "Footman", "Veteran footman", "Knight", "Veteran knight", "Elite knight", "Holy knight", "Legendary knight"].includes(item.name)) value *= effects.militaryPay;
+    if (["Student", "Apprentice mage", "Mage", "Wizard", "Master wizard", "Chairman"].includes(item.name)) value *= effects.magicPay;
+    if (item.name === "Fisherman") value *= itemMul(s.misc, "Fishing net");
     return value * effects.income;
-  }
+  };
 
-  const income = finalJobIncome(job);
-  const expense = (prop.expense + miscItems.filter((i) => misc.includes(i.name)).reduce((s, i) => s + i.expense, 0)) * effects.expense;
+  const income = incomeFor(job);
+  const expense = (prop.expense + miscItems.filter((item) => s.misc.includes(item.name)).reduce((sum, item) => sum + item.expense, 0)) * effects.expense;
   const net = income - expense;
-  const speed = BASE_SPEED * ((rebirths === 0 && evil === 0 && ageYears < 25) ? EARLY_STAGE_BOOST : 1) * (warp ? effects.timeWarp : 1) * adminSpeedMultiplier;
-  const isDead = days >= effects.lifespan;
-  const shopUnlocked = days >= 14 * DAYS_PER_YEAR + 100 || unlockedProperties.length > 1 || unlockedMisc.length > 0;
-  const autoShopUnlocked = getLevel(jobState, "Merchant") >= 100;
+  const speed = BASE_SPEED * ((s.rebirths === 0 && s.evil === 0 && age < 25 && s.universe === 1) ? EARLY_STAGE_BOOST : 1) * (s.warp ? effects.timeWarp : 1) * s.adminSpeedMultiplier;
+  const shopOpen = s.days >= 14 * DAYS_PER_YEAR + 100 || s.unlockedProperties.length > 1 || s.unlockedMisc.length > 0;
+  const autoShopOpen = getLevel(s.jobState, "Merchant") >= 100 || s.achievedMilestones.includes("merchant100AutoShop");
+  const multiverseOpen = s.ownedPerks.includes("realityBreak") || s.highestUniverse > 1;
+  const observerReady = s.metaverse >= OBSERVER_UNLOCK_COST && s.highestUniverse >= 10;
+  const achState = { ...s, language: s.language };
+  const tabs = ["Jobs", "Skills", ...(shopOpen ? ["Shop"] : []), "Amulet", "Achievements", ...(s.evil > 0 || s.ownedPerks.length ? ["Evil Perks"] : []), ...(multiverseOpen ? ["Multiverse"] : []), ...(s.observerUnlocked ? ["Observer"] : []), "Settings", "Admin Console"];
+
+  useEffect(() => { saveGame(s); }, [s]);
 
   useEffect(() => {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return;
-    try {
-      const data = JSON.parse(raw);
-      setLanguage(data.language || "ru"); setDays(data.days ?? 14 * DAYS_PER_YEAR); setCoins(data.coins || 0); setEvil(data.evil || 0); setRebirths(data.rebirths || 0);
-      setJobName(data.jobName || "Beggar"); setSkillName(data.skillName || "Concentration"); setJobState(data.jobState || freshJobState()); setSkillState(data.skillState || freshSkillState());
-      setProperty(data.property || "Homeless"); setMisc(data.misc || []); setUnlockedProperties(data.unlockedProperties || ["Homeless"]); setUnlockedMisc(data.unlockedMisc || []);
-      setOwnedPerks(data.ownedPerks || []); setAutoJobBranch(data.autoJobBranch || "Common work"); setAdminSpeedMultiplier(data.adminSpeedMultiplier || 1);
-    } catch { addLog("Сохранение повреждено."); }
-  }, []);
-
-  useEffect(() => {
-    const data = { language, days, coins, evil, rebirths, jobName, skillName, jobState, skillState, property, misc, unlockedProperties, unlockedMisc, ownedPerks, autoJobBranch, adminSpeedMultiplier };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-  }, [language, days, coins, evil, rebirths, jobName, skillName, jobState, skillState, property, misc, unlockedProperties, unlockedMisc, ownedPerks, autoJobBranch, adminSpeedMultiplier]);
-
-  useEffect(() => {
-    if (paused || isDead) return;
+    if (s.paused || s.days >= effects.lifespan || s.observerUnlocked) return;
     const id = setInterval(() => {
       const dayGain = speed / DAYS_PER_YEAR;
-      setDays((d) => d + dayGain);
-      setCoins((c) => Math.max(0, c + net * dayGain));
-      setJobState((state) => gainTaskState(state, job, 10 * effects.jobXp * effects.happiness * taskMemoryMultiplier(state, job.name) * dayGain, 1).state);
-      setSkillState((state) => gainTaskState(state, skill, 10 * effects.skillXp * effects.happiness * taskMemoryMultiplier(state, skill.name) * dayGain, 1).state);
+      setS((old) => ({
+        ...old,
+        days: old.days + dayGain,
+        coins: Math.max(0, old.coins + net * dayGain),
+        jobState: gainTaskState(old.jobState, job, 10 * effects.jobXp * effects.happiness * taskMemoryMultiplier(old.jobState, job.name) * dayGain, uInfo.difficulty).state,
+        skillState: gainTaskState(old.skillState, skill, 10 * effects.skillXp * effects.happiness * taskMemoryMultiplier(old.skillState, skill.name) * dayGain, uInfo.difficulty).state,
+      }));
     }, 33);
     return () => clearInterval(id);
-  }, [paused, isDead, speed, net, jobName, skillName, effects]);
+  }, [s.paused, s.observerUnlocked, s.days, speed, net, job.name, skill.name, effects, uInfo.difficulty]);
 
   useEffect(() => {
-    setUnlockedProperties((prev) => Array.from(new Set(["Homeless", ...prev, ...properties.filter((i) => reqUnlocked(i.req, ctx)).map((i) => i.name)])));
-    setUnlockedMisc((prev) => Array.from(new Set([...prev, ...miscItems.filter((i) => reqUnlocked(i.req, ctx)).map((i) => i.name)])));
-  }, [days, coins, evil, jobState, skillState]);
+    const done = MILESTONES.filter((item) => achievementUnlocked(item, achState)).map((item) => item.id);
+    const fresh = done.filter((id) => !s.achievedMilestones.includes(id));
+    if (fresh.length) patch({ achievedMilestones: Array.from(new Set([...s.achievedMilestones, ...fresh])) });
+  }, [s.days, s.coins, s.evil, s.rebirths, s.highestUniverse, s.metaverse, s.observerUnlocked, s.jobState, s.skillState, s.misc, s.ownedPerks, s.simulacra]);
 
   useEffect(() => {
-    if (!autoPromote || !isTenCheckpoint(getLevel(jobState, jobName))) return;
-    const branchItems = jobCategories[autoJobBranch] || [];
-    const better = branchItems.filter((j) => reqUnlocked(j.req, ctx) && finalJobIncome(j) > finalJobIncome(job)).sort((a, b) => finalJobIncome(a) - finalJobIncome(b))[0];
-    if (better) { setJobName(better.name); addLog(`Авторабота: ${tr(better.name, language)}.`); }
-  }, [jobState, autoPromote, autoJobBranch]);
+    const up = properties.filter((item) => reqUnlocked(item.req, ctx)).map((item) => item.name);
+    const um = miscItems.filter((item) => reqUnlocked(item.req, ctx)).map((item) => item.name);
+    patch((old) => ({ unlockedProperties: Array.from(new Set(["Homeless", ...old.unlockedProperties, ...up])), unlockedMisc: Array.from(new Set([...old.unlockedMisc, ...um])) }));
+  }, [s.days, s.coins, s.evil, s.universe, s.jobState, s.skillState]);
 
   useEffect(() => {
-    if (!autoLearn || !isTenCheckpoint(getLevel(skillState, skillName))) return;
-    const available = allSkills.filter((s) => reqUnlocked(s.req, ctx));
-    const lowest = available.reduce((best, s) => getLevel(skillState, s.name) < getLevel(skillState, best.name) ? s : best, available[0]);
-    if (lowest && lowest.name !== skillName) { setSkillName(lowest.name); addLog(`Авто-навык: ${tr(lowest.name, language)}.`); }
-  }, [skillState, autoLearn]);
+    if (s.coins <= 0.01 && net < 0 && (s.property !== "Homeless" || s.misc.length)) patch({ property: "Homeless", misc: [] });
+  }, [s.coins, net, s.property, s.misc]);
 
-  function selectJob(name) { setJobName(name); setAutoJobBranch(jobBranchOf(name)); }
-  function resetLife(keepMax = true) {
-    setCoins(0); setDays(14 * DAYS_PER_YEAR); setJobName("Beggar"); setSkillName("Concentration"); setProperty("Homeless"); setMisc([]); setUnlockedProperties(["Homeless"]); setUnlockedMisc([]);
-    setJobState(keepMax ? resetProgressKeepMax(jobState, allJobs) : freshJobState());
-    setSkillState(keepMax ? resetProgressKeepMax(skillState, allSkills) : freshSkillState());
-  }
-  function touchAmulet() { if (ageYears >= AMULET_EYE_AGE) { setRebirths((r) => r + 1); resetLife(true); } }
-  function embraceEvil() { if (ageYears >= AMULET_EVIL_AGE) { setEvil((e) => e + Math.max(1, Math.floor(Math.sqrt(coins + 1) / 30 * effects.evilGain))); setRebirths((r) => r + 1); resetLife(false); } }
-  function buyPerk(perk) { if (evil >= perk.cost && !ownedPerks.includes(perk.id) && reqUnlocked(perk.req, ctx)) { setEvil((e) => e - perk.cost); setOwnedPerks((p) => [...p, perk.id]); } }
+  useEffect(() => {
+    if (!s.autoPromote || !isTen(getLevel(s.jobState, s.jobName))) return;
+    const better = (jobCategories[s.autoJobBranch] || []).filter((item) => reqUnlocked(item.req, ctx) && incomeFor(item) > incomeFor(job)).sort((a, b) => incomeFor(a) - incomeFor(b))[0];
+    if (better) patch({ jobName: better.name });
+  }, [s.jobState, s.autoPromote, s.autoJobBranch]);
 
-  const tabs = ["Jobs", "Skills", ...(shopUnlocked ? ["Shop"] : []), "Amulet", ...(evil > 0 || ownedPerks.length ? ["Evil Perks"] : []), "Settings", "Admin Console"];
-  const visibleJobs = Object.entries(jobCategories).map(([cat, items]) => [cat, items.filter((i) => reqUnlocked(i.req, ctx))]).filter(([, items]) => items.length);
-  const visibleSkills = Object.entries(skillCategories).map(([cat, items]) => [cat, items.filter((i) => reqUnlocked(i.req, ctx))]).filter(([, items]) => items.length);
+  useEffect(() => {
+    if (!s.autoLearn || !isTen(getLevel(s.skillState, s.skillName))) return;
+    const available = allSkills.filter((item) => reqUnlocked(item.req, ctx));
+    const lowest = available.reduce((best, item) => getLevel(s.skillState, item.name) < getLevel(s.skillState, best.name) ? item : best, available[0]);
+    if (lowest && lowest.name !== s.skillName) patch({ skillName: lowest.name });
+  }, [s.skillState, s.autoLearn]);
 
-  return <div className="app">
-    <header><h1>Progress Knight: Reality Break</h1><div>{tr("Game speed", language)} x{speed.toFixed(2)}</div></header>
-    <nav>{tabs.map((t) => <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>{tr(t, language)}</button>)}</nav>
-    <main>
-      <aside>
-        <Section title={language === "ru" ? "Персонаж" : "Character"}><StatBox label={language === "ru" ? "Возраст" : "Age"} value={ageYears} /><ProgressBar value={pct(days - 14 * DAYS_PER_YEAR, effects.lifespan - 14 * DAYS_PER_YEAR)} /><StatBox label={language === "ru" ? "Срок жизни" : "Lifespan"} value={Math.floor(effects.lifespan / DAYS_PER_YEAR)} /><StatBox label={language === "ru" ? "Жильё" : "Property"} value={tr(property, language)} /></Section>
-        <Section title={language === "ru" ? "Деньги" : "Money"}><StatBox label={language === "ru" ? "Баланс" : "Balance"} value={<MoneyAmount amount={coins} language={language} />} /><StatBox label={language === "ru" ? "Доход" : "Income"} value={<MoneyAmount amount={income} language={language} perDay />} /><StatBox label={language === "ru" ? "Расход" : "Expense"} value={<MoneyAmount amount={expense} language={language} perDay />} /><StatBox label={language === "ru" ? "Итог" : "Net"} value={<MoneyAmount amount={net} language={language} perDay signed />} /></Section>
-        <Section title={tr("Automation", language)}><CheckboxRow label="Авторабота" checked={autoPromote} onChange={setAutoPromote} /><div className="muted">{tr("Auto-work branch", language)}: {tr(autoJobBranch, language)} · {getLevel(jobState, jobName)}/{nextTenCheckpoint(getLevel(jobState, jobName))}</div><CheckboxRow label="Авто-навык" checked={autoLearn} onChange={setAutoLearn} /><div className="muted">{getLevel(skillState, skillName)}/{nextTenCheckpoint(getLevel(skillState, skillName))}</div><CheckboxRow label="Time warp" checked={warp} onChange={setWarp} /><CheckboxRow label="Автомагазин" checked={autoShop} onChange={setAutoShop} disabled={!autoShopUnlocked} /></Section>
-        <Section title={tr("Log", language)}>{log.map((x, i) => <div className="log" key={i}>{x}</div>)}</Section>
-      </aside>
-      <section className="content">
-        {tab === "Jobs" && <div className="grid3">{visibleJobs.map(([cat, items]) => <Section key={cat} title={tr(cat, language)}>{items.map((item) => <TaskRow key={item.name} item={item} state={jobState[item.name]} active={jobName === item.name} onClick={selectJob} right={<MoneyAmount amount={finalJobIncome(item)} language={language} perDay />} difficulty={1} memoryState={jobState} language={language} />)}</Section>)}<BranchHint branch={nextLockedBranch(jobCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, language)} language={language} /></div>}
-        {tab === "Skills" && <div className="grid2">{visibleSkills.map(([cat, items]) => <Section key={cat} title={tr(cat, language)}>{items.map((item) => <TaskRow key={item.name} item={item} state={skillState[item.name]} active={skillName === item.name} onClick={setSkillName} right={`x${skillEffectMultiplier(item.name, skillState).toFixed(2)} ${tr(item.desc, language)}`} difficulty={1} memoryState={skillState} language={language} />)}</Section>)}<BranchHint branch={nextLockedBranch(skillCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, language)} language={language} /></div>}
-        {tab === "Shop" && <div className="grid2"><Section title={tr("Properties", language)}>{properties.filter((i) => unlockedProperties.includes(i.name) || reqUnlocked(i.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={property === item.name} onClick={setProperty} right={<MoneyAmount amount={item.expense} language={language} perDay />} language={language} />)}</Section><Section title={tr("Misc", language)}>{miscItems.filter((i) => unlockedMisc.includes(i.name) || reqUnlocked(i.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={misc.includes(item.name)} onClick={(name) => setMisc((m) => m.includes(name) ? m.filter((x) => x !== name) : [...m, name])} right={<MoneyAmount amount={item.expense} language={language} perDay />} language={language} />)}</Section></div>}
-        {tab === "Amulet" && <Section title={tr("Amulet", language)}><p>Амулет сохраняет пределы прошлых жизней и даёт множитель памяти.</p>{ageYears >= AMULET_EYE_AGE && <button onClick={touchAmulet}>Прикоснуться к глазу</button>}{ageYears >= AMULET_EVIL_AGE && <button onClick={embraceEvil}>Принять зло</button>}</Section>}
-        {tab === "Evil Perks" && <Section title={tr("Evil Perks", language)}>{EVIL_PERKS.map((p) => <button key={p.id} className="perk" disabled={ownedPerks.includes(p.id) || evil < p.cost || !reqUnlocked(p.req, ctx)} onClick={() => buyPerk(p)}><b>{tr(p.name, language)}</b><span>{ownedPerks.includes(p.id) ? "Куплено" : `${p.cost} Evil`}</span><small>{p.effect}</small></button>)}</Section>}
-        {tab === "Settings" && <Section title={tr("Settings", language)}><select value={language} onChange={(e) => setLanguage(e.target.value)}>{LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select><button onClick={() => setPaused((p) => !p)}>{paused ? "Продолжить" : "Пауза"}</button><button onClick={() => localStorage.removeItem(SAVE_KEY)}>Очистить сохранение</button>{CONTACTS.map((c) => <div className="contact" key={c.label}><b>{c.label}</b><span>{c.value}</span></div>)}<div className="support">По вопросам сотрудничества или добровольной поддержки пишите в Telegram @tahioff или на почту luter.rouze@gmail.com.</div></Section>}
-        {tab === "Admin Console" && <Section title={tr("Admin Console", language)}><div className="admin-buttons">{ADMIN_SPEED_MULTIPLIERS.map((m) => <button key={m} className={adminSpeedMultiplier === m ? "active" : ""} onClick={() => setAdminSpeedMultiplier((cur) => cur === m ? 1 : m)}>x{m}</button>)}</div></Section>}
-      </section>
-    </main>
-  </div>;
+  useEffect(() => {
+    if (!s.observerUnlocked || s.paused) return;
+    const id = setInterval(() => {
+      const op = observerPointGain(s.simulacra, s.observerUpgrades, effects.observerGain) / 30;
+      setS((old) => ({ ...old, observerPoints: old.observerPoints + op, simulacra: old.simulacra.map((sim) => ({ ...sim, xp: sim.xp + op * 0.35, level: sim.xp > sim.level * 20 ? sim.level + 1 : sim.level, status: "самостоятельно проходит игру" })) }));
+    }, 33);
+    return () => clearInterval(id);
+  }, [s.observerUnlocked, s.paused, s.simulacra, s.observerUpgrades, effects.observerGain]);
+
+  const resetLife = (keepMax, target = s.universe) => patch({ coins: 0, days: 14 * DAYS_PER_YEAR, jobName: "Beggar", skillName: "Concentration", property: "Homeless", misc: [], unlockedProperties: ["Homeless"], unlockedMisc: [], universe: target, jobState: keepMax ? resetProgressKeepMax(s.jobState, allJobs) : freshJobState(), skillState: keepMax ? resetProgressKeepMax(s.skillState, allSkills) : freshSkillState() });
+  const buyPerk = (perk) => { if (s.evil >= perk.cost && !s.ownedPerks.includes(perk.id) && reqUnlocked(perk.req, ctx)) patch({ evil: s.evil - perk.cost, ownedPerks: [...s.ownedPerks, perk.id], ...(perk.id === "realityBreak" ? { highestUniverse: Math.max(s.highestUniverse, 2), universe: 2 } : {}) }); };
+  const collapseUniverse = () => { const gain = universePointGain(s, effects); if (gain > 0) { patch({ metaverse: s.metaverse + gain }); resetLife(false); } };
+  const unlockUniverse = (info) => { if (info.id <= s.highestUniverse + 1 && s.metaverse >= info.unlockCost) patch({ metaverse: s.metaverse - info.unlockCost, highestUniverse: Math.max(s.highestUniverse, info.id) }); };
+  const buyMeta = (upgrade) => { const level = s.metaUpgrades[upgrade.id] || 0; const cost = metaUpgradeCost(upgrade, level); if (s.metaverse >= cost) patch({ metaverse: s.metaverse - cost, metaUpgrades: { ...s.metaUpgrades, [upgrade.id]: level + 1 } }); };
+  const buyObserverUpgrade = (upgrade) => { const level = s.observerUpgrades[upgrade.id] || 0; const cost = observerUpgradeCost(upgrade, level); if (s.observerPoints >= cost) patch({ observerPoints: s.observerPoints - cost, observerUpgrades: { ...s.observerUpgrades, [upgrade.id]: level + 1 } }); };
+  const freshReset = () => setS(defaultSave());
+
+  return <div className="app"><header><h1>Progress Knight: Reality Break</h1><div>x{speed.toFixed(2)} · U{s.universe} · {fmt(s.metaverse)} MP</div></header><nav>{tabs.map((item) => <button key={item} className={s.tab === item ? "active" : ""} onClick={() => patch({ tab: item })}>{tr(item, s.language)}</button>)}</nav><main><aside>
+    <Section title="Персонаж"><StatBox label="Возраст" value={age} /><ProgressBar value={pct(s.days - 14 * DAYS_PER_YEAR, effects.lifespan - 14 * DAYS_PER_YEAR)} /><StatBox label="Срок жизни" value={Math.floor(effects.lifespan / DAYS_PER_YEAR)} /><StatBox label="Жильё" value={tr(s.property, s.language)} /></Section>
+    <Section title="Деньги"><StatBox label="Баланс" value={<MoneyAmount amount={s.coins} language={s.language} />} /><StatBox label="Доход" value={<MoneyAmount amount={income} language={s.language} perDay />} /><StatBox label="Расход" value={<MoneyAmount amount={expense} language={s.language} perDay />} /><StatBox label="Итог" value={<MoneyAmount amount={net} language={s.language} perDay signed />} /></Section>
+    <Section title={tr("Automation", s.language)}><CheckboxRow label="Авторабота" checked={s.autoPromote} onChange={(v) => patch({ autoPromote: v })} /><div className="muted">{tr(s.autoJobBranch, s.language)} · {getLevel(s.jobState, s.jobName)}/{nextTen(getLevel(s.jobState, s.jobName))}</div><CheckboxRow label="Авто-навык" checked={s.autoLearn} onChange={(v) => patch({ autoLearn: v })} /><div className="muted">{tr(s.skillName, s.language)} · {getLevel(s.skillState, s.skillName)}/{nextTen(getLevel(s.skillState, s.skillName))}</div><CheckboxRow label="Time warp" checked={s.warp} onChange={(v) => patch({ warp: v })} /><CheckboxRow label="Автомагазин" checked={s.autoShop} disabled={!autoShopOpen} onChange={(v) => patch({ autoShop: v })} /></Section>
+    <Section title={tr("Log", s.language)}>{(s.log || []).map((item, i) => <div className="log" key={i}>{item}</div>)}</Section>
+  </aside><section className="content">
+    {s.tab === "Jobs" && <div className="grid3">{Object.entries(jobCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx))]).filter(([, list]) => list.length).map(([cat, list]) => <Section key={cat} title={tr(cat, s.language)}>{list.map((item) => <TaskRow key={item.name} item={item} state={s.jobState[item.name]} active={s.jobName === item.name} onClick={(name) => patch({ jobName: name, autoJobBranch: jobBranchOf(name) })} right={<MoneyAmount amount={incomeFor(item)} language={s.language} perDay />} difficulty={uInfo.difficulty} memoryState={s.jobState} language={s.language} />)}</Section>)}<BranchHint branch={nextBranch(jobCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
+    {s.tab === "Skills" && <div className="grid2">{Object.entries(skillCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx))]).filter(([, list]) => list.length).map(([cat, list]) => <Section key={cat} title={tr(cat, s.language)}>{list.map((item) => <TaskRow key={item.name} item={item} state={s.skillState[item.name]} active={s.skillName === item.name} onClick={(name) => patch({ skillName: name })} right={`x${skillEffectMultiplier(item.name, s.skillState).toFixed(2)} ${tr(item.desc, s.language)}`} difficulty={uInfo.difficulty} memoryState={s.skillState} language={s.language} />)}</Section>)}<BranchHint branch={nextBranch(skillCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
+    {s.tab === "Shop" && <div className="grid2"><Section title="Жильё">{properties.filter((item) => s.unlockedProperties.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.property === item.name} onClick={(name) => patch({ property: name })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}</Section><Section title="Предметы">{miscItems.filter((item) => s.unlockedMisc.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.misc.includes(item.name)} onClick={(name) => patch({ misc: s.misc.includes(name) ? s.misc.filter((x) => x !== name) : [...s.misc, name] })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}</Section></div>}
+    {s.tab === "Amulet" && <Section title="Амулет"><p>Амулет сохраняет пределы прошлых жизней.</p>{age >= AMULET_EYE_AGE && <button onClick={() => { patch({ rebirths: s.rebirths + 1 }); resetLife(true); }}>Прикоснуться к глазу</button>}{age >= AMULET_EVIL_AGE && <button onClick={() => { patch({ evil: s.evil + Math.max(1, Math.floor(Math.sqrt(s.coins + 1) / 30 * effects.evilGain)), rebirths: s.rebirths + 1 }); resetLife(false); }}>Принять зло</button>}</Section>}
+    {s.tab === "Achievements" && <div><Section title="Достижения"><CheckboxRow label="Показывать только невыполненные" checked={s.showOnlyIncompleteAchievements} onChange={(v) => patch({ showOnlyIncompleteAchievements: v })} /><div>{s.achievedMilestones.length}/{MILESTONES.length}</div></Section>{visibleAchievementStages(achState).map((stage) => <AchievementPack key={stage.id} stage={stage} list={MILESTONES} state={achState} doneIds={s.achievedMilestones} language={s.language} collapsed={!!s.collapsedAchievementStages[stage.id]} onlyOpen={s.showOnlyIncompleteAchievements} onToggle={() => patch({ collapsedAchievementStages: { ...s.collapsedAchievementStages, [stage.id]: !s.collapsedAchievementStages[stage.id] } })} />)}</div>}
+    {s.tab === "Evil Perks" && <Section title="Перки зла">{EVIL_PERKS.map((perk) => <button key={perk.id} className="perk" disabled={s.ownedPerks.includes(perk.id) || s.evil < perk.cost || !reqUnlocked(perk.req, ctx)} onClick={() => buyPerk(perk)}><b>{tr(perk.name, s.language)}</b><span>{s.ownedPerks.includes(perk.id) ? "Куплено" : `${perk.cost} Evil`}</span><small>{perk.effect}</small></button>)}</Section>}
+    {s.tab === "Multiverse" && <div className="grid2"><Section title="Мультивселенная"><StatBox label="MP" value={fmt(s.metaverse)} /><button onClick={collapseUniverse}>Схлопнуть (+{fmt(universePointGain(s, effects))} MP)</button>{observerReady && <button className="final-perk" onClick={() => patch({ metaverse: s.metaverse - OBSERVER_UNLOCK_COST, observerUnlocked: true, tab: "Observer", simulacra: s.simulacra.length ? s.simulacra : [makeSimulacrum(0, observerEffects(s.observerUpgrades), true)] })}>Нечитаемый перк</button>}</Section><Section title="Вселенные">{UNIVERSES.map((info) => <div className="universe-card" key={info.id}><b>{info.name}</b><small>{info.rule}</small>{info.id <= s.highestUniverse ? <button onClick={() => resetLife(false, info.id)}>Войти</button> : <button disabled={s.metaverse < info.unlockCost || info.id > s.highestUniverse + 1} onClick={() => unlockUniverse(info)}>Открыть · {fmt(info.unlockCost)} MP</button>}</div>)}</Section><Section title="Глобальные улучшения">{META_UPGRADES.map((up) => { const level = s.metaUpgrades[up.id] || 0; const cost = metaUpgradeCost(up, level); return <button className="upgrade" key={up.id} disabled={s.metaverse < cost} onClick={() => buyMeta(up)}><b>{up.labels[Math.min(s.universe - 1, up.labels.length - 1)]}</b><span>lvl {level} · {fmt(cost)} MP</span><small>{up.effect}</small></button>; })}</Section></div>}
+    {s.tab === "Observer" && <div className="grid2"><Section title="Наблюдатель"><StatBox label="OP" value={fmt(s.observerPoints)} /><StatBox label="OP/sec" value={fmt(observerPointGain(s.simulacra, s.observerUpgrades, effects.observerGain))} /><button onClick={() => patch({ simulacra: [...s.simulacra, makeSimulacrum(s.simulacra.length, observerEffects(s.observerUpgrades), s.simulacra.length === 0)] })}>Купить симулякра</button></Section><Section title="Симулякры">{s.simulacra.map((sim) => <div className="sim-card" key={sim.id}><b>{sim.name}</b><span>{talentById(sim.talentId).rarity}: {talentById(sim.talentId).name}</span><small>{personalityById(sim.personalityId).name} · lvl {sim.level} · {sim.status}</small></div>)}</Section><Section title="Улучшения">{OBSERVER_UPGRADES.map((up) => { const level = s.observerUpgrades[up.id] || 0; const cost = observerUpgradeCost(up, level); return <button className="upgrade" key={up.id} disabled={s.observerPoints < cost} onClick={() => { if (s.observerPoints >= cost) patch({ observerPoints: s.observerPoints - cost, observerUpgrades: { ...s.observerUpgrades, [up.id]: level + 1 } }); }}><b>{up.name}</b><span>lvl {level} · {fmt(cost)} OP</span><small>{up.effect}</small></button>; })}</Section></div>}
+    {s.tab === "Settings" && <Section title="Настройки"><select value={s.language} onChange={(e) => patch({ language: e.target.value })}>{LANGUAGES.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button onClick={() => patch({ paused: !s.paused })}>{s.paused ? "Продолжить" : "Пауза"}</button><button onClick={() => { clearSave(); freshReset(); }}>Полный сброс</button>{CONTACTS.map((c) => <div className="contact" key={c.label}><b>{c.label}</b><span>{c.value}</span></div>)}<div className="support">По вопросам сотрудничества или добровольной поддержки пишите в Telegram @tahioff или на почту luter.rouze@gmail.com.</div></Section>}
+    {s.tab === "Admin Console" && <Section title="Админ-консоль"><div className="admin-buttons">{ADMIN_SPEED_MULTIPLIERS.map((m) => <button key={m} className={s.adminSpeedMultiplier === m ? "active" : ""} onClick={() => patch({ adminSpeedMultiplier: s.adminSpeedMultiplier === m ? 1 : m })}>x{m}</button>)}</div><button onClick={() => patch({ ownedPerks: Array.from(new Set([...s.ownedPerks, "shadowDiscipline", "darkPatronage", "wickedBargain", "soulFurnace", "deathDefiance", "demonicAutomation", "realityBreak"])), highestUniverse: 10, universe: 10, metaverse: Math.max(s.metaverse, 2000000) })}>Open Universe X</button></Section>}
+  </section></main></div>;
 }
