@@ -22,7 +22,21 @@ function nextBranch(categories, ctx) {
   return null;
 }
 
-function AchievementsView({ state, language, doneIds, selectedStage, setSelectedStage, onlyOpen, setOnlyOpen, setCollapsed }) {
+function nextLockedItem(items, ctx, unlockedNames = []) {
+  return items.find((item) => !unlockedNames.includes(item.name) && item.req && !reqUnlocked(item.req, ctx)) || null;
+}
+
+function UnlockHint({ item, ctx, language, title = "Следующее открытие", name }) {
+  if (!item) return null;
+  return (
+    <div className="unlock-hint">
+      <div className="unlock-hint-title">{title}: <b>{name || tr(item.name, language)}</b></div>
+      <div className="unlock-hint-req">Требование: {reqText(item.req, ctx, tr, language)}</div>
+    </div>
+  );
+}
+
+function AchievementsView({ state, language, doneIds, selectedStage, setSelectedStage, onlyOpen, setOnlyOpen }) {
   const stages = visibleAchievementStages(state);
   const stageIds = stages.map((stage) => stage.id);
   const currentStage = stageIds.includes(selectedStage) ? selectedStage : stages[0]?.id || "start";
@@ -37,16 +51,9 @@ function AchievementsView({ state, language, doneIds, selectedStage, setSelected
   return (
     <div className="achievements-view">
       <Section title="Достижения">
-        <div className="achievements-hero">
-          <div>
-            <div className="eyebrow">Progress Knight: Reality Break</div>
-            <h3>Достижения без каши</h3>
-            <p>Выбирай этап сверху. Ниже показываются только достижения выбранного этапа, их цель, прогресс и награда.</p>
-          </div>
-          <div className="achievement-total-card">
-            <div className="achievement-total-row"><span>Общий прогресс</span><b>{totalDone}/{total}</b></div>
-            <ProgressBar value={pct(totalDone, total)} />
-          </div>
+        <div className="achievement-total-card">
+          <div className="achievement-total-row"><span>Общий прогресс</span><b>{totalDone}/{total}</b></div>
+          <ProgressBar value={pct(totalDone, total)} />
         </div>
         <div className="achievement-controls">
           <label className="achievement-check"><input type="checkbox" checked={onlyOpen} onChange={(event) => setOnlyOpen(event.target.checked)} />Показывать только невыполненные</label>
@@ -69,10 +76,7 @@ function AchievementsView({ state, language, doneIds, selectedStage, setSelected
 
       {activeStage && <Section title={`${stageIcon(activeStage.id)} ${achievementGroupLabel(activeStage.id, language)}`} tone="achievement-stage-panel">
         <div className="achievement-current-stage">
-          <div>
-            <span>Текущий этап</span>
-            <b>{achievementGroupLabel(activeStage.id, language)}</b>
-          </div>
+          <div><span>Текущий этап</span><b>{achievementGroupLabel(activeStage.id, language)}</b></div>
           <div className="achievement-current-score"><b>{stageDone}/{stageAchievements.length}</b><span>выполнено</span></div>
         </div>
         <ProgressBar value={pct(stageDone, Math.max(1, stageAchievements.length))} />
@@ -86,10 +90,7 @@ function AchievementsView({ state, language, doneIds, selectedStage, setSelected
               <article key={item.id} className={`achievement-card concept-card ${done ? "done" : "locked"}`}>
                 <div className="achievement-card-head">
                   <span className="achievement-status">{done ? "✓" : `${Math.floor(percent)}%`}</span>
-                  <div className="achievement-title-wrap">
-                    <h3>{achievementName(item, language)}</h3>
-                    <p>{achievementDesc(item, language)}</p>
-                  </div>
+                  <div className="achievement-title-wrap"><h3>{achievementName(item, language)}</h3><p>{achievementDesc(item, language)}</p></div>
                 </div>
                 <div className="achievement-progress-line"><span>Прогресс</span><b>{done ? "Готово" : `${fmt(progress.current)} / ${fmt(progress.target)}`}</b></div>
                 <ProgressBar value={percent} />
@@ -225,11 +226,11 @@ export default function App() {
     <Section title={tr("Automation", s.language)}><CheckboxRow label="Авторабота" checked={s.autoPromote} onChange={(v) => patch({ autoPromote: v })} /><div className="muted">{tr(s.autoJobBranch, s.language)} · {getLevel(s.jobState, s.jobName)}/{nextTen(getLevel(s.jobState, s.jobName))}</div><CheckboxRow label="Авто-навык" checked={s.autoLearn} onChange={(v) => patch({ autoLearn: v })} /><div className="muted">{tr(s.skillName, s.language)} · {getLevel(s.skillState, s.skillName)}/{nextTen(getLevel(s.skillState, s.skillName))}</div><CheckboxRow label="Time warp" checked={s.warp} onChange={(v) => patch({ warp: v })} /><CheckboxRow label="Автомагазин" checked={s.autoShop} disabled={!autoShopOpen} onChange={(v) => patch({ autoShop: v })} /></Section>
     <Section title={tr("Log", s.language)}>{(s.log || []).map((item, i) => <div className="log" key={i}>{item}</div>)}</Section>
   </aside><section className="content">
-    {s.tab === "Jobs" && <div className="grid3">{Object.entries(jobCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx))]).filter(([, list]) => list.length).map(([cat, list]) => <Section key={cat} title={tr(cat, s.language)}>{list.map((item) => <TaskRow key={item.name} item={item} state={s.jobState[item.name]} active={s.jobName === item.name} onClick={(name) => patch({ jobName: name, autoJobBranch: jobBranchOf(name) })} right={<MoneyAmount amount={incomeFor(item)} language={s.language} perDay />} difficulty={uInfo.difficulty} memoryState={s.jobState} language={s.language} />)}</Section>)}<BranchHint branch={nextBranch(jobCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
-    {s.tab === "Skills" && <div className="grid2">{Object.entries(skillCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx))]).filter(([, list]) => list.length).map(([cat, list]) => <Section key={cat} title={tr(cat, s.language)}>{list.map((item) => <TaskRow key={item.name} item={item} state={s.skillState[item.name]} active={s.skillName === item.name} onClick={(name) => patch({ skillName: name })} right={`x${skillEffectMultiplier(item.name, s.skillState).toFixed(2)} ${tr(item.desc, s.language)}`} difficulty={uInfo.difficulty} memoryState={s.skillState} language={s.language} />)}</Section>)}<BranchHint branch={nextBranch(skillCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
-    {s.tab === "Shop" && <div className="grid2"><Section title="Жильё">{properties.filter((item) => s.unlockedProperties.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.property === item.name} onClick={(name) => patch({ property: name })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}</Section><Section title="Предметы">{miscItems.filter((item) => s.unlockedMisc.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.misc.includes(item.name)} onClick={(name) => patch({ misc: s.misc.includes(name) ? s.misc.filter((x) => x !== name) : [...s.misc, name] })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}</Section></div>}
+    {s.tab === "Jobs" && <div className="grid3">{Object.entries(jobCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx)), list]).filter(([, visible]) => visible.length).map(([cat, visible, fullList]) => <Section key={cat} title={tr(cat, s.language)}>{visible.map((item) => <TaskRow key={item.name} item={item} state={s.jobState[item.name]} active={s.jobName === item.name} onClick={(name) => patch({ jobName: name, autoJobBranch: jobBranchOf(name) })} right={<MoneyAmount amount={incomeFor(item)} language={s.language} perDay />} difficulty={uInfo.difficulty} memoryState={s.jobState} language={s.language} />)}<UnlockHint item={nextLockedItem(fullList, ctx)} ctx={ctx} language={s.language} title="Следующая работа" /></Section>)}<BranchHint branch={nextBranch(jobCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
+    {s.tab === "Skills" && <div className="grid2">{Object.entries(skillCategories).map(([cat, list]) => [cat, list.filter((item) => reqUnlocked(item.req, ctx)), list]).filter(([, visible]) => visible.length).map(([cat, visible, fullList]) => <Section key={cat} title={tr(cat, s.language)}>{visible.map((item) => <TaskRow key={item.name} item={item} state={s.skillState[item.name]} active={s.skillName === item.name} onClick={(name) => patch({ skillName: name })} right={`x${skillEffectMultiplier(item.name, s.skillState).toFixed(2)} ${tr(item.desc, s.language)}`} difficulty={uInfo.difficulty} memoryState={s.skillState} language={s.language} />)}<UnlockHint item={nextLockedItem(fullList, ctx)} ctx={ctx} language={s.language} title="Следующий навык" /></Section>)}<BranchHint branch={nextBranch(skillCategories, ctx)} ctx={ctx} reqText={(req) => reqText(req, ctx, tr, s.language)} language={s.language} /></div>}
+    {s.tab === "Shop" && <div className="grid2"><Section title="Жильё">{properties.filter((item) => s.unlockedProperties.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.property === item.name} onClick={(name) => patch({ property: name })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}<UnlockHint item={nextLockedItem(properties, ctx, s.unlockedProperties)} ctx={ctx} language={s.language} title="Следующее жильё" /></Section><Section title="Предметы">{miscItems.filter((item) => s.unlockedMisc.includes(item.name) || reqUnlocked(item.req, ctx)).map((item) => <ShopRow key={item.name} item={item} active={s.misc.includes(item.name)} onClick={(name) => patch({ misc: s.misc.includes(name) ? s.misc.filter((x) => x !== name) : [...s.misc, name] })} right={<MoneyAmount amount={item.expense} language={s.language} perDay />} language={s.language} />)}<UnlockHint item={nextLockedItem(miscItems, ctx, s.unlockedMisc)} ctx={ctx} language={s.language} title="Следующий предмет" /></Section></div>}
     {s.tab === "Amulet" && <Section title="Амулет"><p>Амулет сохраняет пределы прошлых жизней.</p>{age >= AMULET_EYE_AGE && <button onClick={() => { patch({ rebirths: s.rebirths + 1 }); resetLife(true); }}>Прикоснуться к глазу</button>}{age >= AMULET_EVIL_AGE && <button onClick={() => { patch({ evil: s.evil + Math.max(1, Math.floor(Math.sqrt(s.coins + 1) / 30 * effects.evilGain)), rebirths: s.rebirths + 1 }); resetLife(false); }}>Принять зло</button>}</Section>}
-    {s.tab === "Achievements" && <AchievementsView state={achState} language={s.language} doneIds={s.achievedMilestones} selectedStage={achievementStage} setSelectedStage={setAchievementStage} onlyOpen={s.showOnlyIncompleteAchievements} setOnlyOpen={(value) => patch({ showOnlyIncompleteAchievements: value })} setCollapsed={(value) => patch({ collapsedAchievementStages: value })} />}
+    {s.tab === "Achievements" && <AchievementsView state={achState} language={s.language} doneIds={s.achievedMilestones} selectedStage={achievementStage} setSelectedStage={setAchievementStage} onlyOpen={s.showOnlyIncompleteAchievements} setOnlyOpen={(value) => patch({ showOnlyIncompleteAchievements: value })} />}
     {s.tab === "Evil Perks" && <Section title="Перки зла">{EVIL_PERKS.map((perk) => <button key={perk.id} className="perk" disabled={s.ownedPerks.includes(perk.id) || s.evil < perk.cost || !reqUnlocked(perk.req, ctx)} onClick={() => buyPerk(perk)}><b>{tr(perk.name, s.language)}</b><span>{s.ownedPerks.includes(perk.id) ? "Куплено" : `${perk.cost} Evil`}</span><small>{perk.effect}</small></button>)}</Section>}
     {s.tab === "Multiverse" && <div className="grid2"><Section title="Мультивселенная"><StatBox label="MP" value={fmt(s.metaverse)} /><button onClick={collapseUniverse}>Схлопнуть (+{fmt(universePointGain(s, effects))} MP)</button>{observerReady && <button className="final-perk" onClick={() => patch({ metaverse: s.metaverse - OBSERVER_UNLOCK_COST, observerUnlocked: true, tab: "Observer", simulacra: s.simulacra.length ? s.simulacra : [makeSimulacrum(0, observerEffects(s.observerUpgrades), true)] })}>Нечитаемый перк</button>}</Section><Section title="Вселенные">{UNIVERSES.map((info) => <div className="universe-card" key={info.id}><b>{info.name}</b><small>{info.rule}</small>{info.id <= s.highestUniverse ? <button onClick={() => resetLife(false, info.id)}>Войти</button> : <button disabled={s.metaverse < info.unlockCost || info.id > s.highestUniverse + 1} onClick={() => unlockUniverse(info)}>Открыть · {fmt(info.unlockCost)} MP</button>}</div>)}</Section><Section title="Глобальные улучшения">{META_UPGRADES.map((up) => { const level = s.metaUpgrades[up.id] || 0; const cost = metaUpgradeCost(up, level); return <button className="upgrade" key={up.id} disabled={s.metaverse < cost} onClick={() => buyMeta(up)}><b>{up.labels[Math.min(s.universe - 1, up.labels.length - 1)]}</b><span>lvl {level} · {fmt(cost)} MP</span><small>{up.effect}</small></button>; })}</Section></div>}
     {s.tab === "Observer" && <div className="grid2"><Section title="Наблюдатель"><StatBox label="OP" value={fmt(s.observerPoints)} /><StatBox label="OP/sec" value={fmt(observerPointGain(s.simulacra, s.observerUpgrades, effects.observerGain))} /><button onClick={() => patch({ simulacra: [...s.simulacra, makeSimulacrum(s.simulacra.length, observerEffects(s.observerUpgrades), s.simulacra.length === 0)] })}>Купить симулякра</button></Section><Section title="Симулякры">{s.simulacra.map((sim) => <div className="sim-card" key={sim.id}><b>{sim.name}</b><span>{talentById(sim.talentId).rarity}: {talentById(sim.talentId).name}</span><small>{personalityById(sim.personalityId).name} · lvl {sim.level} · {sim.status}</small></div>)}</Section><Section title="Улучшения">{OBSERVER_UPGRADES.map((up) => { const level = s.observerUpgrades[up.id] || 0; const cost = observerUpgradeCost(up, level); return <button className="upgrade" key={up.id} disabled={s.observerPoints < cost} onClick={() => { if (s.observerPoints >= cost) patch({ observerPoints: s.observerPoints - cost, observerUpgrades: { ...s.observerUpgrades, [up.id]: level + 1 } }); }}><b>{up.name}</b><span>lvl {level} · {fmt(cost)} OP</span><small>{up.effect}</small></button>; })}</Section></div>}
