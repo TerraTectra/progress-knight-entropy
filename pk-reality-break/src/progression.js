@@ -112,9 +112,16 @@ export function skillEffectMultiplier(name, state) {
   if (name === "Mana control") return skillStateMultiplier(state, name, 0.0022, 12);
   if (name === "Immortality") return skillStateMultiplier(state, name, 0.0021, 9);
   if (name === "Time warping") return skillStateMultiplier(state, name, 0.00155, 7);
+  if (name === "Super immortality") return skillStateMultiplier(state, name, 0.0019, 8);
   if (name === "Dark influence") return skillStateMultiplier(state, name, 0.0022, 11);
   if (name === "Evil control") return skillStateMultiplier(state, name, 0.0025, 12);
   if (name === "Intimidation") return skillStateReduction(state, name, 0.0019, 0.18);
+  if (name === "Demon training") return skillStateMultiplier(state, name, 0.0024, 12);
+  if (name === "Blood meditation") return skillStateMultiplier(state, name, 0.0025, 12);
+  if (name === "Demon's wealth") return skillStateMultiplier(state, name, 0.0021, 10);
+  if (name === "Clockwork focus") return skillStateMultiplier(state, name, 0.00155, 7);
+  if (name === "Paradox handling") return skillStateMultiplier(state, name, 0.0026, 12);
+  if (name === "Entropy surfing") return skillStateMultiplier(state, name, 0.0026, 12);
   return 1;
 }
 
