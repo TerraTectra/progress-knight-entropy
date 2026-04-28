@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  build-and-publish-subdir:
+  build-and-publish-root:
     runs-on: ubuntu-latest
     if: github.actor != 'github-actions[bot]'
 
@@ -30,14 +30,14 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: pk-reality-break
-      - name: Publish built app to main subdirectory
+      - name: Publish built app to repository root
         run: |
-          rm -rf reality-break
-          mkdir -p reality-break
-          cp -R pk-reality-break/dist/. reality-break/
-          touch reality-break/.nojekyll
+          rm -rf assets reality-break css js img fonts scripts data docs
+          rm -f index.html favicon.ico manifest.json service-worker.js sw.js
+          cp -R pk-reality-break/dist/. ./
+          touch .nojekyll
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reality-break
-          git diff --cached --quiet || git commit -m "Publish Reality Break build"
+          git add -A
+          git diff --cached --quiet || git commit -m "Publish Reality Break root build"
           git push
