@@ -138,14 +138,61 @@ export function reqUnlocked(req, ctx) {
   return true;
 }
 
+function taskLevelForReq(ctx, name) {
+  return Math.max(getLevel(ctx.jobState, name), getLevel(ctx.skillState, name));
+}
+
+function remainingJoin(parts, language, any = false) {
+  const clean = parts.filter(Boolean);
+  if (!clean.length) return "";
+  return clean.join(any ? (language === "ru" ? " или " : " or ") : (language === "ru" ? " и " : " and "));
+}
+
 export function reqText(req, ctx, tr, language = "ru") {
-  if (!req) return language === "ru" ? "Нет" : "None";
-  if (req.all) return req.all.map((x) => reqText(x, ctx, tr, language)).join(language === "ru" ? " и " : " and ");
-  if (req.task) return `${tr(req.task, language)} ${language === "ru" ? "ур." : "lvl"} ${req.level}`;
-  if (req.coins) return moneyText(req.coins, language);
-  if (req.ageDays) return language === "ru" ? `День ${Math.floor(req.ageDays - 14 * DAYS_PER_YEAR)}` : `Day ${Math.floor(req.ageDays - 14 * DAYS_PER_YEAR)}`;
-  if (req.evil) return `${fmt(req.evil)} ${language === "ru" ? "зла" : "Evil"}`;
-  if (req.perk) return tr(req.perk, language);
-  if (req.universe) return `${language === "ru" ? "Вселенная" : "Universe"} ${req.universe}`;
-  return "?";
+  if (!req || reqUnlocked(req, ctx)) return "";
+  if (req.all) return remainingJoin(req.all.map((x) => reqText(x, ctx, tr, language)), language);
+  if (req.any) return remainingJoin(req.any.map((x) => reqText(x, ctx, tr, language)), language, true);
+
+  if (req.task) {
+    const current = taskLevelForReq(ctx, req.task);
+    const left = Math.max(0, req.level - current);
+    if (!left) return "";
+    return language === "ru"
+      ? `${tr(req.task, language)} ур. ${current}/${req.level} — осталось ${left}`
+      : `${tr(req.task, language)} lvl ${current}/${req.level} — ${left} left`;
+  }
+
+  if (req.coins) {
+    const left = Math.max(0, req.coins - (ctx.coins || 0));
+    if (!left) return "";
+    return language === "ru"
+      ? `${moneyText(req.coins, language)} — осталось ${moneyText(left, language)}`
+      : `${moneyText(req.coins, language)} — ${moneyText(left, language)} left`;
+  }
+
+  if (req.ageDays) {
+    const currentDay = Math.max(0, Math.floor((ctx.days || 0) - 14 * DAYS_PER_YEAR));
+    const targetDay = Math.max(0, Math.floor(req.ageDays - 14 * DAYS_PER_YEAR));
+    const left = Math.max(0, targetDay - currentDay);
+    if (!left) return "";
+    return language === "ru" ? `День ${currentDay}/${targetDay} — осталось ${left} дн.` : `Day ${currentDay}/${targetDay} — ${left} days left`;
+  }
+
+  if (req.evil) {
+    const current = ctx.evil || 0;
+    const left = Math.max(0, req.evil - current);
+    if (!left) return "";
+    return language === "ru" ? `Зло ${fmt(current)}/${fmt(req.evil)} — осталось ${fmt(left)}` : `Evil ${fmt(current)}/${fmt(req.evil)} — ${fmt(left)} left`;
+  }
+
+  if (req.perk) return ctx.ownedPerks?.includes(req.perk) ? "" : tr(req.perk, language);
+
+  if (req.universe) {
+    const current = ctx.universe || 1;
+    const left = Math.max(0, req.universe - current);
+    if (!left) return "";
+    return language === "ru" ? `Вселенная ${current}/${req.universe} — осталось ${left}` : `Universe ${current}/${req.universe} — ${left} left`;
+  }
+
+  return "";
 }
