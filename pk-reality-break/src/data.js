@@ -119,13 +119,13 @@ export const miscItems = [
 ];
 
 export const EVIL_PERKS = [
-  { id: "shadowDiscipline", name: "Shadow Discipline", cost: 3, req: {}, effect: "+25% all XP" },
-  { id: "darkPatronage", name: "Dark Patronage", cost: 8, req: { perk: "shadowDiscipline" }, effect: "+15% income" },
-  { id: "wickedBargain", name: "Wicked Bargain", cost: 18, req: { all: [{ perk: "darkPatronage" }, { task: "Intimidation", level: 25 }] }, effect: "-15% expenses" },
-  { id: "soulFurnace", name: "Soul Furnace", cost: 40, req: { all: [{ perk: "wickedBargain" }, { task: "Evil control", level: 50 }] }, effect: "+60% Evil gain" },
-  { id: "deathDefiance", name: "Death Defiance", cost: 75, req: { all: [{ perk: "soulFurnace" }, { task: "Immortality", level: 50 }] }, effect: "+30 years lifespan" },
-  { id: "demonicAutomation", name: "Demonic Automation", cost: 100, req: { all: [{ perk: "deathDefiance" }, { task: "Merchant", level: 100 }] }, effect: "+50% XP while automation is enabled" },
-  { id: "realityBreak", name: "Reality Break", cost: 150, req: { all: [{ perk: "darkPatronage" }, { task: "Dark influence", level: 20 }] }, effect: "Open multiverse" },
+  { id: "shadowDiscipline", name: "Shadow Discipline", cost: 2, req: {}, effect: "+25% all XP" },
+  { id: "darkPatronage", name: "Dark Patronage", cost: 5, req: { perk: "shadowDiscipline" }, effect: "+15% income" },
+  { id: "wickedBargain", name: "Wicked Bargain", cost: 10, req: { all: [{ perk: "darkPatronage" }, { task: "Intimidation", level: 15 }] }, effect: "-15% expenses" },
+  { id: "soulFurnace", name: "Soul Furnace", cost: 18, req: { all: [{ perk: "darkPatronage" }, { task: "Evil control", level: 25 }] }, effect: "+60% Evil gain" },
+  { id: "deathDefiance", name: "Death Defiance", cost: 32, req: { all: [{ perk: "soulFurnace" }, { task: "Immortality", level: 35 }] }, effect: "+30 years lifespan" },
+  { id: "demonicAutomation", name: "Demonic Automation", cost: 50, req: { all: [{ perk: "wickedBargain" }, { task: "Merchant", level: 75 }] }, effect: "+50% XP while automation is enabled" },
+  { id: "realityBreak", name: "Reality Break", cost: 75, req: { all: [{ perk: "soulFurnace" }, { task: "Dark influence", level: 20 }, { task: "Demon training", level: 15 }] }, effect: "Open multiverse" },
 ];
 
 export const allJobs = Object.values(jobCategories).flat();
