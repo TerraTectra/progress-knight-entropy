@@ -40,7 +40,7 @@ export function getLevel(state, name) {
 }
 
 export function maxXp(base, level, difficulty = 1) {
-  return base * Math.pow(1.12, level) * difficulty;
+  return base * Math.pow(1.11, level) * difficulty;
 }
 
 export function taskPreviousMax(state, name) {
@@ -106,10 +106,10 @@ export function skillEffectMultiplier(name, state) {
   if (name === "Productivity") return skillStateMultiplier(state, name, 0.0024, 10);
   if (name === "Bargaining") return skillStateReduction(state, name, 0.0019, 0.18);
   if (name === "Meditation") return skillStateMultiplier(state, name, 0.0021, 9);
-  if (name === "Patience") return skillStateMultiplier(state, name, 0.0022, 8);
-  if (name === "Frugality") return skillStateReduction(state, name, 0.0017, 0.30);
-  if (name === "Diligence") return skillStateMultiplier(state, name, 0.0020, 9);
-  if (name === "Curiosity") return skillStateMultiplier(state, name, 0.0023, 10);
+  if (name === "Patience") return skillStateMultiplier(state, name, 0.0028, 10);
+  if (name === "Frugality") return skillStateReduction(state, name, 0.0022, 0.25);
+  if (name === "Diligence") return skillStateMultiplier(state, name, 0.0026, 11);
+  if (name === "Curiosity") return skillStateMultiplier(state, name, 0.0030, 12);
   if (name === "Strength") return skillStateMultiplier(state, name, 0.0022, 11);
   if (name === "Battle tactics") return skillStateMultiplier(state, name, 0.0023, 10);
   if (name === "Muscle memory") return skillStateMultiplier(state, name, 0.0023, 10);

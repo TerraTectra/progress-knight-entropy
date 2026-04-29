@@ -37,7 +37,7 @@ export const skillCategories = {
     { name: "Bargaining", maxXp: 100, desc: "Expenses", req: { task: "Concentration", level: 20 } },
     { name: "Frugality", maxXp: 120, desc: "Expenses", req: { task: "Bargaining", level: 5 } },
     { name: "Diligence", maxXp: 130, desc: "All XP", req: { all: [{ task: "Concentration", level: 10 }, { task: "Productivity", level: 10 }] } },
-    { name: "Meditation", maxXp: 100, desc: "Happiness", req: { all: [{ task: "Concentration", level: 30 }, { task: "Productivity", level: 20 }] } },
+    { name: "Meditation", maxXp: 100, desc: "Happiness", req: { all: [{ task: "Concentration", level: 20 }, { task: "Productivity", level: 15 }] } },
     { name: "Curiosity", maxXp: 140, desc: "Skill XP", req: { task: "Concentration", level: 50 } },
   ],
   Combat: [
@@ -46,7 +46,7 @@ export const skillCategories = {
     { name: "Muscle memory", maxXp: 100, desc: "Strength XP", req: { all: [{ task: "Concentration", level: 30 }, { task: "Strength", level: 30 }] } },
   ],
   Magic: [
-    { name: "Mana control", maxXp: 100, desc: "T.A.A. XP", req: { all: [{ task: "Concentration", level: 200 }, { task: "Meditation", level: 200 }] } },
+    { name: "Mana control", maxXp: 100, desc: "T.A.A. XP", req: { all: [{ task: "Concentration", level: 150 }, { task: "Meditation", level: 150 }] } },
     { name: "Immortality", maxXp: 100, desc: "Longer lifespan", req: { task: "Apprentice mage", level: 10 } },
     { name: "Time warping", maxXp: 100, desc: "Game speed", req: { task: "Mage", level: 10 } },
     { name: "Super immortality", maxXp: 100, desc: "Longer lifespan", req: { all: [{ task: "Time warping", level: 200 }, { task: "Immortality", level: 200 }] } },
