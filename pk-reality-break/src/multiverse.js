@@ -2,28 +2,47 @@ import { allJobs, allSkills } from "./data.js";
 import { getLevel } from "./progression.js";
 
 export const UNIVERSES = [
-  { id: 1, name: "I · Prime World", short: "Prime", pointScale: 0, difficulty: 1, unlockCost: 0, rule: "The original mortal rules." },
-  { id: 2, name: "II · Ashen Fields", short: "Ash", pointScale: 1, difficulty: 1.2, unlockCost: 0, rule: "Slightly harsher economy." },
-  { id: 3, name: "III · Mirror Guild", short: "Mirror", pointScale: 1.55, difficulty: 1.55, unlockCost: 35, rule: "Expenses rise and identities distort." },
-  { id: 4, name: "IV · Clockwork Realm", short: "Clock", pointScale: 2.35, difficulty: 2.1, unlockCost: 110, rule: "Time resists you." },
-  { id: 5, name: "V · Debt Ocean", short: "Debt", pointScale: 3.4, difficulty: 2.8, unlockCost: 300, rule: "Income is higher, expenses are dangerous." },
-  { id: 6, name: "VI · Blood Sun", short: "Blood", pointScale: 5.1, difficulty: 3.7, unlockCost: 850, rule: "Lives are shorter. Evil grows faster." },
-  { id: 7, name: "VII · Arcane Inversion", short: "Invert", pointScale: 7.6, difficulty: 5.2, unlockCost: 2400, rule: "Magic overperforms, steel underperforms." },
-  { id: 8, name: "VIII · Silent Empire", short: "Silent", pointScale: 11, difficulty: 7, unlockCost: 7000, rule: "Work becomes slow and expensive." },
-  { id: 9, name: "IX · Collapsing Crown", short: "Crown", pointScale: 16, difficulty: 10, unlockCost: 22000, rule: "Global upgrades carry the run." },
-  { id: 10, name: "X · Reality Soup", short: "Soup", pointScale: 25, difficulty: 15, unlockCost: 80000, rule: "Everything mutates and chaos waves change multipliers." },
+  { id: 1,  name: "I · Prime World",       short: "Prime",  pointScale: 0,    difficulty: 1,    unlockCost: 0,     enRule: "The original mortal rules.",                                ruRule: "Изначальные правила смертных." },
+  { id: 2,  name: "II · Ashen Fields",     short: "Ash",    pointScale: 1,    difficulty: 1.2,  unlockCost: 0,     enRule: "Slightly harsher economy.",                                 ruRule: "Чуть более жёсткая экономика." },
+  { id: 3,  name: "III · Mirror Guild",    short: "Mirror", pointScale: 1.55, difficulty: 1.55, unlockCost: 35,    enRule: "Expenses rise and identities distort.",                     ruRule: "Расходы растут, личности искажаются." },
+  { id: 4,  name: "IV · Clockwork Realm",  short: "Clock",  pointScale: 2.35, difficulty: 2.1,  unlockCost: 110,   enRule: "Time resists you.",                                         ruRule: "Время сопротивляется тебе." },
+  { id: 5,  name: "V · Debt Ocean",        short: "Debt",   pointScale: 3.4,  difficulty: 2.8,  unlockCost: 300,   enRule: "Income is higher, expenses are dangerous.",                 ruRule: "Доход выше, но расходы опасны." },
+  { id: 6,  name: "VI · Blood Sun",        short: "Blood",  pointScale: 5.1,  difficulty: 3.7,  unlockCost: 850,   enRule: "Lives are shorter. Evil grows faster.",                     ruRule: "Жизни короче. Зло растёт быстрее." },
+  { id: 7,  name: "VII · Arcane Inversion", short: "Invert", pointScale: 7.6, difficulty: 5.2,  unlockCost: 2400,  enRule: "Magic overperforms, steel underperforms.",                  ruRule: "Магия сильнее, сталь слабее." },
+  { id: 8,  name: "VIII · Silent Empire",  short: "Silent", pointScale: 11,   difficulty: 7,    unlockCost: 7000,  enRule: "Work becomes slow and expensive.",                          ruRule: "Работа становится медленной и дорогой." },
+  { id: 9,  name: "IX · Collapsing Crown", short: "Crown",  pointScale: 16,   difficulty: 10,   unlockCost: 22000, enRule: "Global upgrades carry the run.",                            ruRule: "Глобальные улучшения вытягивают забег." },
+  { id: 10, name: "X · Reality Soup",      short: "Soup",   pointScale: 25,   difficulty: 15,   unlockCost: 80000, enRule: "Everything mutates and chaos waves change multipliers.",   ruRule: "Всё мутирует, хаос-волны меняют множители." },
 ];
 
 export const META_UPGRADES = [
-  { id: "stableEcho", baseCost: 5, scale: 2.35, effect: "+15% all XP / level", labels: ["Stable Echo", "Ash Echo", "Mirror Echo", "Clock Echo", "Debt Echo", "Blood Echo", "Inverted Echo", "Silent Echo", "Crowned Echo", "??? Echo"] },
-  { id: "universalLabor", baseCost: 8, scale: 2.4, effect: "+15% income / level", labels: ["Universal Labor", "Cinder Contracts", "Mirror Wages", "Clock Salaries", "Debt Harvest", "Blood Tithe", "Inverted Payroll", "Silent Bureau", "Crown Tax", "Job-Flavored Noise"] },
-  { id: "softTax", baseCost: 12, scale: 2.55, effect: "-8% expenses / level", labels: ["Soft Tax", "Ash Discount", "Mirror Receipt", "Clock Rent", "Debt Buoy", "Blood Discount", "Inverted Cost", "Silent Subsidy", "Crown Exemption", "Price??"] },
-  { id: "chronoAnchor", baseCost: 20, scale: 2.7, effect: "+10% speed and lifespan / level", labels: ["Chrono Anchor", "Ashen Sundial", "Mirror Minute", "Clock Heart", "Debt Deadline", "Blood Hour", "Inverted Clock", "Silent Calendar", "Crown Era", "Time Lump"] },
-  { id: "darkDividend", baseCost: 30, scale: 2.9, effect: "+20% evil gain and +10% meta gain / level", labels: ["Dark Dividend", "Ash Dividend", "Mirror Sin", "Clock Sin", "Debt Interest", "Blood Interest", "Inverted Evil", "Silent Sin", "Crown Heresy", "Bad Math"] },
-  { id: "realityCartography", baseCost: 75, scale: 3.1, effect: "+25% metaverse gain / level", labels: ["Reality Cartography", "Ash Map", "Mirror Atlas", "Clock Compass", "Debt Chart", "Blood Map", "Inverted Atlas", "Silent Survey", "Crown Map", "Map of Not-Map"] },
+  { id: "stableEcho",          baseCost: 5,  scale: 2.35, enEffect: "+15% all XP / level",                                  ruEffect: "+15% ко всему опыту / уровень",
+    enLabels: ["Stable Echo", "Ash Echo", "Mirror Echo", "Clock Echo", "Debt Echo", "Blood Echo", "Inverted Echo", "Silent Echo", "Crowned Echo", "??? Echo"],
+    ruLabels: ["Стабильное эхо", "Пепельное эхо", "Зеркальное эхо", "Часовое эхо", "Долговое эхо", "Кровавое эхо", "Инвертированное эхо", "Безмолвное эхо", "Коронованное эхо", "??? эхо"] },
+  { id: "universalLabor",      baseCost: 8,  scale: 2.4,  enEffect: "+15% income / level",                                  ruEffect: "+15% к доходу / уровень",
+    enLabels: ["Universal Labor", "Cinder Contracts", "Mirror Wages", "Clock Salaries", "Debt Harvest", "Blood Tithe", "Inverted Payroll", "Silent Bureau", "Crown Tax", "Job-Flavored Noise"],
+    ruLabels: ["Всеобщий труд", "Угольные контракты", "Зеркальные зарплаты", "Часовые оклады", "Долговая жатва", "Кровавая десятина", "Инвертированный фонд", "Безмолвное бюро", "Коронный налог", "Шум со вкусом работы"] },
+  { id: "softTax",             baseCost: 12, scale: 2.55, enEffect: "-8% expenses / level",                                 ruEffect: "-8% к расходам / уровень",
+    enLabels: ["Soft Tax", "Ash Discount", "Mirror Receipt", "Clock Rent", "Debt Buoy", "Blood Discount", "Inverted Cost", "Silent Subsidy", "Crown Exemption", "Price??"],
+    ruLabels: ["Мягкий налог", "Пепельная скидка", "Зеркальный чек", "Часовая аренда", "Долговой буй", "Кровавая скидка", "Инвертированная цена", "Безмолвная субсидия", "Коронная льгота", "Цена??"] },
+  { id: "chronoAnchor",        baseCost: 20, scale: 2.7,  enEffect: "+10% speed and lifespan / level",                      ruEffect: "+10% к скорости и сроку жизни / уровень",
+    enLabels: ["Chrono Anchor", "Ashen Sundial", "Mirror Minute", "Clock Heart", "Debt Deadline", "Blood Hour", "Inverted Clock", "Silent Calendar", "Crown Era", "Time Lump"],
+    ruLabels: ["Хроно-якорь", "Пепельные солнечные часы", "Зеркальная минута", "Сердце часов", "Долговой дедлайн", "Кровавый час", "Инвертированные часы", "Безмолвный календарь", "Коронная эра", "Комок времени"] },
+  { id: "darkDividend",        baseCost: 30, scale: 2.9,  enEffect: "+20% evil gain and +10% meta gain / level",            ruEffect: "+20% к приросту зла и +10% к мета-приросту / уровень",
+    enLabels: ["Dark Dividend", "Ash Dividend", "Mirror Sin", "Clock Sin", "Debt Interest", "Blood Interest", "Inverted Evil", "Silent Sin", "Crown Heresy", "Bad Math"],
+    ruLabels: ["Тёмный дивиденд", "Пепельный дивиденд", "Зеркальный грех", "Часовой грех", "Долговой процент", "Кровавый процент", "Инвертированное зло", "Безмолвный грех", "Коронная ересь", "Плохая математика"] },
+  { id: "realityCartography",  baseCost: 75, scale: 3.1,  enEffect: "+25% metaverse gain / level",                          ruEffect: "+25% к приросту метавселенной / уровень",
+    enLabels: ["Reality Cartography", "Ash Map", "Mirror Atlas", "Clock Compass", "Debt Chart", "Blood Map", "Inverted Atlas", "Silent Survey", "Crown Map", "Map of Not-Map"],
+    ruLabels: ["Картография реальности", "Пепельная карта", "Зеркальный атлас", "Часовой компас", "Долговая схема", "Кровавая карта", "Инвертированный атлас", "Безмолвная разведка", "Коронная карта", "Карта не-карты"] },
 ];
 
 export const initialMetaUpgrades = Object.fromEntries(META_UPGRADES.map((upgrade) => [upgrade.id, 0]));
+
+export const universeRule = (universe, lang) => (lang === "ru" ? universe.ruRule : universe.enRule) || universe.enRule;
+export const metaEffect = (upgrade, lang) => (lang === "ru" ? upgrade.ruEffect : upgrade.enEffect) || upgrade.enEffect;
+export const metaLabel = (upgrade, index, lang) => {
+  const labels = lang === "ru" ? upgrade.ruLabels : upgrade.enLabels;
+  return labels[Math.min(index, labels.length - 1)] || upgrade.enLabels[0];
+};
 
 export function universeInfo(id) {
   return UNIVERSES.find((universe) => universe.id === id) || UNIVERSES[0];
