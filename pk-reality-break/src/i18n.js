@@ -18,6 +18,7 @@ export const RU = {
   Squire: "Оруженосец", Footman: "Пехотинец", "Veteran footman": "Опытный пехотинец", Knight: "Рыцарь", "Veteran knight": "Опытный рыцарь", "Elite knight": "Элитный рыцарь", "Holy knight": "Святой рыцарь", "Legendary knight": "Легендарный рыцарь",
   Student: "Ученик", "Apprentice mage": "Ученик мага", Mage: "Маг", Wizard: "Волшебник", "Master wizard": "Мастер-волшебник", Chairman: "Председатель",
   Concentration: "Концентрация", Productivity: "Продуктивность", Bargaining: "Торг", Meditation: "Медитация", Strength: "Сила", "Battle tactics": "Боевая тактика", "Muscle memory": "Мышечная память", "Mana control": "Контроль маны", Immortality: "Бессмертие", "Time warping": "Искажение времени", "Super immortality": "Сверхбессмертие",
+  Patience: "Терпение", Frugality: "Бережливость", Diligence: "Усердие", Curiosity: "Любознательность",
   "Dark influence": "Тёмное влияние", "Evil control": "Контроль зла", Intimidation: "Запугивание", "Demon training": "Демоническая тренировка", "Blood meditation": "Кровавая медитация", "Demon's wealth": "Богатство демона",
   "Clockwork focus": "Часовая концентрация", "Paradox handling": "Управление парадоксами", "Entropy surfing": "Сёрфинг энтропии",
   Homeless: "Бездомный", Tent: "Палатка", "Rented room": "Съёмная комната", "Wooden hut": "Деревянная хижина", Cottage: "Коттедж", House: "Дом", "Large house": "Большой дом", "Small palace": "Малый дворец", "Grand palace": "Великий дворец",
