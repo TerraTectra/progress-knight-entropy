@@ -80,53 +80,88 @@ export function resetProgressKeepMax(state, items) {
 
 export function skillPower(level) {
   const l = Math.max(0, level || 0);
-  return l + Math.sqrt(l) * 8 + Math.log1p(l) * 24;
+  return l + Math.sqrt(l) * 6 + Math.log1p(l) * 16;
 }
 
-export function skillLevelMultiplier(level, rate = 0.0024, cap = 12) {
-  return Math.min(cap, 1 + skillPower(level) * rate);
+const SKILL_SCALE = {
+  standard: { rate: 0.00165, cap: 6.5 },
+  strong: { rate: 0.00185, cap: 7.5 },
+  speed: { rate: 0.00105, cap: 4.5 },
+  lifespan: { rate: 0.0013, cap: 5.5 },
+  meta: { rate: 0.00165, cap: 6.5 },
+  reduction: { rate: 0.00125, floor: 0.32 },
+};
+
+const SKILL_PROFILE = {
+  Concentration: "standard",
+  Productivity: "standard",
+  Patience: "standard",
+  Diligence: "standard",
+  Curiosity: "strong",
+  Meditation: "standard",
+  Strength: "standard",
+  Endurance: "standard",
+  "Weapon handling": "standard",
+  "Guard discipline": "standard",
+  "Battle tactics": "standard",
+  "Muscle memory": "standard",
+  "Mana control": "strong",
+  Immortality: "lifespan",
+  "Time warping": "speed",
+  "Super immortality": "lifespan",
+  "Dark influence": "standard",
+  "Evil control": "meta",
+  "Demon training": "strong",
+  "Blood meditation": "meta",
+  "Demon's wealth": "standard",
+  "Clockwork focus": "speed",
+  "Paradox handling": "meta",
+  "Entropy surfing": "strong",
+};
+
+const REDUCTION_SKILLS = new Set(["Bargaining", "Frugality", "Intimidation"]);
+
+export function skillLevelMultiplier(level, profile = "standard") {
+  const scale = SKILL_SCALE[profile] || SKILL_SCALE.standard;
+  return Math.min(scale.cap, 1 + skillPower(level) * scale.rate);
 }
 
-export function skillStateMultiplier(state, name, rate = 0.0024, cap = 12) {
-  return skillLevelMultiplier(getLevel(state, name), rate, cap);
+export function skillStateMultiplier(state, name, profile = SKILL_PROFILE[name] || "standard") {
+  return skillLevelMultiplier(getLevel(state, name), profile);
 }
 
-export function skillStateReduction(state, name, rate = 0.0018, floor = 0.18) {
-  return Math.max(floor, 1 / (1 + skillPower(getLevel(state, name)) * rate));
+export function skillStateReduction(state, name, profile = "reduction") {
+  const scale = SKILL_SCALE[profile] || SKILL_SCALE.reduction;
+  return Math.max(scale.floor, 1 / (1 + skillPower(getLevel(state, name)) * scale.rate));
 }
 
 export function combineSkillBonuses(...multipliers) {
   const bonus = multipliers.reduce((sum, value) => sum + Math.max(0, (value || 1) - 1), 0);
-  const synergy = 1 + Math.log1p(bonus) * 0.08;
+  const synergy = 1 + Math.log1p(bonus) * 0.045;
   return 1 + bonus * synergy;
 }
 
+function baseSkillEffect(name, state) {
+  if (REDUCTION_SKILLS.has(name)) return skillStateReduction(state, name);
+  return skillStateMultiplier(state, name);
+}
+
 export function skillEffectMultiplier(name, state) {
-  if (name === "Concentration") return skillStateMultiplier(state, name, 0.0024, 10);
-  if (name === "Productivity") return skillStateMultiplier(state, name, 0.0024, 10);
-  if (name === "Bargaining") return skillStateReduction(state, name, 0.0019, 0.18);
-  if (name === "Meditation") return skillStateMultiplier(state, name, 0.0021, 9);
-  if (name === "Patience") return skillStateMultiplier(state, name, 0.0028, 10);
-  if (name === "Frugality") return skillStateReduction(state, name, 0.0022, 0.25);
-  if (name === "Diligence") return skillStateMultiplier(state, name, 0.0026, 11);
-  if (name === "Curiosity") return skillStateMultiplier(state, name, 0.0030, 12);
-  if (name === "Strength") return skillStateMultiplier(state, name, 0.0022, 11);
-  if (name === "Battle tactics") return skillStateMultiplier(state, name, 0.0023, 10);
-  if (name === "Muscle memory") return skillStateMultiplier(state, name, 0.0023, 10);
-  if (name === "Mana control") return skillStateMultiplier(state, name, 0.0022, 12);
-  if (name === "Immortality") return skillStateMultiplier(state, name, 0.0021, 9);
-  if (name === "Time warping") return skillStateMultiplier(state, name, 0.00155, 7);
-  if (name === "Super immortality") return skillStateMultiplier(state, name, 0.0019, 8);
-  if (name === "Dark influence") return skillStateMultiplier(state, name, 0.0022, 11);
-  if (name === "Evil control") return skillStateMultiplier(state, name, 0.0025, 12);
-  if (name === "Intimidation") return skillStateReduction(state, name, 0.0019, 0.18);
-  if (name === "Demon training") return skillStateMultiplier(state, name, 0.0024, 12);
-  if (name === "Blood meditation") return skillStateMultiplier(state, name, 0.0025, 12);
-  if (name === "Demon's wealth") return skillStateMultiplier(state, name, 0.0021, 10);
-  if (name === "Clockwork focus") return skillStateMultiplier(state, name, 0.00155, 7);
-  if (name === "Paradox handling") return skillStateMultiplier(state, name, 0.0026, 12);
-  if (name === "Entropy surfing") return skillStateMultiplier(state, name, 0.0026, 12);
-  return 1;
+  if (name === "Strength") {
+    return combineSkillBonuses(
+      baseSkillEffect("Strength", state),
+      baseSkillEffect("Endurance", state),
+      baseSkillEffect("Weapon handling", state),
+      baseSkillEffect("Guard discipline", state),
+    );
+  }
+  if (name === "Battle tactics") {
+    return combineSkillBonuses(baseSkillEffect("Battle tactics", state), baseSkillEffect("Guard discipline", state));
+  }
+  if (name === "Immortality") {
+    return combineSkillBonuses(baseSkillEffect("Immortality", state), baseSkillEffect("Endurance", state));
+  }
+  return baseSkillEffect(name, state);
 }
 
 export function reqUnlocked(req, ctx) {
