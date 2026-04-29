@@ -1,42 +1,70 @@
 import { BASE_OBSERVER_POINTS_PER_SECOND, BASE_SPEED, BASE_LIFESPAN, DAYS_PER_YEAR } from "./constants.js";
 import { allJobs, allSkills, jobCategories, miscItems, properties } from "./data.js";
 import { freshJobState, freshSkillState, gainTaskState, getLevel, reqUnlocked, resetProgressKeepMax } from "./progression.js";
+import { tr } from "./i18n.js";
 
 export const TALENTS = [
-  { id: "trash", rarity: "Мусорный", name: "Рваный инстинкт", weight: 42, intelligence: 0.42, speed: 0.55, mistake: 0.42, point: 0.55, color: "trash", desc: "Путает цели, теряет золото и качает не то." },
-  { id: "dull", rarity: "Обычный", name: "Тусклая воля", weight: 30, intelligence: 0.75, speed: 0.8, mistake: 0.22, point: 0.9, color: "dull", desc: "Медленно, но понимает базовый маршрут." },
-  { id: "keen", rarity: "Хороший", name: "Острый расчёт", weight: 16, intelligence: 1.05, speed: 1, mistake: 0.12, point: 1.2, color: "keen", desc: "Редко ошибается и не тонет в расходах." },
-  { id: "brilliant", rarity: "Редкий", name: "Холодный алгоритм", weight: 8, intelligence: 1.35, speed: 1.18, mistake: 0.07, point: 1.6, color: "brilliant", desc: "Почти оптимальный маршрут." },
-  { id: "mythic", rarity: "Эпический", name: "Почти игрок", weight: 3.2, intelligence: 1.75, speed: 1.35, mistake: 0.035, point: 2.15, color: "mythic", desc: "Хорошо адаптируется под сложные вселенные." },
-  { id: "legendary", rarity: "Легендарный", name: "Безошибочный свидетель", weight: 0.8, intelligence: 2.35, speed: 1.6, mistake: 0.01, point: 3.1, color: "legendary", desc: "Почти идеально идёт к Universe X." },
+  { id: "trash",     enRarity: "Trash",      ruRarity: "Мусорный",     enName: "Ragged Instinct",         ruName: "Рваный инстинкт",       weight: 42,  intelligence: 0.42, speed: 0.55, mistake: 0.42,  point: 0.55, color: "trash",     enDesc: "Confuses goals, loses gold and trains the wrong things.", ruDesc: "Путает цели, теряет золото и качает не то." },
+  { id: "dull",      enRarity: "Common",     ruRarity: "Обычный",      enName: "Dull Will",               ruName: "Тусклая воля",          weight: 30,  intelligence: 0.75, speed: 0.8,  mistake: 0.22,  point: 0.9,  color: "dull",      enDesc: "Slow, but understands the basic route.",                  ruDesc: "Медленно, но понимает базовый маршрут." },
+  { id: "keen",      enRarity: "Good",       ruRarity: "Хороший",      enName: "Sharp Calculation",       ruName: "Острый расчёт",         weight: 16,  intelligence: 1.05, speed: 1,    mistake: 0.12,  point: 1.2,  color: "keen",      enDesc: "Rarely fails and doesn't drown in expenses.",             ruDesc: "Редко ошибается и не тонет в расходах." },
+  { id: "brilliant", enRarity: "Rare",       ruRarity: "Редкий",       enName: "Cold Algorithm",          ruName: "Холодный алгоритм",     weight: 8,   intelligence: 1.35, speed: 1.18, mistake: 0.07,  point: 1.6,  color: "brilliant", enDesc: "Near-optimal route.",                                     ruDesc: "Почти оптимальный маршрут." },
+  { id: "mythic",    enRarity: "Epic",       ruRarity: "Эпический",    enName: "Almost a Player",         ruName: "Почти игрок",           weight: 3.2, intelligence: 1.75, speed: 1.35, mistake: 0.035, point: 2.15, color: "mythic",    enDesc: "Adapts well to harder universes.",                        ruDesc: "Хорошо адаптируется под сложные вселенные." },
+  { id: "legendary", enRarity: "Legendary",  ruRarity: "Легендарный",  enName: "Flawless Witness",        ruName: "Безошибочный свидетель", weight: 0.8, intelligence: 2.35, speed: 1.6,  mistake: 0.01,  point: 3.1,  color: "legendary", enDesc: "Almost perfectly progresses to Universe X.",              ruDesc: "Почти идеально идёт к Universe X." },
 ];
 
 export const PERSONALITIES = [
-  { id: "greedy", name: "Жадный", speedMod: 0.92, pointMod: 1.08, mistakeMod: 1.12, style: "Переоценивает золото." },
-  { id: "scholar", name: "Учёный", speedMod: 0.96, pointMod: 1.14, mistakeMod: 0.92, style: "Любит навыки." },
-  { id: "reckless", name: "Безрассудный", speedMod: 1.18, pointMod: 0.96, mistakeMod: 1.35, style: "Быстрый, но ломает маршрут." },
-  { id: "patient", name: "Терпеливый", speedMod: 0.82, pointMod: 1.28, mistakeMod: 0.72, style: "Медленный, но стабильный." },
-  { id: "balanced", name: "Ровный", speedMod: 1, pointMod: 1, mistakeMod: 1, style: "Без больших провалов." },
-  { id: "chaotic", name: "Хаотичный", speedMod: 1.32, pointMod: 1.18, mistakeMod: 1.6, style: "Иногда гениален, иногда ужасен." },
+  { id: "greedy",   enName: "Greedy",   ruName: "Жадный",      speedMod: 0.92, pointMod: 1.08, mistakeMod: 1.12, enStyle: "Overestimates gold.",                ruStyle: "Переоценивает золото." },
+  { id: "scholar",  enName: "Scholar",  ruName: "Учёный",      speedMod: 0.96, pointMod: 1.14, mistakeMod: 0.92, enStyle: "Loves skills.",                      ruStyle: "Любит навыки." },
+  { id: "reckless", enName: "Reckless", ruName: "Безрассудный", speedMod: 1.18, pointMod: 0.96, mistakeMod: 1.35, enStyle: "Fast, but breaks the route.",        ruStyle: "Быстрый, но ломает маршрут." },
+  { id: "patient",  enName: "Patient",  ruName: "Терпеливый",  speedMod: 0.82, pointMod: 1.28, mistakeMod: 0.72, enStyle: "Slow, but stable.",                  ruStyle: "Медленный, но стабильный." },
+  { id: "balanced", enName: "Steady",   ruName: "Ровный",      speedMod: 1,    pointMod: 1,    mistakeMod: 1,    enStyle: "No big drops.",                      ruStyle: "Без больших провалов." },
+  { id: "chaotic",  enName: "Chaotic",  ruName: "Хаотичный",   speedMod: 1.32, pointMod: 1.18, mistakeMod: 1.6,  enStyle: "Sometimes brilliant, sometimes awful.", ruStyle: "Иногда гениален, иногда ужасен." },
 ];
 
 export const OBSERVER_UPGRADES = [
-  { id: "commandSignal", name: "Командный шёпот", baseCost: 8, scale: 2.15, effect: "+12% скорость симулякров / уровень" },
-  { id: "errorFilter", name: "Фильтр ошибок", baseCost: 12, scale: 2.35, effect: "-8% шанс ошибки / уровень" },
-  { id: "deepWatching", name: "Глубокое наблюдение", baseCost: 18, scale: 2.5, effect: "+15% очки Наблюдателя / уровень" },
-  { id: "talentMold", name: "Форма таланта", baseCost: 35, scale: 2.85, effect: "Лучший шанс редких талантов" },
+  { id: "commandSignal", enName: "Command Whisper",  ruName: "Командный шёпот",     baseCost: 8,  scale: 2.15, enEffect: "+12% simulacrum speed / level",   ruEffect: "+12% скорость симулякров / уровень" },
+  { id: "errorFilter",   enName: "Error Filter",     ruName: "Фильтр ошибок",       baseCost: 12, scale: 2.35, enEffect: "-8% mistake chance / level",       ruEffect: "-8% шанс ошибки / уровень" },
+  { id: "deepWatching",  enName: "Deep Observation", ruName: "Глубокое наблюдение", baseCost: 18, scale: 2.5,  enEffect: "+15% Observer Points / level",     ruEffect: "+15% очки Наблюдателя / уровень" },
+  { id: "talentMold",    enName: "Talent Mold",      ruName: "Форма таланта",       baseCost: 35, scale: 2.85, enEffect: "Better odds of rare talents",      ruEffect: "Лучший шанс редких талантов" },
 ];
 
 export const OBSERVER_COMMANDS = [
-  { id: "balanced", name: "Balanced", desc: "Обычный режим: без штрафов и перекосов.", speed: 1, mistake: 1, jobXp: 1, skillXp: 1, points: 1, rebirth: 1 },
-  { id: "safe", name: "Safe Economy", desc: "Медленнее, зато меньше ошибок и лучше контроль расходов.", speed: 0.86, mistake: 0.65, jobXp: 0.95, skillXp: 1.05, points: 1.05, rebirth: 1.25 },
-  { id: "rush", name: "Rush Progress", desc: "Быстрее идёт вперёд, но чаще ошибается.", speed: 1.28, mistake: 1.35, jobXp: 1.08, skillXp: 1.08, points: 0.95, rebirth: 0.8 },
-  { id: "study", name: "Study Focus", desc: "Симулякры сильнее давят навыки и магические открытия.", speed: 0.96, mistake: 0.92, jobXp: 0.85, skillXp: 1.35, points: 1, rebirth: 1 },
-  { id: "work", name: "Work Focus", desc: "Симулякры сильнее давят доход и рабочие ветки.", speed: 1.02, mistake: 1.05, jobXp: 1.35, skillXp: 0.85, points: 1, rebirth: 0.95 },
+  { id: "balanced", enName: "Balanced",     ruName: "Сбалансированный", enDesc: "Default mode: no penalties or biases.",                            ruDesc: "Обычный режим: без штрафов и перекосов.",                  speed: 1,    mistake: 1,    jobXp: 1,    skillXp: 1,    points: 1,    rebirth: 1 },
+  { id: "safe",     enName: "Safe Economy", ruName: "Безопасная экономика", enDesc: "Slower, but fewer mistakes and better expense control.",       ruDesc: "Медленнее, зато меньше ошибок и лучше контроль расходов.", speed: 0.86, mistake: 0.65, jobXp: 0.95, skillXp: 1.05, points: 1.05, rebirth: 1.25 },
+  { id: "rush",     enName: "Rush Progress", ruName: "Гонка прогресса", enDesc: "Pushes ahead faster, but mistakes are more frequent.",            ruDesc: "Быстрее идёт вперёд, но чаще ошибается.",                  speed: 1.28, mistake: 1.35, jobXp: 1.08, skillXp: 1.08, points: 0.95, rebirth: 0.8 },
+  { id: "study",    enName: "Study Focus",  ruName: "Учебный фокус",   enDesc: "Simulacra push skills and magical breakthroughs harder.",         ruDesc: "Симулякры сильнее давят навыки и магические открытия.",    speed: 0.96, mistake: 0.92, jobXp: 0.85, skillXp: 1.35, points: 1,    rebirth: 1 },
+  { id: "work",     enName: "Work Focus",   ruName: "Рабочий фокус",   enDesc: "Simulacra push income and work branches harder.",                 ruDesc: "Симулякры сильнее давят доход и рабочие ветки.",           speed: 1.02, mistake: 1.05, jobXp: 1.35, skillXp: 0.85, points: 1,    rebirth: 0.95 },
 ];
 
-export const SIM_NAMES = ["Симулякр Астер", "Симулякр Нокс", "Симулякр Вейл", "Симулякр Орин", "Симулякр Кай", "Симулякр Мор", "Симулякр Лиор", "Симулякр Эхо"];
+export const SIM_NAMES_EN = ["Aster", "Nox", "Vale", "Orin", "Kai", "Mor", "Lior", "Echo"];
+
 export const initialObserverUpgrades = Object.fromEntries(OBSERVER_UPGRADES.map((upgrade) => [upgrade.id, 0]));
+
+export const talentRarity = (talent, lang) => (lang === "ru" ? talent.ruRarity : talent.enRarity) || talent.enRarity;
+export const talentName = (talent, lang) => (lang === "ru" ? talent.ruName : talent.enName) || talent.enName;
+export const talentDesc = (talent, lang) => (lang === "ru" ? talent.ruDesc : talent.enDesc) || talent.enDesc;
+export const personalityName = (personality, lang) => (lang === "ru" ? personality.ruName : personality.enName) || personality.enName;
+export const personalityStyle = (personality, lang) => (lang === "ru" ? personality.ruStyle : personality.enStyle) || personality.enStyle;
+export const observerUpgradeName = (upgrade, lang) => (lang === "ru" ? upgrade.ruName : upgrade.enName) || upgrade.enName;
+export const observerUpgradeEffect = (upgrade, lang) => (lang === "ru" ? upgrade.ruEffect : upgrade.enEffect) || upgrade.enEffect;
+export const commandName = (command, lang) => (lang === "ru" ? command.ruName : command.enName) || command.enName;
+export const commandDesc = (command, lang) => (lang === "ru" ? command.ruDesc : command.enDesc) || command.enDesc;
+export const simName = (name, lang) => {
+  if (!name) return "";
+  if (name.startsWith("Симулякр ") || name.startsWith("Sim ")) return name;
+  return lang === "ru" ? `Симулякр ${name}` : `Sim ${name}`;
+};
+
+export function formatSimStatus(status, lang) {
+  if (!status) return "";
+  if (typeof status === "string") return tr(status, lang);
+  if (status.k === "sim.tick") {
+    const { u, job, jobLevel, skill, skillLevel, streak } = status.p;
+    return `U${u} · ${tr(job, lang)} ${jobLevel} · ${tr(skill, lang)} ${skillLevel} · ${tr("Streak", lang)} ${streak}`;
+  }
+  if (status.k) return tr(status.k, lang);
+  return "";
+}
 
 export function observerUpgradeCost(upgrade, level) {
   return Math.floor(upgrade.baseCost * Math.pow(upgrade.scale, level));
@@ -73,7 +101,7 @@ export function makeSimulacrum(index, effects, forceTrash = false) {
   const personality = pickWeighted(PERSONALITIES);
   return {
     id: `sim_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-    name: SIM_NAMES[index % SIM_NAMES.length] || `Симулякр ${index + 1}`,
+    name: SIM_NAMES_EN[index % SIM_NAMES_EN.length] || `${index + 1}`,
     talentId: talent.id,
     personalityId: personality.id,
     level: 1,
@@ -90,7 +118,7 @@ export function makeSimulacrum(index, effects, forceTrash = false) {
     skillState: freshSkillState(),
     misc: [],
     property: "Homeless",
-    status: "Начинает жизнь заново с 14 лет в первой вселенной.",
+    status: { k: "sim.lifeStart" },
   };
 }
 
@@ -156,7 +184,7 @@ function resetSimulacrumLife(simulacrum) {
     noMistakeStreak: 0,
     jobState: resetProgressKeepMax(simulacrum.jobState, allJobs),
     skillState: resetProgressKeepMax(simulacrum.skillState, allSkills),
-    status: "Перерождение: снова стартует с 14 лет в первой вселенной.",
+    status: { k: "sim.rebirth" },
   };
 }
 
@@ -176,7 +204,7 @@ export function tickSimulacrum(simulacrum, commandId = "balanced", upgrades = in
       ...simulacrum,
       coins: Math.max(0, simulacrum.coins * 0.92),
       noMistakeStreak: 0,
-      status: "Ошибка маршрута: серия опыта сброшена.",
+      status: { k: "sim.mistake" },
     };
   }
 
@@ -205,7 +233,10 @@ export function tickSimulacrum(simulacrum, commandId = "balanced", upgrades = in
   if (next.universe < 10 && getLevel(next.jobState, "Merchant") + getLevel(next.skillState, "Time warping") > next.universe * 45) next.universe += 1;
 
   if (next.days >= BASE_LIFESPAN) next = resetSimulacrumLife(next);
-  next.status = `U${next.universe} · ${job.name} ${getLevel(next.jobState, job.name)} · ${skill.name} ${getLevel(next.skillState, skill.name)} · серия ${next.noMistakeStreak}`;
+  next.status = {
+    k: "sim.tick",
+    p: { u: next.universe, job: job.name, jobLevel: getLevel(next.jobState, job.name), skill: skill.name, skillLevel: getLevel(next.skillState, skill.name), streak: next.noMistakeStreak },
+  };
   return next;
 }
 
