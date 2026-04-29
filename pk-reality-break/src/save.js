@@ -14,6 +14,10 @@ function itemMul(owned, name) {
   return owned?.includes(name) ? (miscItems.find((item) => item.name === name)?.effect || 1) : 1;
 }
 
+function normalizeAutoSkillMode(value) {
+  return "smart";
+}
+
 function jobIncomeFor(state, item, effects) {
   let value = item.income * (1 + Math.log10(getLevel(state.jobState, item.name) + 1));
   if (["Beggar", "Farmer", "Fisherman", "Miner", "Blacksmith", "Merchant"].includes(item.name)) value *= effects.commonPay;
@@ -28,19 +32,9 @@ function offlineEffects(state) {
   const bonus = achievementBonuses(state.achievedMilestones || []);
   const meta = metaEffects(state.metaUpgrades || initialMetaUpgrades);
   const uMods = universeMods(state.universe || 1);
-  const darkLearning = combineSkillBonuses(
-    skillEffectMultiplier("Dark influence", state.skillState),
-    skillEffectMultiplier("Demon training", state.skillState),
-    skillEffectMultiplier("Entropy surfing", state.skillState),
-  );
-  const lifeSkills = combineSkillBonuses(
-    skillEffectMultiplier("Immortality", state.skillState),
-    skillEffectMultiplier("Super immortality", state.skillState),
-  );
-  const speedSkills = combineSkillBonuses(
-    skillEffectMultiplier("Time warping", state.skillState),
-    skillEffectMultiplier("Clockwork focus", state.skillState),
-  );
+  const darkLearning = combineSkillBonuses(skillEffectMultiplier("Dark influence", state.skillState), skillEffectMultiplier("Demon training", state.skillState), skillEffectMultiplier("Entropy surfing", state.skillState));
+  const lifeSkills = combineSkillBonuses(skillEffectMultiplier("Immortality", state.skillState), skillEffectMultiplier("Super immortality", state.skillState));
+  const speedSkills = combineSkillBonuses(skillEffectMultiplier("Time warping", state.skillState), skillEffectMultiplier("Clockwork focus", state.skillState));
 
   return {
     happiness: property.effect * skillEffectMultiplier("Meditation", state.skillState) * itemMul(state.misc, "Cheap meal") * itemMul(state.misc, "Meditation mat") * itemMul(state.misc, "Butler"),
@@ -60,9 +54,9 @@ function offlineEffects(state) {
 function applyOfflineProgress(state) {
   const savedAt = Number(state.savedAt || state.lastTickAt || Date.now());
   const elapsedMs = Math.min(Math.max(0, Date.now() - savedAt), OFFLINE_CAP_MS);
-  if (elapsedMs < OFFLINE_MIN_MS || state.paused) return { ...state, savedAt: Date.now(), lastTickAt: Date.now() };
+  if (elapsedMs < OFFLINE_MIN_MS || state.paused) return { ...state, autoSkillMode: "smart", savedAt: Date.now(), lastTickAt: Date.now() };
 
-  const next = { ...state };
+  const next = { ...state, autoSkillMode: "smart" };
   const effects = offlineEffects(next);
   const age = Math.floor(next.days / DAYS_PER_YEAR);
   const speed = BASE_SPEED * earlySpeedMultiplier(next, age, EARLY_STAGE_BOOST) * (next.warp ? effects.timeWarp : 1) * (next.adminSpeedMultiplier || 1);
@@ -123,7 +117,7 @@ export function defaultSave() {
     ownedPerks: [],
     autoPromote: true,
     autoLearn: true,
-    autoSkillMode: "magic",
+    autoSkillMode: "smart",
     autoShop: true,
     warp: true,
     autoJobBranch: "Common work",
@@ -149,27 +143,12 @@ export function loadSave() {
   if (!raw) return defaults;
   try {
     const data = JSON.parse(raw);
-    const merged = {
-      ...defaults,
-      ...data,
-      autoSkillMode: data.autoSkillMode || defaults.autoSkillMode,
-      jobState: { ...defaults.jobState, ...(data.jobState || {}) },
-      skillState: { ...defaults.skillState, ...(data.skillState || {}) },
-      metaUpgrades: { ...defaults.metaUpgrades, ...(data.metaUpgrades || {}) },
-      observerUpgrades: { ...defaults.observerUpgrades, ...(data.observerUpgrades || {}) },
-      unlockedProperties: Array.from(new Set(["Homeless", ...(data.unlockedProperties || []), data.property || "Homeless"])),
-      unlockedMisc: Array.from(new Set([...(data.unlockedMisc || []), ...(data.misc || [])])),
-    };
+    const merged = { ...defaults, ...data, autoSkillMode: normalizeAutoSkillMode(data.autoSkillMode), jobState: { ...defaults.jobState, ...(data.jobState || {}) }, skillState: { ...defaults.skillState, ...(data.skillState || {}) }, metaUpgrades: { ...defaults.metaUpgrades, ...(data.metaUpgrades || {}) }, observerUpgrades: { ...defaults.observerUpgrades, ...(data.observerUpgrades || {}) }, unlockedProperties: Array.from(new Set(["Homeless", ...(data.unlockedProperties || []), data.property || "Homeless"])), unlockedMisc: Array.from(new Set([...(data.unlockedMisc || []), ...(data.misc || [])])) };
     return applyOfflineProgress(merged);
   } catch {
     return { ...defaults, log: ["Save was corrupted. A new life has been created."] };
   }
 }
 
-export function saveGame(state) {
-  localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, savedAt: Date.now(), lastTickAt: Date.now() }));
-}
-
-export function clearSave() {
-  localStorage.removeItem(SAVE_KEY);
-}
+export function saveGame(state) { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, autoSkillMode: "smart", savedAt: Date.now(), lastTickAt: Date.now() })); }
+export function clearSave() { localStorage.removeItem(SAVE_KEY); }
