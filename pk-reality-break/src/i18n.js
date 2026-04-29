@@ -51,6 +51,11 @@ export const RU = {
 
   "You begin life as a beggar at age 14.": "Ты начинаешь жизнь нищим в 14 лет.",
   "Save was corrupted. A new life has been created.": "Сохранение повреждено. Создана новая жизнь.",
+
+  "sim.lifeStart": "Начинает жизнь заново с 14 лет в первой вселенной.",
+  "sim.rebirth": "Перерождение: снова стартует с 14 лет в первой вселенной.",
+  "sim.mistake": "Ошибка маршрута: серия опыта сброшена.",
+  Streak: "серия",
 };
 
 export function tr(value, language = "ru") {
