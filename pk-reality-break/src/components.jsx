@@ -32,7 +32,7 @@ export function TaskRow({ item, state, active, onClick, right, difficulty, memor
     <button className={`task-row ${active ? "active" : ""}`} onClick={() => onClick(item.name)}>
       <div className="task-main">
         <div className="task-title">{tr(item.name, language)}</div>
-        <div className="muted">{language === "ru" ? "Уровень" : "Level"} {safeState.level} · {language === "ru" ? "До уровня" : "XP left"} {fmt(Math.max(0, need - safeState.xp))}</div>
+        <div className="muted">{tr("Level", language)} {safeState.level} · {tr("XP left", language)} {fmt(Math.max(0, need - safeState.xp))}</div>
         <div className="memory">{taskMemoryText(memoryState, item.name, language)}</div>
       </div>
       <div className="task-right">{right}</div>
@@ -49,7 +49,7 @@ function shopBonusText(item, language = "ru") {
     return language === "ru" ? `-${percent}% к расходам` : `-${percent}% expenses`;
   }
   const percent = Math.round((effect - 1) * 100);
-  if (percent <= 0) return language === "ru" ? "Без бонуса" : "No bonus";
+  if (percent <= 0) return tr("No bonus", language);
   return `${effectName} x${effect.toFixed(2)}${percent > 0 ? ` · +${percent}%` : ""}`;
 }
 
@@ -61,17 +61,17 @@ export function ShopRow({ item, active, onClick, right, req, language }) {
           <div className="shop-identity">
             <div className="shop-title-line">
               <b>{tr(item.name, language)}</b>
-              {active && <span className="active-pill">{language === "ru" ? "Активно" : "Active"}</span>}
+              {active && <span className="active-pill">{tr("Active", language)}</span>}
             </div>
             <div className="shop-desc">{tr(item.desc || "Happiness", language)}</div>
           </div>
           <div className="shop-price">
-            <span>{language === "ru" ? "Расход" : "Cost"}</span>
+            <span>{tr("Cost", language)}</span>
             <b>{right}</b>
           </div>
         </div>
         <div className="shop-bonus-line">
-          <span>{language === "ru" ? "Бонус" : "Bonus"}</span>
+          <span>{tr("Bonus", language)}</span>
           <b>{shopBonusText(item, language)}</b>
         </div>
         {req && <div className="requirement">{req}</div>}
@@ -93,8 +93,8 @@ export function BranchHint({ branch, ctx, reqText, language }) {
   if (!branch) return null;
   return (
     <div className="branch-hint">
-      <b>{language === "ru" ? "Следующая ветка" : "Next branch"}: {tr(branch.cat, language)}</b>
-      <div>{language === "ru" ? "Требование" : "Requirement"}: {reqText(branch.item.req, ctx)}</div>
+      <b>{tr("Next branch", language)}: {tr(branch.cat, language)}</b>
+      <div>{tr("Requirement", language)}: {reqText(branch.item.req, ctx)}</div>
     </div>
   );
 }
