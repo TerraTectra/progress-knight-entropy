@@ -1,9 +1,10 @@
 import { SAVE_KEY, DAYS_PER_YEAR, BASE_SPEED, BASE_LIFESPAN, EARLY_STAGE_BOOST } from "./constants.js";
-import { freshJobState, freshSkillState, gainTaskState, getLevel, resetProgressKeepMax, skillEffectMultiplier, taskMemoryMultiplier, combineSkillBonuses } from "./progression.js";
+import { freshJobState, freshSkillState, gainTaskState, getLevel, skillEffectMultiplier, taskMemoryMultiplier, combineSkillBonuses } from "./progression.js";
 import { initialMetaUpgrades, metaEffects, universeMods } from "./multiverse.js";
 import { initialObserverUpgrades, observerPointGain, tickSimulacrum } from "./observer.js";
 import { allJobs, allSkills, miscItems, properties } from "./data.js";
 import { achievementBonuses } from "./achievements.js";
+import { earlySpeedMultiplier } from "./progressionPlan.js";
 
 const OFFLINE_CAP_MS = 24 * 60 * 60 * 1000;
 const OFFLINE_MIN_MS = 2000;
@@ -43,10 +44,10 @@ function offlineEffects(state) {
 
   return {
     happiness: property.effect * skillEffectMultiplier("Meditation", state.skillState) * itemMul(state.misc, "Cheap meal") * itemMul(state.misc, "Meditation mat") * itemMul(state.misc, "Butler"),
-    jobXp: bonus.allXp * meta.allXp * uMods.jobXp * combineSkillBonuses(skillEffectMultiplier("Productivity", state.skillState), darkLearning) * itemMul(state.misc, "Work gloves") * itemMul(state.misc, "Personal squire") * itemMul(state.misc, "Entropy map") * (state.ownedPerks?.includes("shadowDiscipline") ? 1.25 : 1) * (state.ownedPerks?.includes("demonicAutomation") && state.autoPromote ? 1.5 : 1),
-    skillXp: bonus.allXp * bonus.skillXp * meta.allXp * uMods.skillXp * combineSkillBonuses(skillEffectMultiplier("Concentration", state.skillState), darkLearning) * itemMul(state.misc, "Book") * itemMul(state.misc, "Research notes") * itemMul(state.misc, "Study desk") * itemMul(state.misc, "Library") * itemMul(state.misc, "Entropy map") * (state.ownedPerks?.includes("shadowDiscipline") ? 1.25 : 1) * (state.ownedPerks?.includes("demonicAutomation") && state.autoLearn ? 1.5 : 1),
+    jobXp: bonus.allXp * meta.allXp * uMods.jobXp * combineSkillBonuses(skillEffectMultiplier("Productivity", state.skillState), skillEffectMultiplier("Diligence", state.skillState), darkLearning) * itemMul(state.misc, "Work gloves") * itemMul(state.misc, "Personal squire") * itemMul(state.misc, "Entropy map") * (state.ownedPerks?.includes("shadowDiscipline") ? 1.25 : 1) * (state.ownedPerks?.includes("demonicAutomation") && state.autoPromote ? 1.5 : 1),
+    skillXp: bonus.allXp * bonus.skillXp * meta.allXp * uMods.skillXp * combineSkillBonuses(skillEffectMultiplier("Concentration", state.skillState), skillEffectMultiplier("Patience", state.skillState), skillEffectMultiplier("Curiosity", state.skillState), skillEffectMultiplier("Diligence", state.skillState), darkLearning) * itemMul(state.misc, "Book") * itemMul(state.misc, "Research notes") * itemMul(state.misc, "Study desk") * itemMul(state.misc, "Library") * itemMul(state.misc, "Entropy map") * (state.ownedPerks?.includes("shadowDiscipline") ? 1.25 : 1) * (state.ownedPerks?.includes("demonicAutomation") && state.autoLearn ? 1.5 : 1),
     income: bonus.income * meta.income * uMods.income * skillEffectMultiplier("Demon's wealth", state.skillState) * itemMul(state.misc, "Merchant seal") * itemMul(state.misc, "Debt ledger") * (state.ownedPerks?.includes("darkPatronage") ? 1.12 : 1),
-    expense: meta.expense * uMods.expense * skillEffectMultiplier("Bargaining", state.skillState) * skillEffectMultiplier("Intimidation", state.skillState) * itemMul(state.misc, "Abacus") * (state.ownedPerks?.includes("wickedBargain") ? 0.85 : 1),
+    expense: meta.expense * uMods.expense * skillEffectMultiplier("Bargaining", state.skillState) * skillEffectMultiplier("Frugality", state.skillState) * skillEffectMultiplier("Intimidation", state.skillState) * itemMul(state.misc, "Abacus") * (state.ownedPerks?.includes("wickedBargain") ? 0.85 : 1),
     militaryPay: skillEffectMultiplier("Strength", state.skillState) * itemMul(state.misc, "Knight's banner"),
     commonPay: itemMul(state.misc, "Ledger"),
     magicPay: skillEffectMultiplier("Mana control", state.skillState) * itemMul(state.misc, "Arcane focus") * itemMul(state.misc, "Sapphire charm") * itemMul(state.misc, "Apprentice grimoire") * itemMul(state.misc, "Inversion staff"),
@@ -64,7 +65,7 @@ function applyOfflineProgress(state) {
   const next = { ...state };
   const effects = offlineEffects(next);
   const age = Math.floor(next.days / DAYS_PER_YEAR);
-  const speed = BASE_SPEED * ((next.rebirths === 0 && next.evil === 0 && age < 25 && next.universe === 1) ? EARLY_STAGE_BOOST : 1) * (next.warp ? effects.timeWarp : 1) * (next.adminSpeedMultiplier || 1);
+  const speed = BASE_SPEED * earlySpeedMultiplier(next, age, EARLY_STAGE_BOOST) * (next.warp ? effects.timeWarp : 1) * (next.adminSpeedMultiplier || 1);
   const virtualTicks = elapsedMs / OFFLINE_TICK_MS;
   const dayGain = speed * virtualTicks / DAYS_PER_YEAR;
 
@@ -122,6 +123,7 @@ export function defaultSave() {
     ownedPerks: [],
     autoPromote: true,
     autoLearn: true,
+    autoSkillMode: "magic",
     autoShop: true,
     warp: true,
     autoJobBranch: "Common work",
@@ -150,6 +152,7 @@ export function loadSave() {
     const merged = {
       ...defaults,
       ...data,
+      autoSkillMode: data.autoSkillMode || defaults.autoSkillMode,
       jobState: { ...defaults.jobState, ...(data.jobState || {}) },
       skillState: { ...defaults.skillState, ...(data.skillState || {}) },
       metaUpgrades: { ...defaults.metaUpgrades, ...(data.metaUpgrades || {}) },
