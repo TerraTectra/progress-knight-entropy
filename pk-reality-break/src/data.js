@@ -33,8 +33,12 @@ export const skillCategories = {
   Fundamentals: [
     { name: "Concentration", maxXp: 100, desc: "Skill XP" },
     { name: "Productivity", maxXp: 100, desc: "Job XP", req: { task: "Concentration", level: 5 } },
+    { name: "Patience", maxXp: 110, desc: "Skill XP", req: { task: "Concentration", level: 5 } },
     { name: "Bargaining", maxXp: 100, desc: "Expenses", req: { task: "Concentration", level: 20 } },
+    { name: "Frugality", maxXp: 120, desc: "Expenses", req: { task: "Bargaining", level: 5 } },
+    { name: "Diligence", maxXp: 130, desc: "All XP", req: { all: [{ task: "Concentration", level: 10 }, { task: "Productivity", level: 10 }] } },
     { name: "Meditation", maxXp: 100, desc: "Happiness", req: { all: [{ task: "Concentration", level: 30 }, { task: "Productivity", level: 20 }] } },
+    { name: "Curiosity", maxXp: 140, desc: "Skill XP", req: { task: "Concentration", level: 50 } },
   ],
   Combat: [
     { name: "Strength", maxXp: 100, desc: "Military pay" },
