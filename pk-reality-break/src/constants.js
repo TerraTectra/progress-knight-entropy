@@ -1,7 +1,7 @@
 export const UPDATE_MS = 33.3333333333;
 export const DAYS_PER_YEAR = 365;
 export const BASE_SPEED = 8;
-export const EARLY_STAGE_BOOST = 1.5;
+export const EARLY_STAGE_BOOST = 1.35;
 export const BASE_LIFESPAN = 70 * DAYS_PER_YEAR;
 export const AMULET_FOUND_AGE = 25;
 export const AMULET_SHIVER_AGE = 45;
