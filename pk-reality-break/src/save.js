@@ -137,7 +137,7 @@ export function defaultSave() {
     simulacra: [],
     savedAt: Date.now(),
     lastTickAt: Date.now(),
-    log: ["Ты начинаешь жизнь нищим в 14 лет."],
+    log: ["You begin life as a beggar at age 14."],
   };
 }
 
@@ -159,7 +159,7 @@ export function loadSave() {
     };
     return applyOfflineProgress(merged);
   } catch {
-    return { ...defaults, log: ["Сохранение повреждено. Создана новая жизнь."] };
+    return { ...defaults, log: ["Save was corrupted. A new life has been created."] };
   }
 }
 
