@@ -16,16 +16,16 @@ export const jobCategories = {
     { name: "Knight", maxXp: 140000, income: 130, req: { all: [{ task: "Veteran footman", level: 10 }, { task: "Strength", level: 100 }] } },
     { name: "Veteran knight", maxXp: 1300000, income: 420, req: { all: [{ task: "Knight", level: 10 }, { task: "Battle tactics", level: 150 }] } },
     { name: "Elite knight", maxXp: 12000000, income: 1400, req: { all: [{ task: "Veteran knight", level: 10 }, { task: "Strength", level: 250 }] } },
-    { name: "Holy knight", maxXp: 100000000, income: 5200, req: { all: [{ task: "Elite knight", level: 10 }, { task: "Mana control", level: 180 }] } },
+    { name: "Holy knight", maxXp: 100000000, income: 5200, req: { all: [{ task: "Elite knight", level: 10 }, { task: "Mana control", level: 140 }] } },
     { name: "Legendary knight", maxXp: 900000000, income: 21000, req: { all: [{ task: "Holy knight", level: 10 }, { task: "Time warping", level: 80 }] } },
   ],
   "The Arcane Association": [
     { name: "Student", maxXp: 140000, income: 45, req: { task: "Mana control", level: 1 } },
-    { name: "Apprentice mage", maxXp: 1400000, income: 350, req: { all: [{ task: "Student", level: 10 }, { task: "Mana control", level: 120 }] } },
-    { name: "Mage", maxXp: 14000000, income: 2200, req: { all: [{ task: "Apprentice mage", level: 10 }, { task: "Mana control", level: 220 }] } },
-    { name: "Wizard", maxXp: 140000000, income: 13000, req: { all: [{ task: "Mage", level: 10 }, { task: "Immortality", level: 50 }] } },
-    { name: "Master wizard", maxXp: 1400000000, income: 70000, req: { all: [{ task: "Wizard", level: 10 }, { task: "Time warping", level: 120 }] } },
-    { name: "Chairman", maxXp: 12000000000, income: 420000, req: { all: [{ task: "Master wizard", level: 10 }, { task: "Super immortality", level: 75 }] } },
+    { name: "Apprentice mage", maxXp: 1400000, income: 350, req: { all: [{ task: "Student", level: 10 }, { task: "Mana control", level: 80 }] } },
+    { name: "Mage", maxXp: 14000000, income: 2200, req: { all: [{ task: "Apprentice mage", level: 10 }, { task: "Mana control", level: 160 }] } },
+    { name: "Wizard", maxXp: 140000000, income: 13000, req: { all: [{ task: "Mage", level: 10 }, { task: "Immortality", level: 40 }] } },
+    { name: "Master wizard", maxXp: 1400000000, income: 70000, req: { all: [{ task: "Wizard", level: 10 }, { task: "Time warping", level: 100 }] } },
+    { name: "Chairman", maxXp: 12000000000, income: 420000, req: { all: [{ task: "Master wizard", level: 10 }, { task: "Super immortality", level: 60 }] } },
   ],
 };
 
@@ -38,7 +38,7 @@ export const skillCategories = {
     { name: "Frugality", maxXp: 120, desc: "Expenses", req: { task: "Bargaining", level: 5 } },
     { name: "Diligence", maxXp: 130, desc: "All XP", req: { all: [{ task: "Concentration", level: 10 }, { task: "Productivity", level: 10 }] } },
     { name: "Meditation", maxXp: 100, desc: "Happiness", req: { all: [{ task: "Concentration", level: 20 }, { task: "Productivity", level: 15 }] } },
-    { name: "Curiosity", maxXp: 140, desc: "Skill XP", req: { task: "Concentration", level: 35 } },
+    { name: "Curiosity", maxXp: 140, desc: "Skill XP", req: { task: "Concentration", level: 30 } },
   ],
   Combat: [
     { name: "Strength", maxXp: 100, desc: "Military pay" },
@@ -46,10 +46,10 @@ export const skillCategories = {
     { name: "Muscle memory", maxXp: 100, desc: "Strength XP", req: { all: [{ task: "Concentration", level: 30 }, { task: "Strength", level: 30 }] } },
   ],
   Magic: [
-    { name: "Mana control", maxXp: 100, desc: "T.A.A. XP", req: { all: [{ task: "Concentration", level: 90 }, { task: "Meditation", level: 70 }, { task: "Curiosity", level: 25 }] } },
+    { name: "Mana control", maxXp: 100, desc: "T.A.A. XP", req: { all: [{ task: "Concentration", level: 70 }, { task: "Meditation", level: 50 }, { task: "Curiosity", level: 15 }] } },
     { name: "Immortality", maxXp: 100, desc: "Longer lifespan", req: { task: "Apprentice mage", level: 10 } },
     { name: "Time warping", maxXp: 100, desc: "Game speed", req: { task: "Mage", level: 10 } },
-    { name: "Super immortality", maxXp: 100, desc: "Longer lifespan", req: { all: [{ task: "Time warping", level: 120 }, { task: "Immortality", level: 120 }] } },
+    { name: "Super immortality", maxXp: 100, desc: "Longer lifespan", req: { all: [{ task: "Time warping", level: 100 }, { task: "Immortality", level: 100 }] } },
   ],
   "Dark magic": [
     { name: "Dark influence", maxXp: 100, desc: "All XP", req: { evil: 1 } },
@@ -89,7 +89,7 @@ export const miscItems = [
   { name: "Fishing net", expense: 26, effect: 1.18, desc: "Fisherman pay", req: { task: "Fisherman", level: 25 } },
   { name: "Meditation mat", expense: 32, effect: 1.12, desc: "Happiness", req: { task: "Meditation", level: 25 } },
   { name: "Personal squire", expense: 75, effect: 1.15, desc: "Job XP", req: { task: "Knight", level: 1 } },
-  { name: "Research notes", expense: 95, effect: 1.14, desc: "Skill XP", req: { task: "Mana control", level: 30 } },
+  { name: "Research notes", expense: 95, effect: 1.14, desc: "Skill XP", req: { task: "Mana control", level: 20 } },
   { name: "Steel longsword", expense: 130, effect: 1.18, desc: "Military XP", req: { task: "Knight", level: 5 } },
   { name: "Merchant seal", expense: 190, effect: 1.13, desc: "Job pay", req: { task: "Merchant", level: 25 } },
   { name: "Butler", expense: 260, effect: 1.2, desc: "Happiness", req: { coins: 250000 } },
@@ -114,7 +114,7 @@ export const EVIL_PERKS = [
   { id: "darkPatronage", name: "Dark Patronage", cost: 8, req: { perk: "shadowDiscipline" }, effect: "+15% income" },
   { id: "wickedBargain", name: "Wicked Bargain", cost: 18, req: { all: [{ perk: "darkPatronage" }, { task: "Intimidation", level: 25 }] }, effect: "-15% expenses" },
   { id: "soulFurnace", name: "Soul Furnace", cost: 40, req: { all: [{ perk: "wickedBargain" }, { task: "Evil control", level: 50 }] }, effect: "+60% Evil gain" },
-  { id: "deathDefiance", name: "Death Defiance", cost: 75, req: { all: [{ perk: "soulFurnace" }, { task: "Immortality", level: 80 }] }, effect: "+30 years lifespan" },
+  { id: "deathDefiance", name: "Death Defiance", cost: 75, req: { all: [{ perk: "soulFurnace" }, { task: "Immortality", level: 60 }] }, effect: "+30 years lifespan" },
   { id: "demonicAutomation", name: "Demonic Automation", cost: 100, req: { all: [{ perk: "deathDefiance" }, { task: "Merchant", level: 100 }] }, effect: "+50% XP while automation is enabled" },
   { id: "realityBreak", name: "Reality Break", cost: 150, req: { all: [{ perk: "darkPatronage" }, { task: "Dark influence", level: 20 }] }, effect: "Open multiverse" },
 ];
