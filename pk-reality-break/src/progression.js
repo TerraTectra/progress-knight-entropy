@@ -1,6 +1,16 @@
 import { DAYS_PER_YEAR, MONEY_UNITS } from "./constants.js";
 import { allJobs, allSkills } from "./data.js";
 
+const PERMANENT_LIFE_KEY = "__permanentLifeYears";
+
+function permanentLifeYearsFrom(state) {
+  return state?.[PERMANENT_LIFE_KEY]?.level || 0;
+}
+
+function randomPermanentLifeGain() {
+  return 1 + Math.floor(Math.random() * 5);
+}
+
 export function fmt(n) {
   if (!Number.isFinite(n)) return "∞";
   if (Math.abs(n) >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
@@ -72,10 +82,18 @@ export function gainTaskState(taskState, item, gain, difficulty = 1) {
 }
 
 export function resetProgressKeepMax(state, items) {
-  return Object.fromEntries(items.map((item) => {
+  const next = Object.fromEntries(items.map((item) => {
     const current = state?.[item.name] || { level: 0, xp: 0, maxLevel: 0 };
     return [item.name, { level: 0, xp: 0, maxLevel: Math.max(current.maxLevel || 0, current.level || 0) }];
   }));
+
+  if (items === allSkills) {
+    const previous = permanentLifeYearsFrom(state);
+    const gained = randomPermanentLifeGain();
+    next[PERMANENT_LIFE_KEY] = { level: previous + gained, xp: 0, maxLevel: previous + gained };
+  }
+
+  return next;
 }
 
 export function skillPower(level) {
@@ -87,7 +105,7 @@ const SKILL_SCALE = {
   standard: { rate: 0.00165, cap: 6.5 },
   strong: { rate: 0.00185, cap: 7.5 },
   speed: { rate: 0.00105, cap: 4.5 },
-  lifespan: { rate: 0.0013, cap: 5.5 },
+  lifespan: { rate: 0.012, cap: 12 },
   meta: { rate: 0.00165, cap: 6.5 },
   reduction: { rate: 0.00125, floor: 0.32 },
 };
@@ -148,18 +166,13 @@ function baseSkillEffect(name, state) {
 
 export function skillEffectMultiplier(name, state) {
   if (name === "Strength") {
-    return combineSkillBonuses(
-      baseSkillEffect("Strength", state),
-      baseSkillEffect("Endurance", state),
-      baseSkillEffect("Weapon handling", state),
-      baseSkillEffect("Guard discipline", state),
-    );
+    return combineSkillBonuses(baseSkillEffect("Strength", state), baseSkillEffect("Endurance", state), baseSkillEffect("Weapon handling", state), baseSkillEffect("Guard discipline", state));
   }
   if (name === "Battle tactics") {
     return combineSkillBonuses(baseSkillEffect("Battle tactics", state), baseSkillEffect("Guard discipline", state));
   }
   if (name === "Immortality") {
-    return combineSkillBonuses(baseSkillEffect("Immortality", state), baseSkillEffect("Endurance", state));
+    return combineSkillBonuses(baseSkillEffect("Immortality", state), baseSkillEffect("Endurance", state), 1 + permanentLifeYearsFrom(state) / 70);
   }
   return baseSkillEffect(name, state);
 }
@@ -191,24 +204,17 @@ export function reqText(req, ctx, tr, language = "ru") {
   if (!req || reqUnlocked(req, ctx)) return "";
   if (req.all) return remainingJoin(req.all.map((x) => reqText(x, ctx, tr, language)), language);
   if (req.any) return remainingJoin(req.any.map((x) => reqText(x, ctx, tr, language)), language, true);
-
   if (req.task) {
     const current = taskLevelForReq(ctx, req.task);
     const left = Math.max(0, req.level - current);
     if (!left) return "";
-    return language === "ru"
-      ? `${tr(req.task, language)} ур. ${current}/${req.level} — осталось ${left}`
-      : `${tr(req.task, language)} lvl ${current}/${req.level} — ${left} left`;
+    return language === "ru" ? `${tr(req.task, language)} ур. ${current}/${req.level} — осталось ${left}` : `${tr(req.task, language)} lvl ${current}/${req.level} — ${left} left`;
   }
-
   if (req.coins) {
     const left = Math.max(0, req.coins - (ctx.coins || 0));
     if (!left) return "";
-    return language === "ru"
-      ? `${moneyText(req.coins, language)} — осталось ${moneyText(left, language)}`
-      : `${moneyText(req.coins, language)} — ${moneyText(left, language)} left`;
+    return language === "ru" ? `${moneyText(req.coins, language)} — осталось ${moneyText(left, language)}` : `${moneyText(req.coins, language)} — ${moneyText(left, language)} left`;
   }
-
   if (req.ageDays) {
     const currentDay = Math.max(0, Math.floor((ctx.days || 0) - 14 * DAYS_PER_YEAR));
     const targetDay = Math.max(0, Math.floor(req.ageDays - 14 * DAYS_PER_YEAR));
@@ -216,22 +222,18 @@ export function reqText(req, ctx, tr, language = "ru") {
     if (!left) return "";
     return language === "ru" ? `День ${currentDay}/${targetDay} — осталось ${left} дн.` : `Day ${currentDay}/${targetDay} — ${left} days left`;
   }
-
   if (req.evil) {
     const current = ctx.evil || 0;
     const left = Math.max(0, req.evil - current);
     if (!left) return "";
     return language === "ru" ? `Зло ${fmt(current)}/${fmt(req.evil)} — осталось ${fmt(left)}` : `Evil ${fmt(current)}/${fmt(req.evil)} — ${fmt(left)} left`;
   }
-
   if (req.perk) return ctx.ownedPerks?.includes(req.perk) ? "" : tr(req.perk, language);
-
   if (req.universe) {
     const current = ctx.universe || 1;
     const left = Math.max(0, req.universe - current);
     if (!left) return "";
     return language === "ru" ? `Вселенная ${current}/${req.universe} — осталось ${left}` : `Universe ${current}/${req.universe} — ${left} left`;
   }
-
   return "";
 }
