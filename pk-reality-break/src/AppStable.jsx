@@ -117,7 +117,7 @@ export default function AppStable() {
   const income = incomeFor(job);
   const expense = (prop.expense + miscItems.filter((item) => s.misc.includes(item.name)).reduce((sum, item) => sum + item.expense, 0)) * effects.expense;
   const net = income - expense;
-  const speed = BASE_SPEED * ((s.rebirths === 0 && s.evil === 0 && age < 25 && s.universe === 1) ? EARLY_STAGE_BOOST : 1) * (s.warp ? effects.timeWarp : 1) * s.adminSpeedMultiplier;
+  const speed = BASE_SPEED * ((s.rebirths === 0 && s.evil === 0 && age < 35 && s.universe === 1) ? EARLY_STAGE_BOOST : 1) * (s.warp ? effects.timeWarp : 1) * s.adminSpeedMultiplier;
   const shopOpen = s.days >= 14 * DAYS_PER_YEAR + 100 || s.unlockedProperties.length > 1 || s.unlockedMisc.length > 0;
   const autoShopOpen = getLevel(s.jobState, "Merchant") >= 100 || s.achievedMilestones.includes("merchant100AutoShop");
   const multiverseOpen = s.ownedPerks.includes("realityBreak") || s.highestUniverse > 1;
