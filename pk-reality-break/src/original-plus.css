@@ -1,0 +1,80 @@
+:root{
+  color-scheme:dark;
+  font-family:Arial,Helvetica,sans-serif;
+  --bg:#181818;
+  --panel:#242424;
+  --panel2:#1f1f1f;
+  --panel3:#2b2b2b;
+  --border:#111;
+  --border2:#333;
+  --text:#e8e8e8;
+  --muted:#bdbdbd;
+  --soft:#aaa;
+  --active:#f0a22e;
+  --active2:#d59a34;
+  --blue:#2867a8;
+  --green:#207a3a;
+  --greenText:#8ee08a;
+  --red:#9b3131;
+  --redText:#ff8f8f;
+  --purple:#4f3b91;
+  --purpleText:#c3b4ff;
+  --gold:#a86c18;
+  --goldText:#ffd27a;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+button,select,input{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--active);outline-offset:2px}
+
+.app{max-width:1440px;margin:0 auto;padding:14px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:10px;padding:14px 16px;border:1px solid var(--border);border-radius:2px;background:var(--panel);box-shadow:0 2px 14px rgba(0,0,0,.35)}
+h1{margin:0;color:var(--active);font-size:30px;line-height:1.15;font-weight:800}
+header>div:last-child{color:var(--muted);font-weight:700}
+
+nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;padding:4px;border:1px solid var(--border);border-radius:2px;background:var(--panel)}
+nav button,button{border:1px solid var(--border2);border-radius:2px;background:var(--panel2);color:#ddd;padding:8px 11px;font-weight:700;transition:border-color .12s ease,background-color .12s ease,color .12s ease}
+nav button:hover,button:hover{border-color:#777;background:#333;color:#fff}
+nav button.active{border-color:var(--active2);background:var(--active2);color:#111}
+
+.app main{display:grid;grid-template-columns:310px minmax(0,1fr);gap:10px;align-items:start}.content{min-width:0}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+
+.section{overflow:hidden;margin-bottom:10px;border:1px solid var(--border);border-radius:2px;background:var(--panel3);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.section h2{margin:0;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--blue);color:#fff;font-size:16px;line-height:1.1;font-weight:800}
+.section.tone-dark h2{background:var(--red)}.section.tone-magic h2,.section.tone-multiverse h2{background:var(--purple)}.section.tone-observer h2{background:var(--green)}.section.achievement-stage-panel h2{background:var(--gold)}
+.section> :not(h2){margin-left:10px;margin-right:10px}.section h2+*{margin-top:10px}.section>:last-child{margin-bottom:10px}
+
+.stat{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin:6px 0;padding:7px 8px;border:1px solid #222;border-radius:2px;background:var(--panel2);color:var(--soft)}
+.stat b{color:#f0f0f0;text-align:right}.positive{color:var(--greenText);font-weight:800}.negative{color:var(--redText);font-weight:800}
+
+/* Money block: balance/info muted, net is king */
+aside .section:nth-of-type(2) .stat{opacity:.70;background:#202020}
+aside .section:nth-of-type(2) .stat b{font-size:14px;color:var(--muted)}
+aside .section:nth-of-type(2) .stat:nth-child(2),aside .section:nth-of-type(2) .stat:nth-child(3){opacity:.50}
+aside .section:nth-of-type(2) .stat:last-child{opacity:1;border-width:2px;border-color:var(--active2);background:#332313;box-shadow:0 0 12px rgba(240,162,46,.20)}
+aside .section:nth-of-type(2) .stat:last-child span{color:var(--goldText);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+aside .section:nth-of-type(2) .stat:last-child b{font-size:22px;line-height:1.05;color:var(--goldText)}
+aside .section:nth-of-type(2) .stat:last-child .positive{color:var(--greenText);text-shadow:0 0 10px rgba(142,224,138,.18)}
+aside .section:nth-of-type(2) .stat:last-child .negative{color:#ff9c8e;text-shadow:0 0 10px rgba(255,143,143,.18)}
+
+.task-row{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:8px;margin-bottom:7px;padding:8px 9px;text-align:left;border:1px solid #222;border-radius:2px;background:var(--panel2);color:var(--text)}
+.task-row:hover{border-color:#777;background:#333}.task-row.active{border-color:var(--active2);background:#3f2b12}.task-title{font-size:15px;font-weight:800;color:#f5f5f5}.muted{font-size:12px;color:var(--muted)}.memory{margin-top:2px;font-size:11px;color:var(--goldText)}.task-right{text-align:right;font-size:12px;font-weight:800;color:var(--greenText)}
+.bar{grid-column:1/-1;height:9px;overflow:hidden;border:1px solid #111;border-radius:2px;background:#111}.bar-fill{height:100%;background:var(--active2);transition:width .18s ease}.task-row.active .bar-fill{background:var(--active)}
+
+.check-row,.field-row,.contact{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 10px;padding:8px;border:1px solid #222;border-radius:2px;background:var(--panel2);color:var(--muted)}
+.check-row:hover{border-color:#777;background:#333;color:#fff}.field-row select{max-width:170px;border:1px solid #444;border-radius:2px;background:#151515;color:#eee;padding:4px 6px}.log{padding:5px 0;border-bottom:1px solid #333;color:var(--muted);font-size:12px}
+
+.branch-hint,.unlock-hint{grid-column:1/-1;margin-top:8px;padding:9px 10px;border:1px solid var(--blue);border-radius:2px;background:#1d2b3a;color:#d7ecff}.unlock-hint-title{font-weight:800;color:#fff}.unlock-hint-req{margin-top:2px;color:#c7d8e8}
+
+.shop-row{display:block;width:calc(100% - 20px);margin:0 10px 7px;padding:9px 10px;text-align:left;border:1px solid #222;border-radius:2px;background:var(--panel2);color:var(--text)}.shop-row:hover{border-color:#777;background:#333}.shop-row.active{border-color:var(--green);background:#263c2b}.shop-topline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.shop-title-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.shop-title-line b{font-size:15px;color:#f5f5f5}.active-pill{border:1px solid #111;border-radius:2px;background:var(--active);color:#111;padding:1px 6px;font-size:10px;font-weight:800;text-transform:uppercase}.shop-desc{margin-top:3px;font-size:12px;color:var(--muted)}.shop-price{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:112px;color:var(--soft);font-size:12px}.shop-price b{color:#d7d7d7}.shop-bonus-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid #333;font-size:14px}.shop-bonus-line span{color:var(--soft)}.shop-bonus-line b{color:var(--greenText);text-align:right}.requirement{margin-top:6px;color:var(--goldText);font-size:12px;font-weight:800}
+
+.perk,.upgrade,.universe-card,.sim-card{display:block;width:calc(100% - 20px);margin:0 10px 7px;padding:9px;border:1px solid #222;border-radius:2px;background:var(--panel2);color:var(--text)}.perk:hover,.upgrade:hover,.universe-card button:hover{border-color:#777;background:#333}.upgrade small,.universe-card small,.sim-card small{display:block;margin-top:4px;color:var(--muted)}.final-perk{border-color:var(--purple);background:#27213c;color:var(--purpleText)}
+
+.achievement-total-card,.achievement-current-stage{margin:10px;padding:10px;border:1px solid #222;border-radius:2px;background:var(--panel2)}.achievement-total-row,.achievement-current-stage{display:flex;justify-content:space-between;gap:12px;color:var(--muted)}.achievement-total-row b,.achievement-current-stage b{color:var(--goldText)}.achievement-controls{display:flex;margin:8px 10px 10px}.achievement-check{display:flex;gap:8px;align-items:center;padding:7px 8px;border:1px solid #222;background:var(--panel2);color:var(--muted)}.achievement-stage-tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin:0 10px 10px}.achievement-stage-tab{min-height:80px;display:flex;flex-direction:column;gap:6px;padding:9px;text-align:left;border:1px solid #222;background:var(--panel2);color:var(--text)}.achievement-stage-tab.active{border-color:var(--active2);background:var(--active2);color:#111}.achievement-stage-top{display:flex;justify-content:space-between;font-weight:800}.achievement-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin:12px 10px 10px}.achievement-card{min-height:150px;display:flex;flex-direction:column;gap:9px;padding:12px;border:1px solid #222;border-radius:2px;background:var(--panel2)}.achievement-card.done{border-color:var(--green);background:#223522}.achievement-card-head{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px}.achievement-status{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--active2);border-radius:2px;background:#332313;color:var(--goldText);font-weight:800;font-size:12px}.achievement-card.done .achievement-status{border-color:var(--green);background:#263c2b;color:var(--greenText);font-size:18px}.achievement-card h3{margin:0;font-size:15px;color:#f5f5f5}.achievement-card p{margin:4px 0 0;color:var(--muted);font-size:13px}.achievement-progress-line,.achievement-reward{display:flex;justify-content:space-between;gap:8px;font-size:12px}.achievement-reward{margin-top:auto;padding-top:8px;border-top:1px solid #333}.achievement-reward b{color:var(--goldText)}.empty-achievements{grid-column:1/-1;padding:12px;border:1px dashed #444;background:var(--panel2);color:var(--muted);text-align:center}
+.evil-resource-stat{border-color:var(--red)!important;background:#351d1d!important}.evil-resource-stat span{color:#ffb0b0!important}.evil-resource-stat b{color:#ff8f8f!important}
+.support-note{padding:9px 10px;border:1px solid var(--blue);background:#1d2b3a;color:#d7ecff}
+@media(max-width:1000px){.app main{grid-template-columns:1fr}.grid2,.grid3{grid-template-columns:1fr}.shop-topline{flex-direction:column}.shop-price{align-items:flex-start}.shop-bonus-line{align-items:flex-start;flex-direction:column;gap:4px}.shop-bonus-line b{text-align:left}}
+@media(max-width:520px){.app{padding:10px}nav button{padding:6px 9px;font-size:13px}.achievement-stage-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
