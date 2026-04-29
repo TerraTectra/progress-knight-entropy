@@ -79,6 +79,12 @@ export const properties = [
   { name: "Large house", expense: 280, effect: 4.6, req: { coins: 250000 } },
   { name: "Small palace", expense: 900, effect: 7.5, req: { coins: 1500000 } },
   { name: "Grand palace", expense: 3500, effect: 12, req: { coins: 9000000 } },
+  { name: "Manor", expense: 9000, effect: 18, req: { coins: 30000000 } },
+  { name: "Guild hall", expense: 24000, effect: 28, req: { coins: 120000000 } },
+  { name: "Noble estate", expense: 65000, effect: 44, req: { coins: 500000000 } },
+  { name: "Royal keep", expense: 180000, effect: 70, req: { coins: 2000000000 } },
+  { name: "Ancient citadel", expense: 520000, effect: 115, req: { coins: 9000000000 } },
+  { name: "Sky crown palace", expense: 1600000, effect: 190, req: { coins: 50000000000 } },
 ];
 
 export const miscItems = [
