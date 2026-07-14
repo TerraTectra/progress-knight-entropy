@@ -1,0 +1,55 @@
+name: Deploy Event Horizon
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'black-hole-app/**'
+      - '.github/workflows/deploy-black-hole.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-event-horizon
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: black-hole-app/package.json
+
+      - name: Install dependencies
+        working-directory: black-hole-app
+        run: npm install --no-audit --no-fund
+
+      - name: Build Event Horizon
+        working-directory: black-hole-app
+        run: npm run build
+
+      - name: Publish to black-hole path
+        run: |
+          rm -rf black-hole
+          mkdir -p black-hole
+          cp -R black-hole-app/dist/. black-hole/
+          touch black-hole/.nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add black-hole
+          git diff --cached --quiet || git commit -m "Publish Event Horizon shader build"
+          git push
