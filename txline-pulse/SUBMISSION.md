@@ -40,13 +40,17 @@ Pulse90 needs more than a scoreboard. TxLINE provides the combination required t
 
 - responsive desktop and mobile interface;
 - animated SVG momentum chart;
-- score and match-state rendering from a JSON feed;
+- score and match-state rendering from a validated JSON feed;
 - consensus probability display;
 - reverse-chronological event timeline;
 - spoiler-safe mode;
 - reduced-motion support;
-- deterministic demo snapshot;
-- protected GitHub Actions integration for TxLINE devnet activation and data snapshots;
+- deterministic demonstration snapshot;
+- dynamic provenance badge that only displays `SOLANA VERIFIED` for a live feed with `verified: true`;
+- dependency-free schema and asset validation in GitHub Actions;
+- Open Graph, Twitter Card and structured application metadata;
+- dedicated 1200×630 social preview;
+- protected GitHub Actions integration for TxLINE devnet activation and sanitised data snapshots;
 - dedicated Solana devnet wallet stored only in a private Actions artifact.
 
 ## Technical architecture
@@ -60,6 +64,7 @@ Protected server-side adapter
   • guest JWT and API token
   • fixture / score normalisation
   • consensus conversion
+  • provenance status
   • secret removal
               │
               ▼
@@ -69,7 +74,7 @@ Pulse90 public snapshot schema
 Static accessible fan interface
 ```
 
-The browser never receives a wallet private key, JWT or TxLINE API token.
+The browser never receives a wallet private key, JWT or TxLINE API token. The public snapshot carries explicit `mode` and `verified` fields so the interface cannot confuse a deterministic demo with a live proof-backed feed.
 
 ## Technology
 
@@ -79,6 +84,7 @@ The browser never receives a wallet private key, JWT or TxLINE API token.
 - SVG data visualisation;
 - GitHub Pages;
 - GitHub Actions;
+- dependency-free Node validation;
 - TypeScript server-side adapter;
 - official `txodds/tx-on-chain` examples;
 - Solana devnet and Anchor.
@@ -93,7 +99,22 @@ https://terratectra.github.io/progress-knight-entropy/txline-pulse/
 
 ## Current data mode
 
-The public demo uses a deterministic World Cup snapshot while the protected adapter activates the TxLINE devnet free tier. Replacing the snapshot with a sanitised live export requires no frontend changes.
+The public demo currently uses a deterministic World Cup snapshot with `mode: demo` and `verified: false`. It demonstrates the complete fan experience and the exact sanitised schema expected from the protected adapter, but it does **not** claim a live TxLINE subscription or an on-chain proof.
+
+The protected adapter, dedicated wallet, restore/persistence workflow and TxLINE activation path are implemented. Live activation is pending sufficient Solana devnet fee funding for the subscription transaction. When a real snapshot is available, the same frontend switches to `TXLINE LIVE` and displays `SOLANA VERIFIED` only when the adapter explicitly supplies `verified: true`; no frontend code change is required.
+
+## Quality evidence
+
+GitHub Actions validates every Pulse90 change. The current quality gate checks:
+
+- static asset and social-preview references;
+- reduced-motion support;
+- TxLINE source provenance and timestamp shape;
+- honest demo verification state;
+- team, score and match-state fields;
+- pulse arrays and value ranges;
+- pressure and consensus totals;
+- required event narratives.
 
 ## Safety and positioning
 
@@ -103,11 +124,12 @@ Pulse90:
 - does not hold funds;
 - does not execute trades;
 - does not recommend wagering decisions;
-- labels consensus information as contextual data.
+- labels consensus information as contextual data;
+- never presents deterministic demo data as verified live data.
 
 ## Differentiation
 
-Most sports dashboards optimise for the amount of information shown. Pulse90 optimises for **time-to-understanding**. A fan can glance at one screen and understand the current emotional shape of the match, while the underlying data remains inspectable through the event timeline and verified-source status.
+Most sports dashboards optimise for the amount of information shown. Pulse90 optimises for **time-to-understanding**. A fan can glance at one screen and understand the current emotional shape of the match, while the underlying data remains inspectable through the event timeline and transparent provenance status.
 
 ## Roadmap after the hackathon
 
