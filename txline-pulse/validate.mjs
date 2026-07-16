@@ -32,13 +32,18 @@ check(html.includes('<meta name="twitter:card" content="summary_large_image"'), 
 check(html.includes('./social-card.svg'), "index.html must reference social-card.svg");
 check(html.includes('./styles.css'), "index.html must reference styles.css");
 check(html.includes('./app.js'), "index.html must reference app.js");
+check(html.includes('DEMO · VERIFICATION READY'), "static markup must identify the deterministic demo honestly");
+check(!html.includes('<span class="verified-badge">SOLANA VERIFIED</span>'), "static demo markup must not claim Solana verification");
 check(app.includes('./data/live.json'), "app.js must load the public match snapshot");
+check(app.includes('source.mode === "live" && source.verified'), "app.js must gate verified labels on live verified provenance");
+check(app.includes('DEMO · VERIFICATION READY'), "app.js must render an explicit demo provenance label");
 check(css.includes('@media (prefers-reduced-motion: reduce)'), "styles.css must support reduced motion");
 check(socialCard.includes('width="1200"') && socialCard.includes('height="630"'), "social-card.svg must be 1200x630");
 
 check(feed?.source?.provider === "TxLINE", "feed source provider must be TxLINE");
 check(["demo", "live"].includes(feed?.source?.mode), "feed source mode must be demo or live");
 check(typeof feed?.source?.verified === "boolean", "feed source verified must be boolean");
+check(!(feed?.source?.mode === "demo" && feed?.source?.verified === true), "a deterministic demo snapshot must never be marked verified");
 check(Number.isFinite(Date.parse(feed?.source?.updatedAt)), "feed source updatedAt must be an ISO timestamp");
 
 check(typeof feed?.match?.id === "string" && feed.match.id.length > 0, "match id is required");
@@ -80,4 +85,5 @@ if (failures.length) {
   console.log(`- ${pulseHome.length} pulse samples per team`);
   console.log(`- source mode: ${feed.source.mode}`);
   console.log(`- verified flag: ${feed.source.verified}`);
+  console.log("- provenance policy: honest demo / gated live verification");
 }
