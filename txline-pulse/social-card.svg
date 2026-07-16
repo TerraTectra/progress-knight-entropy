@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Pulse90 — Feel the match. Skip the noise.</title>
+  <desc id="desc">A dark green World Cup match pulse visualization with the Pulse90 brand and TxLINE attribution.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06120f"/>
+      <stop offset="0.56" stop-color="#0a1b17"/>
+      <stop offset="1" stop-color="#111814"/>
+    </linearGradient>
+    <linearGradient id="home" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#63e6ae"/>
+      <stop offset="1" stop-color="#a8ffcf"/>
+    </linearGradient>
+    <linearGradient id="away" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f0a86f"/>
+      <stop offset="1" stop-color="#ffd0a9"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#b7d5c8" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" rx="36" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="36" fill="url(#grid)"/>
+  <circle cx="1050" cy="80" r="210" fill="#70efbb" opacity="0.045"/>
+  <circle cx="1040" cy="570" r="260" fill="#f0a86f" opacity="0.035"/>
+
+  <g transform="translate(72 66)">
+    <g fill="#80f2bf">
+      <rect x="0" y="0" width="7" height="29" rx="3.5"/>
+      <rect x="14" y="8" width="7" height="21" rx="3.5" opacity="0.72"/>
+      <rect x="28" y="15" width="7" height="14" rx="3.5" opacity="0.48"/>
+    </g>
+    <text x="54" y="27" fill="#f3fff9" font-family="Manrope, Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="1">PULSE<tspan fill="#80f2bf">90</tspan></text>
+  </g>
+
+  <g transform="translate(72 152)">
+    <text fill="#7e9f91" font-family="DM Mono, Consolas, monospace" font-size="18" letter-spacing="4">WORLD CUP · LIVE COMPANION</text>
+    <text y="78" fill="#f5fff9" font-family="Manrope, Arial, sans-serif" font-size="72" font-weight="800">Feel the match.</text>
+    <text y="152" fill="#80f2bf" font-family="Manrope, Arial, sans-serif" font-size="72" font-weight="800">Skip the noise.</text>
+    <text y="202" fill="#b8cec4" font-family="Manrope, Arial, sans-serif" font-size="24" font-weight="500">Verified events, momentum and consensus — made human.</text>
+  </g>
+
+  <g transform="translate(680 130)">
+    <rect width="448" height="360" rx="28" fill="#0b1c17" stroke="#9cecc8" stroke-opacity="0.18"/>
+    <text x="30" y="45" fill="#80f2bf" font-family="DM Mono, Consolas, monospace" font-size="15" letter-spacing="2">MATCH PULSE · LIVE</text>
+    <text x="30" y="88" fill="#f5fff9" font-family="Manrope, Arial, sans-serif" font-size="29" font-weight="700">ARG  2 : 1  NED</text>
+    <line x1="30" y1="210" x2="418" y2="210" stroke="#c4dace" stroke-opacity="0.14"/>
+    <path d="M30 205 C60 192 74 166 104 170 C134 174 148 120 178 136 C208 152 222 99 252 108 C282 117 296 72 326 88 C356 104 373 62 418 76" fill="none" stroke="url(#home)" stroke-width="5" stroke-linecap="round" filter="url(#glow)"/>
+    <path d="M30 224 C60 236 74 254 104 249 C134 244 148 272 178 262 C208 252 222 285 252 273 C282 261 296 301 326 282 C356 263 376 292 418 274" fill="none" stroke="url(#away)" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <g fill="#80f2bf">
+      <circle cx="252" cy="108" r="6"/>
+      <circle cx="326" cy="88" r="6"/>
+    </g>
+    <text x="30" y="324" fill="#b8cec4" font-family="Manrope, Arial, sans-serif" font-size="18">Argentina pressure</text>
+    <text x="220" y="324" fill="#f5fff9" font-family="Manrope, Arial, sans-serif" font-size="22" font-weight="700">62%</text>
+    <text x="292" y="324" fill="#b8cec4" font-family="Manrope, Arial, sans-serif" font-size="18">confidence</text>
+    <text x="390" y="324" text-anchor="end" fill="#f5fff9" font-family="Manrope, Arial, sans-serif" font-size="22" font-weight="700">84%</text>
+  </g>
+
+  <g transform="translate(72 556)">
+    <rect width="258" height="42" rx="21" fill="#10251e" stroke="#80f2bf" stroke-opacity="0.22"/>
+    <circle cx="22" cy="21" r="5" fill="#80f2bf"/>
+    <text x="39" y="27" fill="#c8ddd3" font-family="DM Mono, Consolas, monospace" font-size="14" letter-spacing="1">POWERED BY TXLINE</text>
+  </g>
+  <text x="1128" y="583" text-anchor="end" fill="#7e9f91" font-family="DM Mono, Consolas, monospace" font-size="14">SOLANA DEVNET · CONSUMER &amp; FAN EXPERIENCES</text>
+</svg>
