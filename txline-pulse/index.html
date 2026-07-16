@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Pulse90 turns verified TxLINE World Cup data into a calm, accessible live match companion." />
+    <meta name="description" content="Pulse90 turns a TxLINE-ready World Cup data snapshot into a calm, accessible live match companion." />
     <meta name="theme-color" content="#07110f" />
     <meta name="color-scheme" content="dark" />
     <meta name="application-name" content="Pulse90" />
@@ -13,14 +13,14 @@
     <meta property="og:site_name" content="Pulse90" />
     <meta property="og:url" content="https://terratectra.github.io/progress-knight-entropy/txline-pulse/" />
     <meta property="og:title" content="Pulse90 — feel the match without the noise" />
-    <meta property="og:description" content="Live match energy, verified events and spoiler-safe updates powered by TxLINE." />
+    <meta property="og:description" content="Match energy, transparent provenance and spoiler-safe updates in a TxLINE-ready fan experience." />
     <meta property="og:image" content="https://terratectra.github.io/progress-knight-entropy/txline-pulse/social-card.svg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Pulse90 match pulse dashboard for the World Cup" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Pulse90 — feel the match without the noise" />
-    <meta name="twitter:description" content="A calm, spoiler-safe World Cup companion powered by TxLINE." />
+    <meta name="twitter:description" content="A calm, spoiler-safe World Cup companion designed for a sanitised TxLINE feed." />
     <meta name="twitter:image" content="https://terratectra.github.io/progress-knight-entropy/txline-pulse/social-card.svg" />
     <title>Pulse90 — TxLINE World Cup Experience</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,7 +34,7 @@
         "name": "Pulse90",
         "applicationCategory": "SportsApplication",
         "operatingSystem": "Web",
-        "description": "A calm, spoiler-safe World Cup match companion powered by a sanitised TxLINE data feed.",
+        "description": "A calm, spoiler-safe World Cup match companion designed for a sanitised TxLINE data feed.",
         "url": "https://terratectra.github.io/progress-knight-entropy/txline-pulse/",
         "codeRepository": "https://github.com/TerraTectra/progress-knight-entropy/tree/main/txline-pulse",
         "isAccessibleForFree": true,
@@ -69,7 +69,7 @@
         <div class="hero-copy">
           <div class="eyebrow">WORLD CUP · LIVE COMPANION</div>
           <h1>Feel the match.<br /><span>Skip the noise.</span></h1>
-          <p>Pulse90 transforms verified live scores, match events and consensus odds into one calm signal anyone can understand.</p>
+          <p>Pulse90 transforms scores, match events and consensus context into one calm signal anyone can understand.</p>
           <div class="hero-actions">
             <button class="primary-button" id="jumpLive" type="button">Open live match <span>↘</span></button>
             <button class="text-button" id="spoilerToggle" type="button"><span class="toggle-indicator"></span> Spoiler-safe mode</button>
@@ -172,7 +172,7 @@
             <article class="glass-card probability-card">
               <div class="card-heading">
                 <div><span>CONSENSUS SIGNAL</span><strong>Match outcome</strong></div>
-                <span class="verified-badge">SOLANA VERIFIED</span>
+                <span class="verified-badge demo">DEMO · VERIFICATION READY</span>
               </div>
               <div class="probability-ring" id="probabilityRing">
                 <div><strong id="homeWinProb">57%</strong><span id="homeWinLabel">ARG win</span></div>
@@ -182,7 +182,7 @@
                 <div><span>Draw</span><div><i id="drawBar"></i></div><b id="drawBarValue">24%</b></div>
                 <div><span>Away</span><div><i id="awayBar"></i></div><b id="awayBarValue">19%</b></div>
               </div>
-              <p>Derived from consensus market data. It is context, not betting advice.</p>
+              <p>Derived from a deterministic consensus-style demo snapshot. It is context, not betting advice.</p>
             </article>
 
             <article class="glass-card moments-card">
@@ -210,8 +210,8 @@
           <article class="feature-card">
             <span class="feature-index">02</span>
             <div class="feature-visual verify-visual"><span>✓</span><div></div></div>
-            <h3>Verified moments</h3>
-            <p>Critical match events can be checked against cryptographic proofs anchored on Solana.</p>
+            <h3>Verification-ready</h3>
+            <p>Live mode can expose proof-backed provenance without ever sending wallet secrets to the browser.</p>
           </article>
           <article class="feature-card">
             <span class="feature-index">03</span>
@@ -224,13 +224,13 @@
 
       <section class="data-story shell">
         <div class="data-story-copy">
-          <div class="eyebrow">POWERED BY TXLINE</div>
+          <div class="eyebrow">DESIGNED FOR TXLINE</div>
           <h2>Institutional match data,<br />made human.</h2>
-          <p>Pulse90 consumes TxLINE fixtures, scores and consensus odds, then translates every update into accessible fan language.</p>
+          <p>Pulse90 is shaped to consume TxLINE fixtures, scores and consensus odds, then translate every update into accessible fan language.</p>
           <div class="data-points">
-            <div><strong>104</strong><span>World Cup matches</span></div>
-            <div><strong>SSE</strong><span>Live event streams</span></div>
-            <div><strong>✓</strong><span>On-chain proofs</span></div>
+            <div><strong>104</strong><span>World Cup match schema</span></div>
+            <div><strong>SSE</strong><span>Live stream ready</span></div>
+            <div><strong>✓</strong><span>Proof-aware provenance</span></div>
           </div>
         </div>
         <div class="data-flow" aria-label="Data flow diagram">
@@ -246,7 +246,7 @@
     <footer class="footer shell">
       <a class="brand" href="#top"><span class="brand-mark"><span></span><span></span><span></span></span><span>PULSE<strong>90</strong></span></a>
       <p>Built for the TxODDS World Cup Hackathon · Consumer & Fan Experiences track.</p>
-      <div><span id="footerSync">Demo snapshot</span><a href="https://txline.txodds.com/documentation/worldcup" target="_blank" rel="noreferrer">TxLINE docs ↗</a></div>
+      <div><span id="footerSync">TxLINE · Solana devnet · demo snapshot</span><a href="https://txline.txodds.com/documentation/worldcup" target="_blank" rel="noreferrer">TxLINE docs ↗</a></div>
     </footer>
 
     <template id="momentTemplate">

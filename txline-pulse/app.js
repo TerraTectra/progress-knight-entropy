@@ -43,6 +43,7 @@ const els = {
   drawBarValue: $("#drawBarValue"),
   awayBarValue: $("#awayBarValue"),
   probabilityRing: $("#probabilityRing"),
+  verificationBadge: $(".verified-badge"),
   momentsList: $("#momentsList"),
   momentTemplate: $("#momentTemplate"),
   homeLine: $("#homeLine"),
@@ -62,12 +63,24 @@ async function loadFeed() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     state.feed = await response.json();
     render(state.feed);
-    setConnection(state.feed.source.mode === "live" ? "TXLINE LIVE" : "TXLINE DEMO FEED", true);
+    setConnection(connectionLabel(state.feed.source), true);
   } catch (error) {
     console.error("Unable to load Pulse90 feed", error);
     setConnection("FEED OFFLINE", false);
     els.miniNarrative.textContent = "The latest match snapshot could not be loaded.";
   }
+}
+
+function connectionLabel(source) {
+  if (source.mode === "live" && source.verified) return "TXLINE LIVE · VERIFIED";
+  if (source.mode === "live") return "TXLINE LIVE";
+  return "TXLINE DEMO FEED";
+}
+
+function verificationLabel(source) {
+  if (source.mode === "live" && source.verified) return "SOLANA VERIFIED";
+  if (source.mode === "live") return "TXLINE LIVE · UNVERIFIED";
+  return "DEMO · VERIFICATION READY";
 }
 
 function setConnection(label, connected) {
@@ -116,7 +129,19 @@ function render(feed) {
     els.awayBar.style.width = `${consensus.away}%`;
   });
 
-  els.footerSync.textContent = `${source.provider} · ${source.network} · ${relativeTime(source.updatedAt)}`;
+  const isVerifiedLive = source.mode === "live" && source.verified === true;
+  els.verificationBadge.textContent = verificationLabel(source);
+  els.verificationBadge.classList.toggle("verified", isVerifiedLive);
+  els.verificationBadge.classList.toggle("demo", source.mode === "demo");
+  els.verificationBadge.setAttribute(
+    "title",
+    isVerifiedLive
+      ? "This live snapshot reports successful Solana verification."
+      : "This deterministic demo is shaped for TxLINE verification but does not claim an on-chain proof.",
+  );
+
+  const provenance = isVerifiedLive ? "verified live feed" : source.mode === "live" ? "live feed" : "demo snapshot";
+  els.footerSync.textContent = `${source.provider} · ${source.network} · ${provenance} · ${relativeTime(source.updatedAt)}`;
   renderMiniWave(pulse.home, pulse.away);
   renderPulseChart(pulse.home, pulse.away, events, match.minute);
   renderMoments(events);
@@ -231,9 +256,10 @@ function activateView(view) {
   state.activeView = view;
   $$(".view-tab").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
 
+  const verifiedWord = state.feed?.source.mode === "live" && state.feed?.source.verified ? "verified " : "";
   const narratives = {
     pulse: state.feed?.pulse.narrative,
-    timeline: "The latest verified events are ordered by match time. Select Pulse to return to the momentum view.",
+    timeline: `The latest ${verifiedWord}match events are ordered by match time. Select Pulse to return to the momentum view.`,
     numbers: state.feed ? `${state.feed.match.home.name} carry ${state.feed.pulse.homePressure}% of the recent pressure signal; consensus currently favours them at ${state.feed.consensus.home}%.` : "",
   };
   els.liveInsight.textContent = narratives[view] || state.feed?.pulse.narrative || "";
@@ -246,7 +272,7 @@ function activateView(view) {
 $("#jumpLive").addEventListener("click", () => $("#liveMatch").scrollIntoView({ behavior: "smooth" }));
 els.spoilerToggle.addEventListener("click", toggleSpoilers);
 els.soundToggle.addEventListener("click", toggleSound);
-$$('.view-tab').forEach((button) => button.addEventListener("click", () => activateView(button.dataset.view)));
+$$(".view-tab").forEach((button) => button.addEventListener("click", () => activateView(button.dataset.view)));
 
 loadFeed();
 setInterval(() => {

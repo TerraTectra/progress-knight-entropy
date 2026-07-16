@@ -24,14 +24,26 @@
     "TxLINE"
   ],
   "status": {
-    "frontend": "working prototype",
-    "publicData": "deterministic demonstration snapshot",
-    "txlineAdapter": "protected devnet activation in progress"
+    "frontend": "working validated prototype",
+    "publicData": {
+      "mode": "demo",
+      "verified": false,
+      "description": "deterministic demonstration snapshot"
+    },
+    "txlineAdapter": "protected adapter and wallet persistence implemented; live subscription pending devnet fee funding",
+    "verificationPolicy": "SOLANA VERIFIED is rendered only for a live snapshot with verified=true"
+  },
+  "quality": {
+    "ci": true,
+    "schemaValidation": true,
+    "reducedMotion": true,
+    "socialPreview": "1200x630"
   },
   "safety": {
     "betting": false,
     "custody": false,
     "trading": false,
-    "financialAdvice": false
+    "financialAdvice": false,
+    "demoClaimsLiveVerification": false
   }
 }
