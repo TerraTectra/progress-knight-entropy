@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Pulse90 turns verified TxLINE World Cup data into a calm, accessible live match companion." />
+    <meta name="theme-color" content="#07110f" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pulse90 — feel the match without the noise" />
+    <meta property="og:description" content="Live match energy, verified events and spoiler-safe updates powered by TxLINE." />
+    <title>Pulse90 — TxLINE World Cup Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Pulse90 home">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span>PULSE<strong>90</strong></span>
+      </a>
+      <div class="topbar-actions">
+        <button class="status-pill" id="dataStatus" type="button" aria-label="Data connection status">
+          <span class="status-dot"></span>
+          <span>TXLINE DEMO FEED</span>
+        </button>
+        <button class="icon-button" id="soundToggle" type="button" aria-label="Toggle ambient match sound" title="Ambient sound">
+          <span aria-hidden="true">◖</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero shell">
+        <div class="hero-copy">
+          <div class="eyebrow">WORLD CUP · LIVE COMPANION</div>
+          <h1>Feel the match.<br /><span>Skip the noise.</span></h1>
+          <p>Pulse90 transforms verified live scores, match events and consensus odds into one calm signal anyone can understand.</p>
+          <div class="hero-actions">
+            <button class="primary-button" id="jumpLive" type="button">Open live match <span>↘</span></button>
+            <button class="text-button" id="spoilerToggle" type="button"><span class="toggle-indicator"></span> Spoiler-safe mode</button>
+          </div>
+        </div>
+
+        <aside class="mini-score" aria-label="Featured match summary">
+          <div class="mini-score-head">
+            <span class="live-dot"></span>
+            <span id="miniState">LIVE · 68'</span>
+            <span id="miniUpdated">UPDATED NOW</span>
+          </div>
+          <div class="mini-teams">
+            <div>
+              <span class="flag" id="miniHomeFlag">ARG</span>
+              <strong id="miniHome">Argentina</strong>
+            </div>
+            <div class="mini-result" id="miniScore">2 : 1</div>
+            <div>
+              <span class="flag" id="miniAwayFlag">NED</span>
+              <strong id="miniAway">Netherlands</strong>
+            </div>
+          </div>
+          <div class="mini-wave" id="miniWave" aria-label="Match energy sparkline"></div>
+          <p id="miniNarrative">Argentina are controlling territory, but the pressure has started to swing.</p>
+        </aside>
+      </section>
+
+      <section class="match-shell shell" id="liveMatch">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">MATCH PULSE</div>
+            <h2 id="matchTitle">Argentina vs Netherlands</h2>
+          </div>
+          <div class="view-tabs" role="tablist" aria-label="Match view">
+            <button class="view-tab active" type="button" data-view="pulse">Pulse</button>
+            <button class="view-tab" type="button" data-view="timeline">Timeline</button>
+            <button class="view-tab" type="button" data-view="numbers">Numbers</button>
+          </div>
+        </div>
+
+        <div class="match-grid">
+          <article class="pulse-card glass-card">
+            <div class="scoreline">
+              <div class="team-side home-side">
+                <span class="team-code" id="homeCode">ARG</span>
+                <strong id="homeName">Argentina</strong>
+                <span class="team-form" id="homeForm">W W D W</span>
+              </div>
+              <div class="score-centre">
+                <span class="match-clock"><span class="live-dot"></span><span id="matchClock">68:14</span></span>
+                <div class="big-score"><span id="homeScore">2</span><i>:</i><span id="awayScore">1</span></div>
+                <span class="stage-label" id="stageLabel">QUARTER-FINAL</span>
+              </div>
+              <div class="team-side away-side">
+                <span class="team-code" id="awayCode">NED</span>
+                <strong id="awayName">Netherlands</strong>
+                <span class="team-form" id="awayForm">W D W W</span>
+              </div>
+            </div>
+
+            <div class="pulse-visual">
+              <div class="pulse-axis"><span>45'</span><span>55'</span><span>65'</span><span>NOW</span></div>
+              <svg id="pulseChart" viewBox="0 0 900 250" role="img" aria-label="Momentum pulse chart">
+                <defs>
+                  <linearGradient id="homeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#86f7c6" stop-opacity="0.48" />
+                    <stop offset="100%" stop-color="#86f7c6" stop-opacity="0" />
+                  </linearGradient>
+                  <linearGradient id="awayGradient" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="#f0a86f" stop-opacity="0.42" />
+                    <stop offset="100%" stop-color="#f0a86f" stop-opacity="0" />
+                  </linearGradient>
+                  <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                </defs>
+                <line x1="0" y1="125" x2="900" y2="125" class="chart-midline" />
+                <path id="homeArea" class="area home-area" fill="url(#homeGradient)" />
+                <path id="awayArea" class="area away-area" fill="url(#awayGradient)" />
+                <path id="homeLine" class="pulse-line home-line" filter="url(#glow)" />
+                <path id="awayLine" class="pulse-line away-line" />
+                <g id="eventMarkers"></g>
+              </svg>
+              <div class="pulse-labels">
+                <span><i class="home-key"></i><b id="homePressure">62%</b> Argentina pressure</span>
+                <span><i class="away-key"></i><b id="awayPressure">38%</b> Netherlands pressure</span>
+              </div>
+            </div>
+
+            <div class="insight-strip">
+              <div class="insight-icon">✦</div>
+              <div>
+                <span>LIVE READ</span>
+                <strong id="liveInsight">The game is opening up. Netherlands have created three dangerous entries in five minutes.</strong>
+              </div>
+              <span class="confidence" id="confidenceLabel">84% confidence</span>
+            </div>
+          </article>
+
+          <aside class="side-stack">
+            <article class="glass-card probability-card">
+              <div class="card-heading">
+                <div><span>CONSENSUS SIGNAL</span><strong>Match outcome</strong></div>
+                <span class="verified-badge">SOLANA VERIFIED</span>
+              </div>
+              <div class="probability-ring" id="probabilityRing">
+                <div><strong id="homeWinProb">57%</strong><span id="homeWinLabel">ARG win</span></div>
+              </div>
+              <div class="outcome-bars">
+                <div><span>Home</span><div><i id="homeBar"></i></div><b id="homeBarValue">57%</b></div>
+                <div><span>Draw</span><div><i id="drawBar"></i></div><b id="drawBarValue">24%</b></div>
+                <div><span>Away</span><div><i id="awayBar"></i></div><b id="awayBarValue">19%</b></div>
+              </div>
+              <p>Derived from consensus market data. It is context, not betting advice.</p>
+            </article>
+
+            <article class="glass-card moments-card">
+              <div class="card-heading">
+                <div><span>KEY MOMENTS</span><strong>What changed the pulse</strong></div>
+              </div>
+              <ol id="momentsList" class="moments-list"></ol>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section class="features shell">
+        <div class="section-heading feature-heading">
+          <div><div class="eyebrow">DESIGNED FOR REAL FANS</div><h2>One feed. Three ways to feel it.</h2></div>
+          <p>Built for the second screen — readable from a sofa, a train or a noisy watch party.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-index">01</span>
+            <div class="feature-visual hush-visual"><div class="hush-ball"></div><div class="hush-lines"></div></div>
+            <h3>Spoiler-safe</h3>
+            <p>Hide scores and outcomes while keeping the emotional rhythm of the match.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-index">02</span>
+            <div class="feature-visual verify-visual"><span>✓</span><div></div></div>
+            <h3>Verified moments</h3>
+            <p>Critical match events can be checked against cryptographic proofs anchored on Solana.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-index">03</span>
+            <div class="feature-visual calm-visual"><i></i><i></i><i></i><i></i><i></i></div>
+            <h3>Calm by design</h3>
+            <p>No flashing odds wall. Pulse90 turns dense data into a single understandable story.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="data-story shell">
+        <div class="data-story-copy">
+          <div class="eyebrow">POWERED BY TXLINE</div>
+          <h2>Institutional match data,<br />made human.</h2>
+          <p>Pulse90 consumes TxLINE fixtures, scores and consensus odds, then translates every update into accessible fan language.</p>
+          <div class="data-points">
+            <div><strong>104</strong><span>World Cup matches</span></div>
+            <div><strong>SSE</strong><span>Live event streams</span></div>
+            <div><strong>✓</strong><span>On-chain proofs</span></div>
+          </div>
+        </div>
+        <div class="data-flow" aria-label="Data flow diagram">
+          <div class="flow-node"><span>01</span><strong>TxLINE</strong><small>scores · odds · fixtures</small></div>
+          <div class="flow-link"><i></i><i></i><i></i></div>
+          <div class="flow-node active"><span>02</span><strong>Pulse engine</strong><small>normalise · detect · explain</small></div>
+          <div class="flow-link"><i></i><i></i><i></i></div>
+          <div class="flow-node"><span>03</span><strong>Your screen</strong><small>calm · clear · live</small></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer shell">
+      <a class="brand" href="#top"><span class="brand-mark"><span></span><span></span><span></span></span><span>PULSE<strong>90</strong></span></a>
+      <p>Built for the TxODDS World Cup Hackathon · Consumer & Fan Experiences track.</p>
+      <div><span id="footerSync">Demo snapshot</span><a href="https://txline.txodds.com/documentation/worldcup" target="_blank" rel="noreferrer">TxLINE docs ↗</a></div>
+    </footer>
+
+    <template id="momentTemplate">
+      <li>
+        <span class="moment-time"></span>
+        <i class="moment-icon"></i>
+        <div><strong class="moment-title"></strong><small class="moment-detail"></small></div>
+      </li>
+    </template>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
