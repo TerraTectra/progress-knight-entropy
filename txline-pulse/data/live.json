@@ -3,7 +3,7 @@
     "provider": "TxLINE",
     "mode": "demo",
     "network": "Solana devnet",
-    "verified": true,
+    "verified": false,
     "updatedAt": "2026-07-16T17:42:00Z"
   },
   "match": {
