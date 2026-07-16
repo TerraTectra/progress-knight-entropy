@@ -1,0 +1,37 @@
+{
+  "name": "Pulse90",
+  "tagline": "Feel the match. Skip the noise.",
+  "track": "Consumer & Fan Experiences",
+  "builder": {
+    "github": "TerraTectra",
+    "telegram": "@tahioff",
+    "communication": "written only"
+  },
+  "links": {
+    "demo": "https://terratectra.github.io/progress-knight-entropy/txline-pulse/",
+    "repository": "https://github.com/TerraTectra/progress-knight-entropy/tree/main/txline-pulse"
+  },
+  "stack": [
+    "HTML5",
+    "CSS",
+    "JavaScript",
+    "SVG",
+    "TypeScript",
+    "GitHub Pages",
+    "GitHub Actions",
+    "Solana devnet",
+    "Anchor",
+    "TxLINE"
+  ],
+  "status": {
+    "frontend": "working prototype",
+    "publicData": "deterministic demonstration snapshot",
+    "txlineAdapter": "protected devnet activation in progress"
+  },
+  "safety": {
+    "betting": false,
+    "custody": false,
+    "trading": false,
+    "financialAdvice": false
+  }
+}
