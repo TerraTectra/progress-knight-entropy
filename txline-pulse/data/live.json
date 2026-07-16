@@ -1,0 +1,81 @@
+{
+  "source": {
+    "provider": "TxLINE",
+    "mode": "demo",
+    "network": "Solana devnet",
+    "verified": true,
+    "updatedAt": "2026-07-16T17:42:00Z"
+  },
+  "match": {
+    "id": "pulse90-demo-arg-ned",
+    "competition": "World Cup",
+    "stage": "Quarter-final",
+    "state": "live",
+    "minute": 68,
+    "second": 14,
+    "home": {
+      "name": "Argentina",
+      "code": "ARG",
+      "score": 2,
+      "form": "W W D W"
+    },
+    "away": {
+      "name": "Netherlands",
+      "code": "NED",
+      "score": 1,
+      "form": "W D W W"
+    }
+  },
+  "pulse": {
+    "homePressure": 62,
+    "awayPressure": 38,
+    "confidence": 84,
+    "narrative": "The game is opening up. Netherlands have created three dangerous entries in five minutes.",
+    "summary": "Argentina are controlling territory, but the pressure has started to swing.",
+    "home": [18, 26, 21, 34, 42, 38, 51, 68, 64, 57, 72, 79, 67, 61, 58, 54, 49, 43, 52, 62],
+    "away": [35, 30, 39, 31, 28, 24, 22, 20, 27, 34, 29, 25, 31, 38, 43, 48, 55, 63, 59, 51]
+  },
+  "consensus": {
+    "home": 57,
+    "draw": 24,
+    "away": 19,
+    "context": "Consensus market signal aggregated by TxLINE"
+  },
+  "events": [
+    {
+      "minute": 22,
+      "type": "goal",
+      "side": "home",
+      "title": "Argentina goal",
+      "detail": "A fast central move breaks the first line."
+    },
+    {
+      "minute": 41,
+      "type": "warning",
+      "side": "away",
+      "title": "Netherlands pressure spike",
+      "detail": "Two shots and a dangerous corner inside three minutes."
+    },
+    {
+      "minute": 54,
+      "type": "goal",
+      "side": "home",
+      "title": "Argentina extend the lead",
+      "detail": "The pulse peaks after a high turnover."
+    },
+    {
+      "minute": 65,
+      "type": "goal",
+      "side": "away",
+      "title": "Netherlands pull one back",
+      "detail": "The match shifts from control to chase."
+    },
+    {
+      "minute": 68,
+      "type": "momentum",
+      "side": "away",
+      "title": "Momentum is moving",
+      "detail": "Three dangerous entries since the restart."
+    }
+  ]
+}
